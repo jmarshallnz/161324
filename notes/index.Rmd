@@ -1,0 +1,38 @@
+--- 
+title: "Data mining"
+author: "Jonathan Marshall, Martin Hazelton"
+date: "`r Sys.Date()`"
+site: bookdown::bookdown_site
+documentclass: book
+bibliography: [book.bib, packages.bib]
+# url: your book url like https://bookdown.org/yihui/bookdown
+# cover-image: path to the social sharing image like images/cover.jpg
+description: |
+  Data mining notes
+link-citations: yes
+github-repo: jmarshallnz/161324_notes
+---
+
+# About
+
+This is the `index.Rmd` file which will be our first chapter...
+
+Week 1: Introduction, what is datamining/statistical learning ISLR 2
+
+Week 2: Some more intro stuff maybe. Something about missing values? Not in ISLR???
+
+Week 3: Linear regression ISLR 3
+
+Week 4: Validation? ISLR 5?
+
+Week 5: Model selection, beyond linear model. ISLR 6/7?
+
+Week 6/7: Classification ISLR 4?
+
+Week 8/9: Trees, forests ISLR 8
+
+Week 10: SVM? ISLR 9
+
+Week 11: Clustering ISLR 12
+
+Week 12: Something, something... (Text analysis?)

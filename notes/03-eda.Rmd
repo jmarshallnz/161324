@@ -1,0 +1,784 @@
+# Exploratory Data Analysis
+
+> We shall not cease from exploration, and the end of all our exploring
+> will be to arrive where we started and know the place for the first
+> time.\
+> *T. S. Eliot*
+
+## Exploratory Data Analysis in Data Mining
+
+Exploratory data analysis (EDA) seeks to provide an overview of a
+dataset, for example through numerical and graphical summaries. The aim
+is to detect interesting patterns in the data, without recourse to the
+construction of elaborate statistical models or the application of
+formal hypothesis tests.
+
+The philosophy behind EDA has much in common with that for data mining
+(in particular, eschewing classical parametric modelling and inference).
+It is therefore no surprise that EDA techniques provide a useful set of
+tools for the data miner.
+
+As mentioned above, the use of statistical graphics is fundamental to
+EDA. In this chapter we look at some basic statistical graphics in R.
+Some more advanced graphical tools are considered in
+[\[chp:graphics\]](#chp:graphics){reference-type="ref"
+reference="chp:graphics"}. We also consider the effects of having
+missing values in a dataset, and what can be done to handle problems
+that may arise because of this.
+
+## Basic Graphical Plots in R
+
+### Histograms
+
+The histogram is a simple method for visualizing the distribution of a
+single variable. It is constructed as follows:
+
+1.  Divide the real line into bins (typically assumed to be of equal
+    width).
+
+2.  Plot the (normalized) frequency (number) of data in each bin.
+
+**Example . : Histograms for Swiss Bank Note Data**\
+The data set `swiss` contains measurements on 100 forged Swiss bank
+notes and 100 real Swiss bank notes. On each bank note the size of the
+bottom margin was recorded, as was the diagonal length of the note (all
+measurements in mm). This kind of data is important for the development
+of automatic methods for detecting fraudulent bank notes. In this
+example we will look at histograms of bottom margins for the forged
+notes.
+
+The histogram in Figure [1.1](#fig:swiss1){reference-type="ref"
+reference="fig:swiss1"} was produced using the default settings for the
+`hist` function in R.
+
+![[\[fig:swiss1\]]{#fig:swiss1 label="fig:swiss1"} Histogram of margin
+sizes for forged Swiss back notes.](swiss1){#fig:swiss1 width="4in"}
+
+In this histogram the column heights correspond to the raw frequencies
+(counts) of values in each bin. An alternative is to scale the histogram
+so that the aggregate area under the histogram bars is 1, and the area
+of each individual bar is equal to the proportion of the data in the
+corresponding interval. We can get this alternative scaling by setting
+the `probability` argument as true. See the code below.
+
+![[\[fig:swiss2\]]{#fig:swiss2 label="fig:swiss2"} Histogram of margin
+sizes for forged Swiss back notes with scaling to probability
+scale.](swiss2){#fig:swiss2 width="4in"}
+
+The appearance of a histogram depends on the bin widths and the bin
+'anchor point' (that is the left hand edge of the far left bin). To
+illustrate this point the histograms in Figure
+[1.2](#fig:swiss2){reference-type="ref" reference="fig:swiss2"} are
+derived from the same data using various bin widths and anchor points.
+We note that the default choice of bin-width for histograms in R is
+usually pretty good. Dealing with the issue of anchor points is more
+problematic, and requires the more sophisticated methodology that we
+introduce in Section [\[sec:kde\]](#sec:kde){reference-type="ref"
+reference="sec:kde"}.
+
+![[\[fig:swiss3\]]{#fig:swiss3 label="fig:swiss3"} More histograms of
+margin sizes for forged Swiss back notes.](swiss3){#fig:swiss3
+width="6in"}
+
+We finish this example histograms by supplying (and commenting upon) the
+R code used to produce Figures [1.1](#fig:swiss1){reference-type="ref"
+reference="fig:swiss1"}-[1.3](#fig:swiss3){reference-type="ref"
+reference="fig:swiss3"}.
+
+    swiss <- read.table("swiss.txt",header=F)  
+    swiss.forged.margin <- swiss[,1]   
+    hist(swiss.forged.margin) 
+    hist(swiss.forged.margin,probability=T) 
+    par(mfrow=c(2,2))  
+    hist(swiss.forged.margin,breaks=seq(7,13,by=1),col=5,main="") 
+    hist(swiss.forged.margin,breaks=seq(7,13,by=0.5),col=5,main="") 
+    hist(swiss.forged.margin,breaks=seq(6.75,13.25,by=0.5),col=5,main="") 
+    hist(swiss.forged.margin,breaks=seq(7,13,by=0.2),col=5,main="") 
+
+-   The text file `swiss.txt` does not contain column headers.
+
+-   The syntax `swiss.forged.margin <- swiss[,1]` assigns the first
+    column of the data frame `swiss` to the object
+    `swiss.forged.margin`.
+
+-   `hist(swiss.forged.margin)` plots the histogram (with default
+    settings for parameters).
+
+-   The syntax `par(mfrow=c(2,2))` divides the graphics device (plotting
+    window in this case) into a 2 by 2 array. This means that the next
+    four plots appear as panels in a single plotting window.
+
+-   In the later plots, the `breaks` argument of `hist` specifies the
+    breaks between bins. The argument `col=5` specifies the plotting
+    colour for the histogram bars (colour 5 is cyan), while `main=""`
+    indicates that the main title should be contain no characters
+    (i.e. be blank).
+
+### Normal Probability Plots
+
+The normal distribution[^1] plays a central role in Statistics. One
+reason for this is the Central Limit Theorem, which (loosely) says that
+the mean of sufficiently many random variables will have an approximate
+normal distribution. It follows that any variable that might be thought
+of as the result of averaging many small effects may well follow a
+normal distribution, at least approximately.
+
+It is often of interest to assess whether an observed variable is
+normally distributed. A popular graphical method for assessing this is
+the normal Q-Q plot (or normal probability plot). The normal Q-Q plot
+works by plotting the quantiles of the observed data against the
+quantiles of the theoretical normal distribution. If the data are
+normally distributed then the sample quantiles will match quite closely
+to the theoretical quantiles, and hence the Q-Q plot will deliver an
+approximately straight line.
+
+**Example . : Normal as the Next Guy**\
+In this Example we generate a sample of $n=1000$ normal random variables
+(from a normal distribution with mean $\mu=3$ and variance
+$\sigma^2 = 2^2$) and then produce a normal Q-Q plot for these data. The
+command `rnorm` produces simulations from the normal distribution, with
+arguments specifying the sample size (`n`), mean and standard deviation,
+while `qqnorm` produces a normal Q-Q plot.
+
+    y <- rnorm(n=1000,mean=3,sd=2)
+    qqnorm(y)
+
+![[\[fig:qqnorm1\]]{#fig:qqnorm1 label="fig:qqnorm1"} A normal Q-Q plot
+for simulated normal data.](qqnorm1){#fig:qqnorm1 width="5in"}
+
+The resulting plot is displayed in Figure
+[1.4](#fig:qqnorm1){reference-type="ref" reference="fig:qqnorm1"}. As
+one would expect, the plot is very linear, confirming that the data are
+drawn from a normal distribution.
+
+**Example . : That Isn't Normal Currency**\
+We now produce a normal Q-Q plot for the bottom margin of the Swiss bank
+notes.
+
+    > qqnorm(swiss.forged.margin}
+    > shapiro.test(swiss.forged.margin)
+
+            Shapiro-Wilk normality test
+
+    data:  swiss.forged.margin 
+    W = 0.9661, p-value = 0.01115
+
+![[\[fig:qqnorm2\]]{#fig:qqnorm2 label="fig:qqnorm2"} A normal Q-Q plot
+for Swiss bank note data.](qqnorm2){#fig:qqnorm2 width="5in"}
+
+The Q-Q plot is displayed in Figure
+[1.5](#fig:qqnorm2){reference-type="ref" reference="fig:qqnorm2"}. It
+displays a moderate departure for linearity (particularly in the
+left-hand tail) suggestive of possible non-normality. To investigate
+further, we apply the Shapiro-Wilk test of normality to the data (using
+the R command `shapiro.test`). The null hypothesis for this test is that
+the data are drawn from a normal distribution, so that small p-values
+indicate rejection of this hypothesis and hence indicate doubt about the
+normality of the data. In this case we have a p-value of $0.011$,
+providing some evidence that the data are not normally distributed.
+
+### Scatterplots
+
+Scatterplots are a means of visualizing bivariate data. Things to look
+for include trends, the presence of outliers (that is, observations that
+seem very different to the main body), and any clustering.
+
+The basic command to produce a scatterplot is `plot`. For variables `x`
+and `y` the syntax `plot(x,y)` and `plot(y ~ x)` produce identical
+results. Note, however, that the latter format allows specification of a
+data frame (in which `x` and `y` might be located) while the former does
+not.
+
+**Example . : Scatterplots for the Husbands and Wives Data**\
+Recall that the husbands and wives data includes observations on height
+(in mm) and age (in years). We will start with a simple scatterplot of
+wife's height against her husband's height.
+
+    plot(husbands$H.Ht,husbands$W.Ht)
+
+The result is shown in Figure [1.6](#fig:scatter1){reference-type="ref"
+reference="fig:scatter1"}. From this plot we can see an obvious positive
+relationship between the variables. There are no apparent clusters, and
+no extreme outliers (though the tallest wife has a moderately short
+husband, producing a data point that is somewhat out of the ordinary).
+
+![[\[fig:scatter1\]]{#fig:scatter1 label="fig:scatter1"} Scatterplot of
+wife's height against husband's height.](scatter1){#fig:scatter1
+width="5in"}
+
+The plot itself could be beautified in a number of ways. For example, we
+could label the axes (with something other than the object names in R),
+change the plotting symbol or change the colour of the data points. Such
+changes can be implemented by specifying values for optional arguments
+in the function `plot`. For example, the `xlab` and `ylab` arguments
+control axis labels; the argument `col` controls the plotting colour;
+and `pch` controls the plotting character (open circles, crosses,
+triangles, closed circles etc.). The code below uses these options to
+plot the data in red (that's colour 2 for R, although writing
+`col="red"` would work just the same) and uses closed circles as
+plotting symbols (that's plotting character 19).
+
+    plot(W.Ht~H.Ht, xlab="Husband's height",ylab="Wife's height",col=2,pch=19,data=husbands)
+
+![[\[fig:scatter2\]]{#fig:scatter2 label="fig:scatter2"} Beautified
+scatterplot of wife's height against husband's
+height.](scatter2){#fig:scatter2 width="5in"}
+
+In Figure [1.7](#fig:scatter2){reference-type="ref"
+reference="fig:scatter2"} the colour is just for show, but colour can
+also be useful if the data divide into groups. Suppose, for example,
+that we think that the married couples' height data may vary depending
+on whether or not they married young -- say before the husband was 30.
+The code below produces a scatterplot in which the couples where the
+husband is over 30 when married appear as red points, and those where
+the husband was less than 30 appear as black points.
+
+    > older <- (husbands$H.Age.Marriage >= 30)
+    > older
+      [1] FALSE FALSE  TRUE FALSE  TRUE FALSE  TRUE  TRUE FALSE FALSE FALSE FALSE
+    .....
+    [193] FALSE    NA FALSE  TRUE FALSE FALSE FALSE
+    > older <- older+1
+    > older
+      [1]  1  1  2  1  2  1  2  2  1  1  1  1  2  2  1  1  1  1  1  1  2  1  1  1  1
+    .....
+    [176]  1  1  1  1  1  1  1  1  1  2  1  1  1  1  1  1  1  1 NA  1  2  1  1  1
+    > 
+    > plot(W.Ht ~ H.Ht, xlab="Husband's height",ylab="Wife's height",
+    + col=older,pch=19,data=husbands)
+    > legend("topleft",legend=c("Younger","Older"),col=1:2,pch=19)
+
+![[\[fig:scatter3\]]{#fig:scatter3 label="fig:scatter3"} Scatterplot of
+wife's height against husband's height with data grouped by husband's
+age on his wedding day.](scatter3){#fig:scatter3 width="5in"}
+
+Points to note:
+
+-   The command `older <- (husbands$H.Age.Marriage >= 30)` creates a
+    *logicial vector* `older` which is `TRUE` for husbands who are 30 or
+    older on their wedding day, and `FALSE` otherwise.
+
+-   When a logical vector is involved in a numeric calculation, `TRUE`
+    is interpreted as one and `FALSE` as zero. Hence `older <- older+1`
+    replaces the original vector `older` with one where there are 2s for
+    husbands married at 30 or later, and 1s for husbands married earlier
+    than 30.
+
+-   When the vector `older` is specified as the `col` argument to
+    `plot`, each data point is plotted using the colour specified by
+    `older` (so colour 2 \[red\] for older husbands, and colour 1
+    \[black\]) for younger ones.
+
+-   The command beginning `plot` is very long, and would come off the
+    end of the page if entered without a break. We therefore hit the
+    `RETURN` key in the middle of typing the text. That's why the cursor
+    changes to a `+` (rather than the usual `>`): R is waiting for the
+    completion of the command.
+
+-   The `legend` command adds a legend to a plot. The `legend` argument
+    to the `legend` function specifies the text in the legend; the `col`
+    and `pch` arguments specify the plotting symbol colour and type; and
+    the first argument indicates where the legend should be placed in
+    the plot. Use the help system to discover the appropriate syntax for
+    alternative placements.
+
+-   Looking at the scatterplot, there is little evidence that the
+    relationship between husbands' and wives' heights is different
+    between the younger and older husband groups.
+
+Interpreting scatter plots can become difficult if
+
+-   there are many repeated data;
+
+-   the data set is very large.
+
+With regard to (i), overlaying of data points can mask the true density
+of observations, while for huge datasets there may be so many points
+that the large sections of the plotting window become uniform black ink.
+
+**Example . : Scatterplots for the Adult Dataset**\
+Don't worry (or get too expectant!) -- the adult dataset is very tame.
+It contains data from the 1994 census in the U.S. This particular
+dataset contains records for 32561 adults with 15 variables, so unlike
+the relatively small husbands dataset (which we introduced for
+illustrative purposes) this really is data mining territory. The data
+are available for download as the (large) text file `adult.txt`.
+
+In this example we will look at the relationship between the variable
+`edu.n`, a numerical summary of educational level achieved, and `Age`
+(age in years). We first try a standard scatterplot, displayed in Figure
+[1.9](#fig:scatter4){reference-type="ref" reference="fig:scatter4"}.
+
+    plot(edu.n ~ Age, ylab="Educational level", data=adult)
+
+![[\[fig:scatter4\]]{#fig:scatter4 label="fig:scatter4"} Scatterplot of
+educational level achieved against age, based on a sample of 32561
+adults from a U.S. census.](scatter4.jpg){#fig:scatter4 width="5in"}
+
+It is quite difficult to make out much detail in this plot, because most
+plotted points are overlaid many times. For instance, the ink density
+provides little guidance as to which educational levels of attainment
+are most common.
+
+One way to address the problem of repeated data points is to *jitter*
+the data. Jittering is the process of adding a small amount of noise to
+data. In can be implemented in R using the `jitter` command. We can
+therefore obtain a jittered scatterplot, as displayed in Figure
+[1.10](#fig:scatter5){reference-type="ref" reference="fig:scatter5"}.
+
+    plot(jitter(edu.n) ~ jitter(Age),xlab="Age",ylab="Educational level",data=adult)
+
+Notice in this second scatterplot that the visible ink density reveals
+structure that was largely hidden in the previous plot.
+
+![[\[fig:scatter5\]]{#fig:scatter5 label="fig:scatter5"} Jittered
+scatterplot of educational level achieved against age, based on a sample
+of 32561 adults from a U.S. census.](scatter5.jpg){#fig:scatter5
+width="5in"}
+
+Scatterplots display the relationship between only two (numerical)
+variables. Faced with a data set with more than two such variables, one
+option for exploring the data is to produce scatterplots of all pairs of
+variables. This generally only works well for modest number of
+variables. It can be achieved automatically in R by using the `pairs`
+command, which may be applied to a (numerical) matrix or data frame. For
+example, `pairs(husbands)` produces the array of scatterplots displayed
+in Figure [1.11](#fig:scatter6){reference-type="ref"
+reference="fig:scatter6"} for the husbands data. As one might expect,
+the relationship between husbands' and wives' ages is particularly
+strong.
+
+![[\[fig:scatter6\]]{#fig:scatter6 label="fig:scatter6"} Scatterplots
+for every pair of variables from the husbands and wives
+dataset.](scatter6){#fig:scatter6 width="6in"}
+
+### Boxplots
+
+Scatterplots are for visualizing the relationship between two numerical
+variables. If you want to explore the relationship between a numerical
+variable and a categorical variable (i.e. a factor), then boxplots (also
+known as a box-and-whisker plots) are useful. In R, if the numerical
+variable is stored as the object `x` and the factor as `A`, then the
+appropriate syntax is
+
+    boxplot(x ~ A)
+
+where the function `boxplot` can take additional arguments to specify a
+data frame and control various graphical parameters (e.g. colour and
+width of boxes).
+
+**Example . : Boxplots for the Adult Data**\
+We return to the adult data, but now focus on the numerical variable
+`hrs.per.wk` (average number of hours worked per week) and the factor
+`relationship` (which describes status within a family unit). The
+standard boxplot in Figure [1.12](#fig:box1){reference-type="ref"
+reference="fig:box1"} was produced by the code
+
+    boxplot(hrs.per.wk ~ relationship,ylab="Hours per week",data=adult)
+
+![[\[fig:box1\]]{#fig:box1 label="fig:box1"} Boxplots of hours worked
+per week, grouped by position in family, from the adult
+dataset.](box1){#fig:box1 width="6in"}
+
+We can beautify the plot a bit by adding some colour to the boxes and
+narrowing the width of the boxes, which tend to be unattractively wide
+when the factor has just a few levels (i.e. categories). The code
+
+    boxplot(hrs.per.wk ~ relationship,ylab="Hours per week",boxwex=0.4,col=5,data=adult)
+
+produces the refined boxplots in Figure
+[1.13](#fig:box2){reference-type="ref" reference="fig:box2"}. Note that
+colour 5 is cyan, and that the argument `boxwex` controls box widths.
+
+![[\[fig:box2\]]{#fig:box2 label="fig:box2"} Colourful boxplots of hours
+worked per week, grouped by position in family, from the adult
+dataset.](box2){#fig:box2 width="6in"}
+
+## Dealing with Missing Values [\[sec:missing\]]{#sec:missing label="sec:missing"}
+
+### Patterns of Missingness
+
+As noted in Section
+[\[sec:missing1\]](#sec:missing1){reference-type="ref"
+reference="sec:missing1"}, it is not unusual for real datasets to
+contain missing values. We have already met some examples, with missing
+values present in the husbands and wives dataset, and also in the yeast
+gene expression data (from Computer Lab 2).
+
+The importance of the presence of missing values depends on a number of
+things. For example, how many data are missing, and what is the pattern
+of missing data values across the dataset? To address these questions,
+let us think about the probability that each entry in the dataset is
+missing. It might be that the data are *missing completely at random*
+(MCAR). By that, we mean that the probability of an entry being missing
+for some variable is equal across all records in the dataset.
+Alternatively, it could be that the probability of recording a missing
+value depends on the true (but unrecorded) data value. There is a
+further distinction that can then be drawn. On the one hand, it might be
+that the probability of missingness[^2] can be explained in terms of
+other variables where we do have data (in which case we say that the
+unavailable entries are *missing at random* (MAR). On the other hand, it
+could be that the probability of missingness is determined intrinsically
+by the true value of the missing datum, and that this probability cannot
+be explained in terms of the data that we do have[^3].
+
+To illustrate these concepts, let us consider a geologist who is
+carrying large and heavy samples of crystals between labs. In the first
+lab the weight of each crystal is recorded, while in the second its
+volume is measured. The final dataset should include weight and volume
+for each sample, but some crystals are dropped and smash on the ground
+en route between the labs and therefore have missing values for volume.
+If the geologist is equally likely to fumble and drop any of the
+crystals, then the volume data will be missing completely at random. If
+instead, the geologist has a tendency to drop the heavier crystals, then
+the we would likely model the missing volume data as missing at random.
+However, it might be that it is the bulk rather than the weight of the
+crystals that makes them difficult to handle, in which case the
+probability of dropping each one will depend on its volume. The data are
+then not missing at random.
+
+The situation where the data are not missing at random is particularly
+challenging. In many cases a thorough investigation of the processes
+involved in the pattern of missingness can be revealing. This might
+involve collection of further data or checking the data processing
+procedure. For example, it might transpire that true extreme values are
+rejected as measurement error and reported as missing values by
+automated data capture and processing software[^4]. However, it is more
+common to assume that the pattern of missingness is either MCAR or (more
+commonly) MAR. Arguably, the significance of the missing data mechanism
+is more important when doing classical statistics (i.e. building
+statistical models, testing hypotheses and so forth). Nonetheless, it is
+worth keeping in mind that the conclusions drawn from any data mining
+procedure may be sensitive to the assumptions that we make about missing
+values.
+
+### Working with Complete Cases
+
+The impact that missing data will have on any subsequent analysis will
+depend on the proportion of the data points that are missing (all other
+things being equal). If there are just a few missing values, or if there
+are missing values on many variables but restricted to a small number of
+records (i.e. cases), then a simple way to deal with them is to exclude
+all cases with missing values. In other words, we retain only *complete
+cases*. This is simple to do in R using the `complete.cases` function.
+
+**Example . : Deletion of Incomplete Records for the Husbands and Wives
+Data**\
+Recall that the husbands and wives data contains 199 records, each
+corresponding to a husband-wife pair for which the following variables
+are recorded.
+
+  ------------------ ---------------------------------------------
+  `H.Age`            Husband's current age (in years)
+  `H.Ht`             Husband's height in millimetres
+  `W.Age`            Wife's current age (in years)
+  `W.Ht`             Wife's height in millimetres
+  `H.Age.Marriage`   Husband's age (in years) when first married
+  ------------------ ---------------------------------------------
+
+We processed these data earlier so that missing values are specified by
+the usual `NA` convention in R.
+
+Suppose that we wish to compute the correlation matrix for these data.
+This is a matrix with ones on the long-diagonal (corresponding to a
+perfect correlation of any variable with itself) and pair correlations
+as the off-diagonal elements[^5].
+
+    > cor(husbands)
+                        H.Age       H.Ht W.Age       W.Ht H.Age.Marriage
+    H.Age           1.0000000 -0.2773030    NA -0.2118564             NA
+    H.Ht           -0.2773030  1.0000000    NA  0.3644337             NA
+    W.Age                  NA         NA     1         NA             NA
+    W.Ht           -0.2118564  0.3644337    NA  1.0000000             NA
+    H.Age.Marriage         NA         NA    NA         NA              1
+
+We see from this that there is a positive correlation of $0.36$ between
+wives' and husbands' heights (i.e. `W.Ht` and `H.Ht`), although it is
+not particularly strong. However, much of the correlation structure in
+the data is hidden from us because of missing values in the correlation
+matrix. These occur because R returns `NA` when it tries to compute the
+correlation between a pair of variables where either one contains
+missing values.
+
+One way of handling this is to delete all records which are incomplete
+(i.e. contain at least one missing value).
+
+    > nrow(husbands)
+    [1] 199
+    > husbands2 <- husbands[complete.cases(husbands),]
+    > nrow(husbands2)
+    [1] 169
+    > cor(husbands2)
+                        H.Age       H.Ht      W.Age       W.Ht H.Age.Marriage
+    H.Age           1.0000000 -0.2251498  0.9382382 -0.1931005      0.3624374
+    H.Ht           -0.2251498  1.0000000 -0.1563196  0.3041247     -0.1032112
+    W.Age           0.9382382 -0.1563196  1.0000000 -0.2062793      0.2364224
+    W.Ht           -0.1931005  0.3041247 -0.2062793  1.0000000     -0.0368114
+    H.Age.Marriage  0.3624374 -0.1032112  0.2364224 -0.0368114      1.0000000
+
+Points to note:
+
+-   We start off with 199 records, which is the number of rows in the
+    data frame (which can be found using the `nrow` function).
+
+-   The command `complete.cases(husbands)` returns a logical vector,
+    with `T` for each row of the data frame which is a complete case
+    (i.e. does not contain missing values) and `F` for incomplete cases.
+
+-   The syntax `husbands2 <- husbands[complete.cases(husbands),]`
+    creates a new data frame `husbands2` comprising just the complete
+    records from `husbands`.
+
+-   The complete case data frame has 169 rows, indicating that there
+    were 30 ($=199-169$) incomplete records.
+
+-   The correlation matrix for `husbands2` has no missing values. As one
+    might expect, by far the strongest correlation is between wives' and
+    husbands' ages (`W.Age` and `H.Age`).
+
+### Missing Data Imputation
+
+In the previous example, deletion of the incomplete cases led to a
+relatively small reduction in the sample size: $n=199$ down to $n=169$.
+In such circumstances case deletion is a reasonable approach to handling
+missing values. However, suppose that we have a dataset with 100
+variables, and a probability of 2% that each data item will be missing.
+In that situation only about 13% of the records would be complete, so
+that deleting incomplete records would result in a massive reduction in
+sample size.
+
+In any event, throwing away good data (like the available entries in an
+incomplete record) is an anathema to a Statistician, whose job should be
+to squeeze all the available information from a dataset. Nonetheless,
+many statistical methods will only work with complete data (as we saw
+when trying to find the correlation matrix in the previous example).
+This suggests that we look at ways of filling in the missing values by
+plausible surrogates. This is called *imputation* in Statistics.
+
+Perhaps the simplest possible approach to imputation is to use an
+average value for each missing data item. For a quantitative variable we
+would replace each missing value by the mean; for a categorical variable
+we would use the mode (i.e. the most frequently occurring category).
+
+**Example . : Mean Imputation for Husbands and Wives Data**\
+The husbands and wives dataset has missing values for the variables
+`W.Age` (wife's age) and `H.Age.Marriage` (husband's age when married).
+The following R code replaces missing values by the variable mean for
+the first of these variables .
+
+    > HusWife <- husbands
+    > HusWife$W.Age
+      [1] 43 28 30 57 52 27 52 NA 43 23 25 39 32 NA 35 33 43 35 32 30 40 NA 29 55 25
+    .....
+    [176] NA 48 33 49 64 55 41 38 31 52 43 51 47 NA 32 33 NA 18 NA 45 64 43 39 56
+    > mean(HusWife$W.Age,na.rm=T)
+    [1] 40.68235
+    > HusWife$W.Age[is.na(HusWife$W.Age)] <- mean(HusWife$W.Age,na.rm=T)
+    > HusWife$W.Age
+      [1] 43.00000 28.00000 30.00000 57.00000 52.00000 27.00000 52.00000 40.68235
+    .....
+    [193] 18.00000 40.68235 45.00000 64.00000 43.00000 39.00000 56.00000
+
+Points to note:
+
+-   We start by copying the data frame `husbands` to another data frame
+    `HusWife`. Our reason for this is that mean imputation is probably
+    not the best approach to imputation for this dataset -- we do it
+    here merely for illustrative purposes. We therefore want to retain
+    the unimputed version of `husbands` for later use.
+
+-   As you may recall, the optional argument `na.rm=T` causes the `mean`
+    function to calculate a mean by excluding missing values. Without
+    that argument the `mean` function will return `NA` for any variable
+    with missing entries.
+
+-   The function `is.na` applied to a vector returns a logical vector
+    indicating whether or not each entry is missing (with `T`
+    corresponding to missing values). Hence
+
+        > HusWife$W.Age[is.na(HusWife$W.Age)] <- mean(HusWife$W.Age,na.rm=T)
+
+    replaces all the missing values of `HusWife$W.Age` by
+    `mean(HusWife$W.Age,na.rm=T)`, as required.
+
+Mean imputation ignores the correlation structure in the data, in the
+sense that the imputed values do not depend on data on the other
+variables. As a result, mean imputation can distort trends in the
+dataset. As an illustration, Figure
+[1.14](#fig:impute1){reference-type="ref" reference="fig:impute1"}
+displays a scatterplot of wife's age against husband's age using the
+imputed data set (`HusWife`), where the imputed values are coloured red.
+Obviously the imputed values muddle what is otherwise a rather clear
+trend between the two variables.
+
+![[\[fig:impute1\]]{#fig:impute1 label="fig:impute1"} Scatterplot of
+wife's age against husband's age for the mean imputed dataset. Imputed
+values are coloured red.](impute1){#fig:impute1 width="5in"}
+
+A more plausible approach to imputation (for numerical variables) is to
+replace each missing value by a typical value based on similar records.
+For example, consider imputing the age of a wife with a 25 year old
+husband. We might approach this by looking at all complete cases with
+husbands that are around 25 years old (say in the range 22-28) and
+compute the ages of their wives. The mean of these values would likely
+be a far better reconstruction of the missing value than the overall
+mean of wives' ages (which is 40.7 years).
+
+To put this in practice we need to be precise about what we mean by
+'similar records' in the above paragraph. If the data are numerical,
+then we can measure similarity (or rather *dis*similarity) by the
+Euclidean distance between records[^6]. For a record with a missing
+value on some given variable, we can then find the $k$ nearest complete
+cases (using Euclidean distance based on the variables for which we do
+have data). The mean of the variable in question for these $k$ *near
+neighbours* can then be used as a replacement for the missing value.
+This methodology is known as *k nearest neighbour imputation*. It is
+implemented in R by the function `kNNImpute`, the code for which can be
+loaded directly into R by issuing the command
+
+    source("http://www.massey.ac.nz/~mhazelto/161223/kNNImpute.R")
+
+which also loads supporting code. Alternatively, the code can be
+downloaded from the 161.223 Stream site, and the loaded in R using the
+`source` command.
+
+In practice we must choose a value for $k$. The crux of the issue is as
+follows. If we choose a small $k$ then the imputed value will be
+somewhat unstable, being the mean of just a few values. Nonetheless, the
+values that we will be averaging over will all be quite like the
+incomplete case under investigation, since we are dealing with only very
+near neighbours. On the other hand, if we choose a large value of $k$
+then the imputed value should be much more stable (being the mean of
+many data) but we will incorporate information from some cases that are
+quite distant from (and hence quite unlike) the record in question.
+There are a number of sophisticated automated methods for choosing $k$,
+but for in many cases $k=5$ is a reasonable rule-of-thumb to use.
+
+There is one final aspect of $k$ nearest neighbour imputation that
+requires attention. Euclidean distance is sensitive to the scaling of
+the variables. For example, in the husbands and wives dataset, heights
+are measured in millimetres, so that a difference of 30 corresponds to
+just 3cm which might be considered a rather modest height difference.
+However, ages are measured in years, where a 30 year age difference is
+extreme. It follows that there will often be an advantage in computing
+distances (or dissimilarities) based on a scaled version of the data,
+where all variables have comparable spreads. The argument `x.scale` for
+the function `kNNImpute` controls whether or not such scaling is
+employed. The default setting (`x.scale=TRUE`) is to use scaling.
+Setting `x.scale=FALSE` results in no data scaling when computing
+distances.
+
+**Example . : k Nearest Neighbour Imputation for the Husbands and Wives
+Data**\
+In this example we impute values for the missing data on `W.Age` and
+`H.Age.Marriage` using k nearest neighbour imputation.
+
+    > source("http://www.massey.ac.nz/~mhazelto/161223/kNNImpute.R")
+    > husbands.imp <- kNNImpute(husbands,k=5,x.scale=FALSE)$x
+    [1] "Computing distance matrix..."
+    [1] "Distance matrix complete"
+    ....
+    [1] "Imputing row 194"
+
+    > husbands.imp2 <- kNNImpute(husbands,k=5,x.scale=TRUE)$x
+    [1] "Computing distance matrix..."
+    [1] "Distance matrix complete"
+    ....
+    [1] "Imputing row 194"
+
+Points to note:
+
+-   As mentioned above, the function `kNNImpute` must be loaded using
+    the `source` command prior to use.
+
+-   The function `kNNImpute` returns an R *list* object, with components
+    `x` and `missing.matrix`. The former contains a data matrix with
+    imputations in place of missing values, while the latter describes
+    the pattern of missing values in the input data frame (as a logical
+    matrix). The elements of a list can be accessed using syntax of the
+    form `list$component` (just like referring to variables in a data
+    frame). Hence `kNNImpute(husbands,k=5)$x` returns a matrix version
+    of the data frame `husbands` with missing values replaced by
+    imputations obtained using the 5 nearest neighbour method.
+
+-   This imputed data matrix is stored as `husbands.imp` in the unscaled
+    case, and `husbands.imp2` in the scaled case.
+
+Finally, Figure [1.15](#fig:impute2){reference-type="ref"
+reference="fig:impute2"} displays scatterplots of wife's age against
+husband's age using the imputed data sets just created. As before, the
+imputed values are coloured red. It is clear that k nearest neighbour
+imputation does a far better job than mean imputation for this dataset.
+Furthermore, the right-hand plot looks rather better than the left-hand
+(in terms of the plausibility of the imputed values) illustrating the
+importance of scaling the data when working with distance methods.
+
+![[\[fig:impute2\]]{#fig:impute2 label="fig:impute2"} Scatterplot of
+wife's age against husband's age for k nearest neighbout imputed
+datasets. The left-hand plot shows the results when imputation is
+carried out on the raw data; the right-hand plot when imputation is
+performed with scaling. In both cases imputed values are coloured
+red.](impute2){#fig:impute2 width="5.0in"}
+
+### Alternative Methods of Imputation
+
+There are alternatives to mean imputation and k-nearest neighbour
+imputation. For example, regression based imputation applies (linear)
+regression models in order to predict the missing values based on the
+available data.
+
+An important distinction is between single and multiple methods of
+imputation. We have focused solely on the former, where each missing
+value is replaced by a single imputation. A general problem with this
+approach is that we lose the sense of uncertainty in the imputed values.
+If we employ the resulting imputed dataset as if it were truly observed,
+then we are pretending that we have more information than is actually
+the case. It follows that the result from any analysis based on the
+imputed dataset will produce results which appear more precise than they
+should.
+
+In multiple imputation we simulate multiple possible values for each
+missing data item. The idea is that this captures the sense of
+uncertainty in the imputed values. However, we are left with a somewhat
+complex data structure, where the original data are augmented by a raft
+of alternatives for each missing value. It follows that the use of
+multiply imputed datasets in subsequent analyses is not entirely
+straightforward.
+
+While interesting, the details of these alternative methods of
+imputation are beyond the scope of this course.
+
+\*\*You should now do Computer Lab 3.\*\*
+
+[^1]: The normal distribution is sometimes referred to as the Gaussian
+    distribution after German mathematician (and absolute genius) Carl
+    Friedrich Gauss (1777--1855).
+
+[^2]: If you were wondering, 'missingness' is a real word! It appears
+    uncommon in everyday usage (it does not appear in my 1876 page
+    Shorter Oxford English Dictionary, although it is in the full OED)
+    but is very much part of the technical vocabulary of missing data
+    analysis.
+
+[^3]: The descriptions of MCAR and MAR that we have given are not formal
+    definitions. These concepts can be defined in an precise
+    mathematical way, although this requires that we have some
+    statistical models for the data, and in particular for the
+    probability of missingness.
+
+[^4]: Circumstances rather like this have been credited for the delay in
+    detection of the hole in the Antarctic ozone layer, where readings
+    of almost zero ozone concentrations were flagged as unreliable by
+    the data processing software and hence interpreted as 'missing
+    values' by some scientists
+
+[^5]: Correlation is symmetric: that is, the
+    ${\textsf {cor}}(X,Y) = {\textsf {cor}}(Y,X)$. As a consequence
+    correlation matrices are symmetric.
+
+[^6]: Euclidean distance is the distance between points as measured by a
+    ruler. By Pythagoras theorem, the Euclidean distance between the
+    $i$th and $j$th records is defined by
+    $$d_{ij} = \sqrt{ \sum_{\ell=1}^p (x_{i\ell} - x_{j\ell})^2 }$$
+    where $x_{i\ell}$ is the value of the $\ell$th variable for the
+    $i$th case.

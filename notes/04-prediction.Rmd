@@ -1,0 +1,1803 @@
+# Prediction
+
+## Prediction, Classification and Clustering
+
+The remainder of the paper is largely concerned with prediction,
+classification and clustering for large datasets. These are related
+problems.
+
+In prediction, the aim is to estimate the value of a quantitative
+*target* variable using information from all other available variables
+(the predictors). For prediction we will have two datasets -- a training
+set and a test set. For records in the training set we have the correct
+value of the target variable (or predictand[^1]), so that these data can
+be used to construct a prediction methodology. The value of the target
+variable is unavailable (or is regarded as unavailable) in the test set,
+so our problem is to reconstruct these values.
+
+In classification, we wish to use the predictor variables to assign each
+observation to one of a number of pre-specified classes. Again, we have
+training data, where the classes for each observation are known; and we
+have test data, where they the classes are unknown and hence need
+predicting. If one thinks of a qualitative target variable defining
+class membership for each observation, then the classification problem
+mirrors the prediction one exactly, except that the target is changed
+from quantitative to qualitative.
+
+Clustering is akin to the classification in that the aim is to divide
+the observations into groups. However, in clustering these groups are
+not known a priori: it is like classification without the training
+dataset. We therefore seek to find natural groupings in the data without
+any prior information to guide us. In the computer science and machine
+learning literatures, classification and clustering are commonly
+referred to as *supervised learning* and *unsupervised learning*
+respectively.
+
+To illustrate these ideas, consider the following archaeological
+scenarios.
+
+-   Archaeologist Dr Illinois Jane has found an incomplete fossilized
+    skeleton of a Tyrannosaurus Rex. Dr Jane wishes to create replicas
+    of the missing bones in order to display a full skeleton in her
+    local museum. To do so, she must estimate the dimensions of the
+    missing bones based on the bones that have been found. She has
+    training data to help her, in the form of corresponding measurements
+    taken from previously discovered complete Tyrannosaurus Rex
+    skeletons
+
+    Dr Jane is faced with a number of prediction problems here, since
+    she wants to predict quantitative target variables (the lengths,
+    etc., of the missing bones).
+
+-   On her next expedition, Dr Jane uncovers fossils from a number of
+    sauropods[^2]. She wants to know whether each fossilised dinosaur is
+    a Brachiosaurus, or a Diplodocus, or an Apatosaurus, or none of
+    these. This is classification problem, because the aim is to assign
+    each fossilised dinosaur to one of four pre-specified classes.
+    Training data are provided by measurements on Brachiosaurus,
+    Diplodocus, Apatosaurus and other sauropod fossils from existing
+    collections around the world.
+
+-   On holiday in the north of Western Australia, Dr Jane discovers by
+    chance a large number of fossilized fish. She has never before seen
+    any fossils quite like these. There is quite a lot of variety in the
+    fossils, so Dr Jane suspects that there are several species present.
+    Using measurements taken on each fossil, she attempts to group them
+    with the aim of distinguishing the different species that might be
+    present. This is a clustering problem, because the goal is to form
+    classes de novo.
+
+In this chapter we will look at a variety of methods for prediction.
+These range from from methods based on explicit, easily interpretable
+models (in particular, linear regression) to computational black box
+techniques (like neural networks). Specifically, we will consider
+multiple linear regression; tree-based methods; and neural networks.
+
+## The Basics of Prediction{#sec:predictionbasics}
+
+The classical prediction problem works as follows. We have two datasets.
+The first is the training data, where we have information on the
+predictor and target variables for each record. The second is a test
+dataset, where we know the values of the predictors, but not of the
+target variable. Our aim then is to predict the target variable on these
+test cases.
+
+The basic approach will be to use the training data to construct a model
+that relates the target variable to the predictors. This model will have
+the predictors as 'inputs' and the target as an output, so that we can
+predict the test cases from the variables that we observe on them.
+
+The challenge is to construct a good model for prediction! There are two
+issues here. First, we have to choose a particular type of model. For
+example we might use linear regression; we might use tree-based methods;
+we might use neural networks[^3]. Then, when we have decided on an
+overall technique, we will need to tune the model. This might involve
+selecting which predictors to include and which to exclude, or choosing
+the size of a regression-tree, or selecting the complexity of a neural
+network.
+
+It might seem tempting to compare the various modelling techniques and
+tuning parameters by seeing how well they reproduce the values of the
+target variables in the training set. However, this will give a false
+picture. Any model constructed from a given data set will tend to
+predict that dataset rather well -- it's like having home ground
+advantage in a sports match. However, the model will typically do less
+well when applied to the independent test dataset.
+
+One resolution is to split the training data into two or more subsets,
+one of which becomes the new training set, and the other other(s) become
+validation and/or (artificial) test sets. Now, if we construct our
+various models from just the records in the new training set, we then
+have the validation/artificial test sets as independent testing grounds.
+(Returning to the sporting analogy, predicting on these datasets will be
+playing away from home, since they were not used in model construction.)
+Moreover, we actually know the true values of the target variable on
+these sets, and can hence obtain an independent assessment of the
+accuracy of our predictions.
+
+Once we have used the validation/artificial test sets dataset to choose
+the best model, it makes sense to recombine all the training data and
+refit the model before applying it to the real test dataset. For
+example, we might decide that the best type of model is a linear
+regression with a particular set of variables based on our artificial
+test data. We should then re-estimate the parameters of that model from
+the full training set before making predictions on the test cases.
+
+In the notes that follow you will sometimes see test datasets where the
+target variable is present. This is for illustrative purposes. If we do
+know the target variable, then we can compute errors in prediction and
+hence provide comparisons between methods. However, do keep in mind that
+in real-world prediction, the aim will be to predict on test cases
+without the target present. Learn to do this well and a lucrative career
+in anything from financial forecasting to sports betting to weather
+forecasting might lie ahead of you!
+
+## Linear Regression for Prediction{#sec:regress}
+
+### Data Structures and Notation
+
+Linear regression is a very large topic, the theory and practice of
+which could occupy several university courses[^4]. Here we will restrict
+ourselves to a brief overview, focusing on the use of linear regression
+models for prediction.
+
+We will seek to construct our regression models from the training data,
+and will then apply these models to obtain predictions on the test data.
+For the training data, one of the observed variables (or attributes)
+will be the target; denote this by $y$. This variable is typically
+referred to as the *response* in the context of regression modelling.
+The remaining variables in the training data set (which are also the
+variables available in the test data) are known as the predictors, and
+will be denoted $x_1, x_2, \ldots, x_p$.
+
+::: {.example}
+**Prediction for Wage Data**
+
+This example is concerned with data on workers in the U.S., collected in
+the late 1980s. For each worker the following attributes are recorded.
+
+  Attribute   Definition
+  ----------- ---------------------------------------------------------------------------------
+  `EDU`       Number of years of education
+  `SOUTH`     Indicator variable for living in Southern Region ($1=$yes, $0=$no)
+  `SEX`       F (female) or M (male)
+  `EXP`       Number of years of work experience
+  `UNION`     Union member? ($1=$yes, $0=$no)
+  `WAGE`      Hourly wage (in dollars)
+  `AGE`       Age in years
+  `RACE`      Ethnicity (Other, Hispanic, or White)
+  `OCCUP`     Occupation category (Management, Sales, Clerical, Service, Professional, Other)
+  `SECTOR`    Employment sector (Other, Manufacturing, or Construction)
+  `MARRIED`   Married? (yes or no)
+
+The target variable (predictand) is `WAGE` (i.e. this is the variable
+that we generically denote $y$). The other attributes are the predictors
+(generically denoted $x_1, x_2, \ldots, x_{p}$, where $p=10$ is the
+number of them). Notice that some of these predictors are numerical
+variables (e.g. `EDU`, `AGE`) and some are categorical (e.g. `SEX`,
+`OCCUP`).
+
+The training set comprises data on 400 employees, which can be
+downloaded into R by
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+wage.train <- read_csv(file="data/wage-train.csv")
+```
+
+A test dataset of 134 observations is also available, which can be
+downloaded into R by
+
+```{r, message=FALSE}
+wage.test <- read_csv(file="data/wage-test.csv")
+```
+
+Notice that in this case the we actually have the values for the target
+`WAGE` in the test data. This artificial situation means we can use the
+test dataset to assess the performance of the prediction methodology
+(since we know the true answer in each case).
+:::
+
+### The Linear Regression Model
+
+The multiple linear regression model[^5] expresses the target variable
+as a linear combination of the predictors. That is,
+
+\begin{align}
+y_i &= \beta_0 + \beta_1 x_{i1} + \beta_{2} x_{i2} + \cdots + \beta_p x_{ip} + \varepsilon_i \\
+    &= \beta_0 + \sum_{j=1}^p \beta_j x_{ij} + \varepsilon_i\qquad(i=1,2,\ldots,n)\\
+(\#eq:regress)\end{align}
+
+where
+
+-   $y_i$ is the value of the target variable for the $i$th observation
+    in the training set.
+
+-   $x_{ij}$ is the value of $j$th predictor for the $i$th observation
+    in the training set.
+
+-   $\varepsilon_1, \ldots \varepsilon_n$ are random error terms,
+    usually assumed to be independent $N(0,\sigma^2)$ random
+    variables[^6].
+
+-   The coefficients $\beta_0, \beta_1, \ldots, \beta_p$ are unknown
+    regression parameters, that must be estimated in practice.
+
+You may have already spotted a problem with the model described in
+equation \@ref(eq:regress) (particularly if you have studied linear
+regression models previously). The model formulation is appropriate for
+numerical predictors, but what about factors (i.e. categorical predictor
+variables)? The answer is that we can replace each factor by a set of
+dummy (indicator) variables. These are binary variables (i.e. taking
+value zero or one), and can be used to code each level of each factor.
+For instance, the variable `SEX` from the previous Example can be
+replaced by two indicator variables, `MALE` and `FEMALE` (say), where
+`MALE` is 1 for each male and 0 otherwise, and `FEMALE` takes the value
+0 for each male and 1 for each female. Similarly, we could code
+ethnicity using binary indicator variables for 'Other', 'Hispanic' and
+'White' categories[^7]. It follows that we the regression model in
+equation \@ref(eq:regress) is appropriate once we have coded each factor in
+terms of numerical (binary) indicators[^8].
+
+It is important to recognize that the multiple linear regression model
+makes some rather strong assumptions. We have already noted assumptions
+about the error terms in equation \@ref(eq:regress). However, even more
+important is the implicit
+assumption that the relationship between the target variable and the
+predictors is linear. There are ways of relaxing this assumption
+somewhat (for example, using *polynomial regression*), but we shall not
+pursue these here. Rather, we will look later at methods that allow far
+more flexible relationships between the response and the predictors.
+
+### Fitting Linear Regression Models
+
+In order to apply regression models in practice we must estimate the
+parameters $\beta_0, \beta_1, 
+\ldots, \beta_p$. This is referred to as 'fitting the model'. This can
+be done using the *method of least squares*, whereby we select the
+values $\hat \beta_0, \hat \beta_1, \ldots, 
+\hat \beta_p$ that minimize the sum of squares
+
+\begin{equation}
+SS(\beta_0, \beta_1, \ldots, \beta_p) = \sum_{i=1}^n \left ( 
+         y_i - \beta_0 - \beta_1 x_{i1} - \beta_{2} x_{i2} - \cdots - \beta_p x_{ip} \right )^2.
+(\#eq:ss)\end{equation}
+
+The minimizers
+$\hat \beta_0, \hat \beta_1, \ldots, \hat \beta_p$ are called least
+squares estimates of the parameters. The minimum value of the $SS$
+(i.e. the value of $SS$ when the parameters are set to the least squares
+estimates) is called the *residual sum of squares*, frequently
+abbreviated to RSS. Hence
+
+\begin{equation}
+{\textsf {RSS}}= \sum_{i=1}^n  ( 
+         y_i - \hat \beta_0 - \hat \beta_1 x_{i1} - \hat \beta_{2} x_{i2} - \cdots - \hat \beta_p x_{ip}  )^2.
+(\#eq:rss)\end{equation}
+
+Regression models can be fitted in R using the `lm` function[^9]. The
+basic syntax is
+
+```{r, eval=FALSE}
+lm(formula, data)
+```
+
+where
+
+-   `formula` is the *model formula* (a required argument)
+
+-   `data` is the data frame in use (optional).
+
+A fitted model can be assigned to a fitted model object for later use
+(as illustrated a little further below).
+
+If the target variable is stored as the object `y` in R, and there are
+two predictor variables stored as `x1`, `x2`, then the aforementioned
+model formula will be
+
+```{r, eval=FALSE}
+y ~ 1 + x1 + x2
+```
+
+The number `1` on the right hand side of the formula tells R that you
+want to include an intercept (i.e. a $\hat \beta_0$) term in your model.
+In fact you can omit the `1 +` from the formula since R includes an
+intercept by default, but some people like to include it for aesthetic
+reasons. If you want to fit a regression through the origin, then the
+model is specified by `y ~ -1 + x`.
+
+R will look first in the data frame argument to `lm` (if provided) when
+searching for the variables in a model formula. It will then look in the
+user's workspace. In general, it is recommended that you do supply a
+data frame argument to `lm` in order to avoid confusion between common
+variable names in different datasets.
+
+One very useful convention in R model formulae is that a dot on the
+right-hand side of the formula represents all variables in the data
+frame excluding the target. For instance, if the data frame `my.df`
+contains variables `y`, `x1` and `x2`, then
+
+```{r, eval=FALSE}
+my.lm <- lm(y ~ x1 + x2, data=my.df)
+```
+
+and
+
+```{r, eval=FALSE}
+my.lm2 <- lm(y ~ . , data=my.df)
+```
+
+produce identical fitted models, saved as `my.lm` and `my.lm2`
+respectively in the above code.
+
+::: {.example}
+**Regression Modelling for the Wage Data**
+
+In this example we fit a regression model to the training data from the
+wage dataset.
+
+```{r}
+wage.lm <- lm(WAGE ~ . , data=wage.train)
+summary(wage.lm)
+```
+
+Some comments on this R snippet.
+
+-   The first line of code fits a linear model with `WAGE` as the
+    response (target) and all other variables in the data frame
+    `wage.train` as predictors. The resulting fitted model is saved as
+    the object `wage.lm`. (There is no requirement to use a name of the
+    form `something.lm` for the fitted model, but such a naming
+    convention can be helpful when it comes to remembering the
+    attributes of each of the objects in your workspace.)
+
+-   The presence of a row of dots in the R snippet indicates that we
+    have deleted some non-essential output.
+
+-   The `summary` function attempts to provide a summary of whatever
+    type of object it is applied to. For linear models we get a generic
+    type of table of regression coefficients. This table includes the
+    estimated coefficients themselves
+    (i.e. $\hat \beta_0, \ldots, \hat \beta_p$); their standard errors;
+    and t-values and corresponding p-values for testing whether the
+    associated coefficient is different from zero. A small p-value
+    (usually interpreted as one less than $0.05$) indicates that there
+    is statistically significant evidence that the corresponding
+    coefficient is not zero. (This is highlighted using stars -- the
+    more stars, the stronger the evidence that the coefficient is
+    non-zero.)
+
+    The interpretation of p-values for individual regression terms is
+    quite subtle[^10]. For the purposes of the current paper it is
+    sufficient to recognize that (highly) significant terms are
+    providing important information about the response variable, and
+    hence should be useful in generating predictions. Non-significant
+    variables are not provide so much information (at least when all
+    other variables have been taken into account), and hence may be
+    adding noise to the prediction model as much as anything else.
+
+    Hence, in the current example we see that `Union` is a significant
+    predictor of `WAGE`. `Union` is a binary variable with 1 indicating
+    union membership and 0 indicating lack thereof. Given the positive
+    coefficient for `Union`, it appears that belonging to a union has a
+    positive impact on a worker's hourly wage (having adjusted for all
+    the other predictors).
+:::
+
+### Prediction
+
+Regression models can be used for a variety of purposes. For example,
+their straightforward interpretability means that they can be employed
+to better understand the relationships between variables, and also to
+quantify the effects of predictors on the response. However, our primary
+interest here is in the use of these models for prediction.
+
+Given estimates of the model parameters (obtained using the method of
+least squares) we can form the *fitted model* as 
+
+\begin{align}
+\hat y &= \hat \beta_0 + \hat \beta_1 x_{1} + \hat \beta_{2} x_{2} + \cdots + \hat \beta_p x_{p} \\
+    &= \hat \beta_0 + \sum_{j=1}^p \hat \beta_j x_{j}.
+(\#eq:regress-fit)
+\end{align}
+
+We can hence obtain *point
+predictions* by substituting in requisite values for the predictors and
+then calculating the resulting value for $\hat y$. We use the phrase
+'point predictions' to emphasise that this procedure generates just a
+single prediction. Also useful are *prediction intervals*, which specify
+a range of values with an associated level of confidence.
+
+Prediction for linear models in R can be carried out using the `predict`
+command. The syntax for computing point predictions is as follows:
+
+```{r, eval=FALSE}
+predict(my.lm, newdata=my.test.predictors)
+```
+
+where `my.lm` is the fitted regression model to perform the prediction,
+and `my.test.predictors` is a data frame containing (as rows) the sets
+of predictors for which we wish to make predictions[^11]. We can obtain
+predictions intervals (in addition to the point predictions) by
+
+```{r, eval=FALSE}
+predict(my.lm, newdata=my.test.predictors, interval="prediction")
+```
+
+By default the prediction interval will be at the 95% level (so that
+there is probability 0.95 that each prediction interval will contain the
+true target value, assuming that the model is adequate). This percentage
+can be changed through the optional `level` argument to `predict`.
+
+::: {.example}
+**Prediction for the Wage Data**
+
+Here we use the model fitted in the previous example to make predictions
+for the target variable (hourly wage) in the test data set.
+
+```{r}
+wage.pred <- predict(wage.lm, newdata=wage.test, interval="prediction")
+wage.pred.fit <- wage.pred[,1]
+wage.pred.lwr <- wage.pred[,2]
+wage.pred.upr <- wage.pred[,3]
+head(wage.pred)
+```
+
+We can then plot the true target values (i.e. wages) against predictions based
+on the linear model `wage.lm`:
+
+```{r wagepred1, fig.cap="Scatterplot of true wages against predicted wages."}
+plot(wage.pred.fit, wage.test$WAGE, xlab="Predicted wage", ylab="True wage")
+```
+
+A second plot embellishes this by adding the range of
+95% prediction intervals, as depicted by vertical lines for each
+observation in the test set.
+
+```{r wagepred2, fig.cap="Scatterplot of true wages against predicted wages, with 95% prediction intervals depicted by vertical lines."}
+plot(wage.pred.fit, wage.test$WAGE, xlab="Predicted wage", ylab="True wage",
+     ylim=c(-10,30), col=2, pch=19)
+segments(wage.pred.fit, wage.pred.lwr, wage.pred.fit, wage.pred.upr, col=grey(0.4))
+points(wage.pred.fit, wage.test$WAGE, col=2, pch=19)
+```
+
+Some noteworthy points are as follows.
+
+-   The first command saves the predictions in the object `wage.pred`.
+    Because we specified the `interval` argument in `predict`, the
+    object `wage.pred` is a three column matrix. The first column
+    contains the predictions themselves; the second and third columns
+    are lower and upper bounds respectively for 95% prediction
+    intervals. We save these columns as vectors `wage.pred.fit`,
+    `wage.pred.lwr` and `wage.pred.upr` for later use.
+
+-   The plotting command for the first Figure \@ref(fig:wagepred1)
+    requires no special comment, but the
+    code to produce Figure \@ref(fig:wagepred2) is a little more involved. We first
+    produce the plot of true values against predicted values (using red
+    filled circles as plotting symbol). We then use the `segments`
+    command to draw line segments from the lower end of each prediction
+    interval to the upper. (Look at the help file for `segments` if you
+    want to learn more about this function.) The final `points` function
+    replots the (red) points in the graph which otherwise get partially
+    obscured by the lines. (This is by no means essential, but it does
+    make the plot look at little more aesthetically pleasing.)
+
+-   Two things are strikingly clear from the Figures. First, the (point)
+    predictions are not terribly impressive. If the regression model
+    produced highly accurate predictions then the plot of true versus
+    predicted values would lie more or less on a 45$^\circ$ straight
+    line. Instead we see considerable variation. Second, the prediction
+    intervals are very wide, indicating a high degree of imprecision in
+    the predictions. Consider, for example, that when the true value of
+    `WAGE` is about 8 dollars per hour, the prediction intervals range
+    from about $0$ to $16$ dollars per hour.
+
+    Of course, zero dollars per hour (or even slightly negative values
+    in some cases) is nonsensical in the prediction interval, but
+    reflects the dependence of linear regression models on their
+    underlying assumptions (in this case the pertinent one being that
+    the errors are normally distributed).
+:::
+
+### Prediction Accuracy and the Bias-Variance Trade-Off
+
+Why are the predictions so variable in the previous Example? After all,
+we seem to have quite a lot of information available -- 10 attributes on
+400 individuals. However, how many of these variables are providing
+useful information for predicting the target variable? Inclusion of
+predictors that have very little association with the target will simply
+add noise to the prediction process.
+
+This discussion suggests that we should try and identify the relatively
+uninformative predictors, and remove them from the model in order to
+reduce the noise in the system. However, we should be aware that
+deletion of any predictor that is related to the target (no matter how
+weak that relationship is) will introduce bias in the prediction
+process.
+
+Consider a very simple example in which there are only two predictors,
+$x_1$ and $x_2$, where the first of these is strongly informative about
+the target $y$, and the latter very weakly so. The model using both
+predictors is $$y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \varepsilon$$
+Denote this model $M_1$. Because the error term has zero mean, we can
+compute the mean (expected) value of the response variable as
+\begin{equation}
+{\textsf E}[y] = \beta_0 + \beta_1 x_1 + \beta_2 x_2.
+(\#eq:m1)
+\end{equation}
+
+We can expect $\beta_2$ to be very close to zero (since $x_2$ is only
+weakly informative about $y$). Suppose that its true value is
+$\beta_2 = 0.0001$. Suppose further that if we estimate this parameter
+from training data, then we might obtain an estimate $\hat \beta_2$
+anywhere in the range $(-0.15,\, 0.15)$ (depending on the particular
+quirks of the sample of training data that we happen to have to hand).
+It follows that unless we get very lucky, the estimate $\hat \beta_2$
+will be further from the true value than will be zero. In other words,
+it would typically be better to set $\beta_2 = 0$ (i.e. eliminate the
+variable $x_2$ from the model) than to try and estimate this parameter.
+
+This discussion suggests that we should prefer model $M_2$,
+$$y = \beta_0 + \beta_1 x_1 +  \varepsilon$$
+where the second predictor is excluded. Note that
+\begin{equation}
+{\textsf E}[y] = \beta_0 + \beta_1 x_1
+(\#eq:m2)
+\end{equation}
+under $M_2$. Since this expected value ignores the small
+but non-zero contribution from the term $\beta_2 x_2$ in equation
+\@ref(eq:m1), it follows
+that equation \@ref(eq:m2) misspecifies the mean value ${\textsf E}[y]$. In
+other words, the model is biased.
+
+In summary, excluding a very weakly informative predictor will introduce
+bias into the prediction procedure, but will eliminate variability
+inherent in having to estimate its coefficient (i.e. the corresponding
+$\beta$). This leads us to a critical idea in prediction (and indeed in
+Statistics in general). The controllable error in prediction can be
+decomposed into two types. First, there is bias due to misspecification
+of the model. Second, there is variance derived from uncertainty in the
+estimates of the regression parameters. It will often be worth
+introducing a small amount of bias if we can obtain a large reduction in
+variance as a result. This is known as the *bias-variance trade-off*.
+
+We can express these ideas mathematically as follows. Suppose that we
+are trying to predict a test case with target $y_0$ and predictors
+$x_{1,0}, \ldots, x_{p,0}$. The target can be decomposed as
+\begin{equation}
+y_0 = f_0 + \varepsilon_0
+(\#eq:pred-decompose)
+\end{equation}
+where $f_0 = f_0(x_{1,0}, \ldots, x_{p,0})$
+is predictable from $x_{1,0}, \ldots, x_{p,0}$, and $\varepsilon_0$ is
+unpredictable error[^12]. It follows that the performance of a predictor
+$\hat y$ can be assessed by how well it estimates $f_0$. We can measure
+that in terms of mean squared error (MSE), defined by
+\begin{equation}
+\textsf{MSE}(\hat y) = {\textsf E}\left [ (\hat y - f_0)^2 \right ].
+(\#eq:mse)\end{equation}
+This is the 'controllable error' (as opposed to the
+unpredictable $\varepsilon_0$) that was mentioned earlier. It can be
+decomposed into squared bias and variance components as follows[^13]:
+\begin{align}
+\textsf{MSE}(\hat y) &= {\textsf E}\left [ (\hat y - f_0)^2 \right ] \\
+             &= {\textsf E}\left [ (\hat y - {\textsf E}[\hat y] + {\textsf E}[\hat y] - f_0)^2 \right ] \\
+             &= {\textsf E}\left [ (\hat y - {\textsf E}[\hat y])^2 + ({\textsf E}[\hat y] - f_0)^2 + 2 (\hat y - {\textsf E}[\hat y])({\textsf E}[\hat y] - f_0) \right ] \\
+             &= {\textsf E}\left [ (\hat y - {\textsf E}[\hat y])^2 \right ] + {\textsf E}\left [ ({\textsf E}[\hat y] - f_0)^2 \right ] + 2 {\textsf E}\left [  (\hat y - {\textsf E}[\hat y])({\textsf E}[\hat y] - f_0) \right ] \\
+             &= {\textsf E}\left [ (\hat y - {\textsf E}[\hat y])^2 \right ] +  ({\textsf E}[\hat y] - f_0)^2  + 2 ({\textsf E}[\hat y] - {\textsf E}[\hat y])({\textsf E}[\hat y] - f_0) \\
+             &= {\textsf E}\left [ (\hat y - {\textsf E}[\hat y])^2 \right ] +  ({\textsf E}[\hat y] - f_0)^2   \\
+             &= {\textsf {var}}(\hat y) + \left [ {\textsf {bias}}(\hat y) \right ]^2
+(\#eq:mse-decompose)\end{align}
+where
+${\textsf {bias}}(\hat y) = {\textsf E}[\hat y] - f_0$ is the systematic
+difference between the mean of our predictor $\hat y$ and the
+estimand[^14] $f_0$. Equation \@ref(eq:mse-decompose)
+ describes the bias-variance trade-off in a transparent manner.
+
+::: {.example}
+**Prediction Performance for the Wage Data**
+
+If you look back at the previous Example you will see that several of
+the predictors are not statistically significant. We might therefore try
+removing one or more of these variables from the model in order to
+improve prediction performance courtesy of a bias-variance trade-off.
+Here we consider removing `RACE` from the model.
+
+```{r}
+wage.lm.2 <- lm(WAGE ~ . -RACE, data=wage.train)
+wage.pred.test <- predict(wage.lm, newdata=wage.test)
+wage.pred.test.2 <- predict(wage.lm.2, newdata=wage.test)
+MSE.test <- mean((wage.pred.test - wage.test$WAGE)^2)
+MSE.test.2 <- mean((wage.pred.test.2 - wage.test$WAGE)^2)
+MSE.test
+MSE.test.2
+wage.pred.train <- predict(wage.lm,wage.train)
+wage.pred.train.2 <- predict(wage.lm.2,wage.train)
+MSE.train <- mean((wage.pred.train - wage.train$WAGE)^2)
+MSE.train.2 <- mean((wage.pred.train.2 - wage.train$WAGE)^2)
+MSE.train
+MSE.train.2
+```
+
+There is quite a lot going on in that R snippet! The most important
+points are as follows.
+
+-   The first line of code fits a new regression model, which is stored
+    as `wage.lm.2`. Notice the use of minus signs on the right-hand side
+    of the model formula to remove unwanted terms. (It is quicker here
+    to remove two unwanted terms than to list the eight predictors that
+    we do wish to include.)
+
+-   The objects `wage.pred.test` and `wage.pred.test.2` respectively
+    contain point predictions for the observations in the test dataset.
+
+-   The observed mean squared error (MSE) of prediction is given by
+    $$\textsf{MSE}_{test} = \frac{1}{n_{test}} \sum_{i=1}^{n_{test}} \left ( y_{test,i} - \hat y_{test,i} \right )^2$$
+    where $n_{test}$ denotes the number of observations in the test
+    dataset; $y_{test,i}$ is the value of the target for the $i$th test
+    observation; and $\hat y_{test,i}$ is the corresponding prediction
+    based on a regression model.
+
+    The observed MSE values on the test data using our two models are
+    stored as `MSE.test` and `MSE.test.2` respectively. Note that the
+    MSE value is a little smaller for the second model, indicating that
+    we get slightly better predictions overall using that model. Removal
+    of the `RACE` has been beneficial.
+
+-   We can also compute a mean squared error on the training dataset:
+    $$\textsf{MSE}_{train} = \frac{1}{n_{train}} \sum_{i=1}^{n_{train}} \left ( y_{train,i} - \hat y_{train,i} \right )^2$$
+    using the obvious notation.
+
+    We get $\textsf{MSE}_{train} = `r round(MSE.train, 2)`$ for the first model and
+    $\textsf{MSE}_{train} = `r round(MSE.train.2, 2)`$ for the second. Two aspects of these
+    results are striking. First, the mean squared errors based on the
+    training data are considerably smaller than those based on the test
+    data. Second, the first model is preferable on this measure.
+
+    What is going on here is that measuring predictive accuracy based on
+    the training data gives biased results. The model was constructed
+    using the training data, and so will be specially tailored to that
+    dataset. To use a sporting analogy, the model enjoys home ground
+    advantage when used to predict the training data, while real
+    prediction (e.g. on the test data) is like playing away from home.
+    This explains why the MSE values on the training set are so much
+    lower.
+
+    Digging a little deeper, you should be able to see that
+    $\textsf{MSE}_{train} = {\textsf {RSS}}/n_{train}$ where
+    ${\textsf {RSS}}$ is the residual sum of squares for the regression
+    model, defined in equation \@ref(eq:rss). Now,
+    removal of predictors can never reduce ${\textsf {RSS}}$, and will
+    generally cause it to increase (albeit by a very smaller amount if
+    the predictors in question are weakly associated with the response).
+    It follows that $\textsf{MSE}_{train}$ will always favour the model
+    with more predictors, and hence fails to take proper account of the
+    bias-variance trade-off. Again, this is because
+    $\textsf{MSE}_{train}$ alone is not a good measure of the true
+    predictive power of the model. We should not let the results on
+    $\textsf{MSE}_{train}$ persuade us that the first model is better
+    than the second.
+:::
+
+### Model Selection
+
+The previous discussion indicates the need for methods of model
+selection, whereby we choose between models with different sets of
+predictor variables. Our aim will be to find the combination that
+provides the best the best possible predictions in the test data,
+although in practice we will typically have to make do with find a model
+that is merely good (as opposed to the very best).
+
+There are a myriad of model selection techniques available for linear
+regression models. We shall discuss just one here[^15], namely
+*backwards variable selection* algorithm using *AIC* (Akaike information
+criterion). This method requires only a training dataset, and works by
+starting with a model containing all the available predictors. The
+algorithm then proceeds step by step, systematically removing predictors
+that provide little information about the target variable. In more
+detail, at each step the predictor which adds least information to the
+model (as measured by AIC) is removed, unless all remaining predictors
+provide a useful amount of information. When that occurs the algorithm
+terminates.
+
+Note the following.
+
+-   The AIC criterion can be motivated by concepts in information theory
+    and entropy. It is defined in such a way that a *smaller* value of
+    AIC indicates a better model. AIC can be said to describe the
+    bias-variance trade-off in model construction.
+
+-   Each factor (i.e. categorical predictor variables) is handled as a
+    whole in the variable selection process. For example, for the wage
+    data we must either include the variable `OCCUP` or exclude it; it
+    would be meaningless to include some of its levels (e.g. management)
+    while excluding others.
+
+-   Backwards variable selection in R can be conducted using the `step`
+    command. The required syntax is
+
+```{r, eval=FALSE}
+step(my.full.model)
+```
+
+    where `my.full.model` is a fitted linear model containing all the
+    predictors[^16].
+
+::: {.example}
+**Model Selection for the Wage Data**
+
+We perform model selection for the wage data as follows.
+
+```{r}
+wage.lm.step <- step(wage.lm)
+summary(wage.lm.step)
+```
+
+The first line of code implements backwards variable selection with AIC,
+and stores the final model as `wage.lm.step`. The output at each step of
+the algorithm displays a table describing the variables that are
+currently in the model, and the effects of removing each one. The tables
+are ordered by increasing AIC. For example, at the very first step the
+effect of removing the variable `MARRIAGE` is to produce a model with
+AIC of 1156.1. This is the lowest AIC that can be obtained by deleting a
+single predictor (or by leaving the model unchanged).
+
+The algorithm halts once `MARRIED`, `AGE` and `RACE` have been removed
+from the model. At that stage the AIC cannot be reduced by removing any
+single predictor.
+:::
+
+Finally, we note that while model selection using AIC is generally well
+regarded, it will not guarantee improved prediction accuracy.
+
+```{r}
+wage.pred.test.step <- predict(wage.lm.step,wage.test)
+MSE.test.step <- mean((wage.pred.test.step - wage.test$WAGE)^2)
+MSE.test.step
+```
+
+Comparing this result with that from the previous Example, we see that
+the model produced by the backwards selection algorithm is slightly
+worse in terms of prediction MSE than both of those we looked at
+earlier.
+
+**You should now do computer lab 5**
+
+## Regression Trees{#sec:regtree}
+
+```{r include=FALSE}
+library(tidyverse)
+library(rpart)
+wage.train <- read_csv("data/wage-train.csv")
+wage.test  <- read_csv("data/wage-test.csv")
+```
+
+### Introduction to Regression Trees{#sec:introtree}
+
+Linear regression models make assumptions about the form of the
+relationship between the target and the predictors. When these
+assumptions hold, such regression models are extremely effective
+predictors[^21]. However, linear regression models can perform terribly
+if the model underlying assumptions fail. In such circumstances we will
+want more flexible methods of prediction, that are less dependent on
+modelling assumptions. Regression trees[^22] are one such method.
+
+The basic idea of regression trees is to split the data into groups
+defined in terms of the predictors, and then estimate the response
+within each group by a fixed value. Most commonly, the groups are formed
+by a sequence of binary splits, so that the resulting partition of the
+data can be described by a *binary tree*. These ideas, and also the
+flexibility inherent in tree-based regression models, are illustrated in
+the following example.
+
+::: {.example}
+**A Regression Tree Model for a Toy Dataset**
+
+We generated an artificial dataset of 400 observations with a single
+predictor $x$ and a target $y$. A scatterplot of the data is displayed
+in Figure \@ref(fig:toytree1). The relationship between $x$ and $y$ is
+clearly quite complicated, and so would be difficult to model using
+linear regression.
+
+```{r toytree1, echo=FALSE, fig.cap="Scatterplot of toy dataset."}
+set.seed(2012)
+x <- runif(400,0,10)
+y <- 1+ sin(1.5*x/(1+x^2/100)) + rnorm(400,sd=0.25)
+plot(x,y)
+```
+
+A tree based method works by systematically splitting the data into
+groups according to $x$, and then predicting the target using the means
+within each group. The recursive partitioning of the data (i.e. the
+division into groups) is displayed using a tree in Figure \@ref(fig:toytree2). From
+the first branching of the tree (at its root) we see that the initial
+step is to divide the data into two parts: those with $x < 6.213$ branch
+to the left, and those with $x \ge 6.213$ branch to the right. The next
+step is to further divide those group with $x < 6.213$ into sub-groups
+with $x < 2.163$ and $x \ge 2.163$.
+
+```{r toytree2, echo=FALSE, fig.cap="Regression tree for the toy dataset."}
+toy.rp <- rpart(y ~ x, cp=0.1)
+plot(toy.rp,compress=T,margin=0.1)
+text(toy.rp,cex=1)
+```
+
+In principle we could partition the data further (by creating splits in
+the current groups), but for simplicity we will stop with the current
+set of *leaves*. At each leaf the target is estimated by the mean value
+of the y-variable for all data at that leaf. This means that the
+predictions are constant across the range of x-values defining each
+leaf. This is illustrated in Figure \@ref(fig:toytree3).
+
+```{r toytree3, echo=FALSE, fig.cap="Scatterplot of the toy dataset, with the partitioning of the data indicated by the background shading and the predictions within each group plotted as the horizontal line segments."}
+plot(x,y,col=2,pch=19)
+polygon(c(-1,-1,2.163,2.163),c(-0.7,2.9,2.9,-0.7),col=grey(0.95),border=NA)
+polygon(c(2.163,2.163,6.213,6.213),c(-0.7,2.9,2.9,-0.7),col=grey(0.85),border=NA)
+polygon(c(6.213,6.213,11,11),c(-0.7,2.9,2.9,-0.7),col=grey(0.95),border=NA)
+points(x,y,col=2,pch=19)
+segments(6.213,1.794,11,1.794,lwd=2)
+segments(2.163,0.5704,6.213,0.5704,lwd=2)
+segments(-1,1.645,2.163,1.645,lwd=2)
+box()
+```
+:::
+
+### How to Grow a Tree
+
+Before describing methodology for constructing a regression tree, we
+need to define some terms. In mathematics, a tree is a type of
+undirected graph. In the language of graph theory, the branches of the
+trees are called *edges* or arcs, and the vertices are often referred to
+as *nodes*. The trees that we use are *rooted* (with the root of the
+tree conventionally plotted at the top of the tree) and are binary
+(i.e. each vertex splits into two branches). Vertices at the tips of the
+tree (i.e. those without further splits) are called leaves.
+
+A regression tree is constructed by making a sequence of binary splits.
+At each step of the algorithm, we need to examine each of the current
+set of terminal nodes (i.e. leaves on the current tree) to see which
+split will most improve the tree. Implicit in this statement is the need
+for some measure of the quality of a tree, by which we can identify the
+optimal split.
+
+If we are thinking purely in terms of how well the tree fits the
+training data, then a natural measure of quality for any given tree is
+the residual sum of squares. This can be written as
+$${\textsf {RSS}}_{train} = \sum_{i=1}^{n_{train}} \left ( y_{train,i} - \hat y_{train,i} \right )^2$$
+where $\hat y_{train,i}$ is the tree-based prediction. Now the optimal
+predictions (in terms of minimizing the squared error) are provided by
+group means. In other words, if observation $i$ is assigned to leaf
+$\ell$, then $\hat y_{i} = \bar y_{\ell}$ where $\bar y_{\ell}$ is the
+mean of all data at that leaf (and where we have suppressed the
+subscript $train$ to simplify the notation). It follows that the
+residual sum of squares for a tree can be written in the form
+$${\textsf {RSS}}= \sum_{\ell} \sum_{i \in C_{\ell}} \left ( y_{i} - \bar y_{\ell} \right )^2$$
+where the set $C_{\ell}$ indexes the observation at leaf $\ell$.
+
+::: {.example}
+**A Very Simple Choice of Splits**
+
+Suppose that we observed the following data:
+
+::: {.center}
+  ----- ----- ----- -----
+  $x$     0.1   0.3   0.5
+  $y$       2     3     7
+  ----- ----- ----- -----
+:::
+
+It is clear that we need consider only two splits: (i) split the data
+according to whether $x < 0.2$ or $x \ge 0.2$, or (ii) split the data
+according to whether $x < 0.4$ or $x \ge 0.4$. The resulting trees are
+displayed in Figure \@ref(fig:splits), where the values of the target variables are
+shown for the observations at each vertex.
+
+```{r splits, echo=FALSE, fig.cap="Trees constructed using two possible splits of a simple dataset."}
+par(mfrow=c(1,2))
+par(mar=c(0,0,2,0))
+plot(c(0,2),c(0.1,2),type="n",xlab="",ylab="",axes=F)
+segments(0.3,1.5,1.7,1.5)
+segments(1,1.7,1,1.5)
+segments(0.3,1.5,0.3,0.5)
+segments(1.7,1.5,1.7,0.5)
+text(1,1.8,"{2,3,7}",cex=1.25)
+text(0.3,0.4,"{2}",cex=1.25)
+text(1.7,0.4,"{3,7}",cex=1.25)
+text(0.5,1.6,"x < 0.2",cex=1.25)
+text(1.5,1.6,"x >= 0.2",cex=1.25)
+title("Tree (i)",cex.main=1.5)
+plot(c(0,2),c(0.1,2),type="n",xlab="",ylab="",axes=F)
+segments(0.3,1.5,1.7,1.5)
+segments(1,1.7,1,1.5)
+segments(0.3,1.5,0.3,0.5)
+segments(1.7,1.5,1.7,0.5)
+text(1,1.8,"{2,3,7}",cex=1.25)
+text(0.3,0.4,"{2,3}",cex=1.25)
+text(1.7,0.4,"{7}",cex=1.25)
+text(0.5,1.6,"x < 0.4",cex=1.25)
+text(1.5,1.6,"x >= 0.4",cex=1.25)
+title("Tree (ii)")
+```
+
+For tree (i) the mean for the left-hand leaf is $\bar{y}_1 = 2$ and the
+right-hand leaf is $\bar{y}_2 = (3+7)/2 = 5$. Hence for tree (i) we have
+$${\textsf {RSS}}= \left [ (2-2)^2 \right ] + \left [ (3-5)^2 + (7-5)^2 \right ] = 8.$$
+Following similar calculations, for tree (ii) we have
+$${\textsf {RSS}}= \left [ (2-2.5)^2 + (3-2.5)^2 \right ] + \left [ (7-7)^2 \right ] = 0.5.$$
+We conclude that the second split is better.
+
+Note that we would have got the same results using different splits; for
+example, a split of $x < 0.11$ and $x \ge 0.11$ for tree (i). However,
+it is conventional to split at the midpoint between the maximum of the
+'low valued' branch and the minimum of the 'high valued' branch.
+:::
+
+So far we have dealt only with splits based on numerical predictors.
+With factors (i.e. categorical predictors) we split by dividing the
+factor levels into two sets, and then sending observations down left or
+right branch according to this division. The separation of the levels is
+again done so as to minimize the residual sum of squares.
+
+If we restrict attention to trees of a certain size (i.e. with a maximum
+number of splits), then the reader with a particularly well developed
+sense of curiosity (or good mathematical intuition) might be tempted to
+ask whether a sequence of splits chosen to minimize the residual sum of
+squares at each step will produce the optimal tree (i.e. the one with
+the lowest residual sum of squares overall). The answer is no. The kind
+of step by step methodology that is employed in tree construction is
+known as a 'greedy' algorithm. It is relatively computationally cheap to
+perform, but is not guaranteed to generate the best of all trees. In
+general that would require a sense of forward planning that is not
+enabled in a greedy algorithm.
+
+### Implementing Regression Trees in R
+
+Regression trees can be constructed in R using the `rpart` function[^23].
+This is part of the `rpart` library, which must be pre-loaded before the
+functions therein can be used. The basic syntax for `rpart` mirrors that
+for `lm`: for example,
+
+```{r, eval=FALSE}
+rpart(y ~ x1 + x2, data=mydata)
+```
+
+will fit a regression tree with target variable `y` and predictors `x1`
+and `x2`, with R searching first the data frame `mydata` when looking
+for these variables.
+
+::: {.example}
+**Building a Regression Tree for the Wage Data**
+
+Here we build a regression tree from the US wage training data, and then
+use it to make predictions on the test set. The code below constructs
+the tree, then summarises and plots it.
+
+```{r}
+library(rpart)
+wage.rp <- rpart(WAGE ~ . ,data=wage.train)
+summary(wage.rp)
+```
+
+Some points to note:
+
+-   We start by loading the `rpart` package.
+
+-   The second command saves a regression tree as `wage.rp`. Note the
+    use of the dot in the model formula, again standing for all
+    variables in the dataset excluding the target.
+
+-   The summary of `wage.rp` returns information on the formation of all
+    splits. We have omitted much of the output (where indicated by the
+    string of dots) to save space.
+
+-   The table at the head of the summary for `wage.rp` provides
+    information on the extent to which each new split (i.e. the creation
+    of each new node) has improved the model. We will examine the
+    meaning of the various quantities in this table later, in section \@ref{sec:treeprune}.
+
+-   The remainder of the summary output describes each node in turn[^24].
+    For each vertex we get an ordered list of the top few possible
+    splits (the *primary splits*). These are specified by inequalities
+    for continuous predictors, and by sequences of L's and R's for the
+    levels of categorical predictors (indicating whether observations
+    split down the left or right branch). The listed improvements are
+    measured in terms of a the fractional reduction in the residual sum
+    of squares for the data at the node in question (the *parent* node
+    for the split). In more detail, suppose that $\hat y$ is the
+    prediction for all data at the parent node, and that $\hat y_L$ and
+    $\hat y_R$ are the predictions at the left and right 'child' nodes
+    respectively. Then if we define
+    ${\textsf {RSS}}_P = \sum_{i \in P} (y_i - \hat y)^2$ as the
+    residual sum of squares at the parent, and
+    ${\textsf {RSS}}_L = \sum_{i \in L} (y_i - \hat y_L)^2$ and
+    ${\textsf {RSS}}_R = \sum_{i \in R} (y_i - \hat y_R)^2$ as the
+    residuals sums of squares at left and right children, then the
+    improvement is measured by
+    $${\tt improve} = 1 - \frac{{\textsf {RSS}}_R + {\textsf {RSS}}_L}{{\textsf {RSS}}_P}.$$
+
+    With these comments in mind, we see that the first node (at the root
+    of the tree) was formed by splitting on the variable `OCCUP`.
+    Observations at levels 1, 3, 5 and 6 (i.e. `Management`, `Clerical`,
+    `Professional` and `Other`) are sent down the left-hand branch at
+    the split; those at levels 2 and 4 (i.e. `Sales` and `Service`) are
+    sent down the right-hand branch. Splitting in this way results in a
+    17.2% reduction in the residual sum of squares. (The next best
+    option would have been to split according to `EDU < 13.5`, which
+    would have resulted in a 14% reduction in residual sum of squares.)
+
+    The next split is at node 2, the left-hand child of the node. We can
+    see that a total of 280 observations were sent to this node at the
+    first split. The optimal split here is on `UNION<0.5` (i.e. whether
+    or not the worker has union membership), giving a 13.7% reduction in
+    residual sum of squares for observations at node 2.
+
+    The leaves of the tree (i.e. the terminal nodes) are described by
+    the number of observations, the mean response (i.e. prediction) and
+    sum of squares at each one. For example, there is a leaf (node 30)
+    with 11 observations and mean target value $12.18$.
+
+We can plot the structure of the tree using
+
+```{r wagetree, fig.cap="Regression tree for the US wage data."}
+plot(wage.rp, compress=TRUE, margin=0.1)
+text(wage.rp)
+```
+
+The command `plot(wage.rp)` plots just the structure of the
+regression tree. We add text describing the splits by
+`text(wage.rp`). The optional arguments `compress=TRUE` 
+and `margin=0.1` in the plot
+command tends to improve the appearance of the plotted tree.
+Note that the splits based on factors use alphabetically ordered
+letters to represent the factor levels (i.e. 'a' for level 1, 'b'
+for level 2 and so forth).
+
+We can obtain predictions from the fitted regression tree by applying
+the `predict` command[^25].
+
+```{r}
+wage.rp.pred <- predict(wage.rp, newdata=wage.test)
+head(wage.rp.pred)
+mse.rp <- mean((wage.rp.pred - wage.test$WAGE)^2)
+mse.rp
+```
+
+Here we have computed the mean squared error of prediction on the
+artificial test data using the regression tree `wage.rp`. A comparison
+with the linear regression models discussed earlier shows that the
+regression tree predictions are a little worse (a mean squared error of
+$`r round(mse.rp, 1)`$ in comparison to $21.9$ for regression model `wage.lm`). This
+could be because the relationship between the target and the important
+predictor variables is close to linear, or because the of regression
+tree model requires refining.
+
+You may have noticed in the regression tree summary in the Example above
+that *surrogate splits* are listed for some nodes. A surrogate split is
+an alternative that approximates the (best) primary split. Surrogate
+splits come into play when there are missing data. Specifically, if an
+observation lacks data on the current split variable, then it will be
+assigned to a branch by applying the surrogate splitting rule. For
+instance, had any observation lacked information on `OCCUP`, then it
+would instead have been assigned based on the surrogate split rule
+`EDU < 14.5`. The use of surrogate splits allows regression trees to
+make use of records that are partially complete. In comparison,
+regression models cannot do so (unless one first imputes replacements
+for the missing values).
+:::
+
+### Pruning{#sec:treeprune}
+
+Construction of the regression tree for the wage data halted when there
+were multiple observations at each leaf. In principle we can continue to
+split the nodes in any regression tree until we eventually end up with a
+tree with one observation at each leaf (assuming that each record has a
+unique combination of values for its predictors). However, this would
+produce a highly unreliable prediction model.
+
+To understand why, think in terms of bias-variance trade-off. If we have
+a regression tree with just a single observation at each leaf, then the
+predictions will be highly variable (if unbiased). On the other hand, if
+there are a good number of observations at each leaf then the averaging
+process will result in a far smaller variance for the prediction. The
+price to pay will be increased bias. In more detail, the predictable
+mean of the target (i.e. $f_0$ from equation \@ref(eq:pred-decompose))
+will typically vary according to the
+predictors. The regression tree models this as constant within each
+leaf, so that the greater the range of predictor values the worse the
+approximation.
+
+Consider, for example, the regression tree for the toy example in
+Section \@ref(sec:introtree). The tree in Figure \@ref(fig:toytree2)
+gives rise to the prediction model depicted in Figure \@ref(fig:toytree3).
+Clearly the horizontal line segments give only a crude approximation to
+the trend in the data. Were we to divide the x-axis into much small
+intervals, we could more closely track the trend in the target variable
+(and hence reduce the bias). However, if we took this to an extreme, and
+make the intervals so short that each contained just a few data points,
+then the predictions would be hugely variable. See Figure \@ref(fig:treebiasvariance).
+
+```{r treebiasvariance, echo=FALSE, fig.cap="Regression trees for the toy dataset with different numbers of splits. The predicted values, plotted as horizontal black lines, are connected to make it easier to follow their trend as a function of $x$. The top tree is very simple, and produces predictions with low variance but high bias. The bottom tree is highly complex, and produces predictions with high variance but low bias. The middle tree seems to produce a reasonable bias-variance trade-off."}
+toy.rp.1 <- rpart(y ~ x, cp=0.1)
+toy.rp.2 <- rpart(y ~ x, cp=0.01)
+toy.rp.3 <- rpart(y ~ x, cp=0.000001,minsplit=3)
+par(mar=c(4,1,1,1))
+par(mfrow=c(3,2))
+plot(toy.rp.1,compress=T,margin=0.1)
+plot(x,y,col=2,pch=19)
+lines(x,predict(toy.rp.1),lwd=2)
+plot(toy.rp.2,compress=T,margin=0.1)
+plot(x,y,col=2,pch=19)
+lines(x,predict(toy.rp.2),lwd=2)
+plot(toy.rp.3,compress=T,margin=0.1)
+plot(x,y,col=2,pch=19)
+lines(x,predict(toy.rp.3),lwd=2)
+```
+
+An alternative way of thinking about the bias-variance trade off is in
+terms of the balance between model complexity and model fit. Model
+complexity can be measured in terms of the number of vertices in the
+tree, while model fit can be measured by the residual sum of squares of
+the fitted tree. The top tree in Figure \@ref(fig:treebiasvariance) is
+a simple model (low complexity), with a fairly poor fit to the data.
+The bottom tree in Figure \@ref(fig:treebiasvariance) follows the training data extremely
+closely (i.e. has a very low residual sum of squares), but is highly
+complex -- far more complex than seems warranted. The middle tree
+provides a balance in terms of model complexity and model fit.
+
+The concept of model complexity motivates a methodology for determining
+the level of pruning regression trees. Specifically, we introduce the
+complexity parameter $cp$, which specifies the minimum improvement in
+model fit that warrants inclusion of a new split (and the additional
+complexity that this implies). This means that if at any stage of the
+tree growing we encounter a situation where no split produces an
+improvement of at least $cp$, then the tree is complete[^26]. The measure
+of improvement is once again the relative improvement in residual sum of
+squares. The default value of $cp$ is $0.01$, but this can be changed by
+specifying the `cp` argument of `rpart`.
+
+::: {.example}
+**Regression Trees of Different Complexities for the Wage Data**
+
+The regression tree for the wage training data displayed earlier in
+Figure \@ref(fig:wagetree)
+was constructed using the default value of the complexity parameter
+$cp = 0.01$. We here build trees using $cp=0.1$ and $cp=0.001$, and use
+them for prediction on the wage test data. The resulting trees are
+plotted in Figure \@ref(fig:wagetree2).
+
+```{r wagetree2, fig.cap="Regression trees for the US wage data with complexity parameters $cp=0.1$ (left-hand panel) and $cp=0.001$ right-hand panel) respectively."}
+wage.rp.1 <- rpart(WAGE ~ ., data=wage.train, cp=0.1)
+wage.rp.2 <- rpart(WAGE ~ ., data=wage.train, cp=0.001)
+par(mar=c(1,1,3,1))
+par(mfrow=c(1,2))
+plot(wage.rp.1,compress=T,margin=0.1)
+text(wage.rp.1,cex=0.7)
+title("cp=0.1")
+plot(wage.rp.2,compress=T,margin=0.1)
+text(wage.rp.2,cex=0.7)
+title("cp=0.001")
+```
+
+You should by now understand the general purpose of most of the R
+commands. We adjusted the margins of the plotting regions to reduce
+unnecessary white-space and adjusted the size of plotting characters, so
+as to improve the appearance of the plots in Figure \@ref(fig:wagetree2), but
+such embellishments are hardly critical. The main points to take away
+are first, that the choice of $cp=0.1$ leads to a hugely simple tree
+(with just a single split) while $cp=0.001$ generates a much more
+complex tree.
+
+We can also compute mean square error on the test data.
+
+```{r}
+wage.rp.pred.1 <- predict(wage.rp.1, newdata=wage.test)
+wage.rp.pred.2 <- predict(wage.rp.2, newdata=wage.test)
+mse.rp.1 <- mean((wage.rp.pred.1 - wage.test$WAGE)^2)
+mse.rp.2 <- mean((wage.rp.pred.2 - wage.test$WAGE)^2)
+mse.rp.1
+mse.rp.2
+```
+
+The second point of interest is that the mean squared
+error of prediction for the second tree is much lower than the first.
+Indeed, the mean squared error of $\textsf{MSE}= `r round(mse.rp.2, 1)`$ is noticeably
+lower than that using the default value of $cp=0.01$.
+:::
+
+### Validation and Cross-Validation{#sec:validation}
+
+The default value of $cp=0.01$ for the complexity parameter feels quite
+reasonable, at an intuitive level, but it is only a rule-of-thumb.
+Moreover, as we saw in the previous Example, we can often get better
+prediction results using alternative values of $cp$. This raises the
+question as to how we might try and determine a better value of $cp$ for
+prediction. Of course, if we have a test set including values for the
+target, then we could simply use the value of $cp$ that leads to minimal
+predictive error. While in practice the regression tree will be applied
+to real test data where the target is unobserved (hence the need for
+prediction!), we might nevertheless try and replicate this approach to
+selection of $cp$ using the data that we do have.
+
+We could take all the data for which we have target values, and divide
+them into training and *validation* datasets. The training data would be
+used for growing trees in the usual manner, but performance for any
+given value of $cp$ would be assessed by predictive accuracy on the
+validation dataset[^27]. A potential shortcoming of this approach is the
+dependence on the particular choice of validation dataset (in essence, a
+lack of symmetry in the way in which we handle each record), and the
+reduction in size of the training dataset. We could address the latter
+issue by splitting the data in proportions 90% to 10% for training and
+validation sets respectively, but there remains the problem that the
+particular 10% of observations in the latter set may be unusual.
+
+We can deal with this by using *cross-validation*. The idea is that we
+split the data into ten blocks of equal size, with each block in turn
+being set aside as the validation data. Starting with the first block as
+the validation set, we train the regression tree on the remaining 90% of
+the data and calculate the prediction error for various values of $cp$.
+We then set aside the second block as the validation set, and compute
+the prediction error for models trained on the other 90%, and so on.
+Eventually we will have ten sets of prediction errors, which can be
+averaged to give a cross-validation estimate of prediction error for
+each value of $cp$ that we employed.
+
+Before we illustrate the use of cross-validation for tree selection on
+the wage data, a number of general points about cross-validation warrant
+attention.
+
+-   The 90% to 10% data split just described gives rise to so-called
+    *10-fold cross-validation*. While this is common choice, it is by no
+    means the only one. For models that are highly computationally
+    expensive we might prefer 5-fold cross-validation (i.e. a split of
+    80% to 20% between validation and training sets at each step).
+
+-   Cross-validation results are subject to noise arising from the
+    random split into the cross-validation blocks. We can avoid this by
+    splitting the data into $n$ parts, with $n-1$ records in the
+    training set and just one in the validation set at each step. This
+    is known as *leave-one-out cross validation*. It can be very time
+    consuming to implement.
+
+-   The general idea of cross-validation is used far more widely in
+    Statistics than just for regression trees.
+
+::: {.example}
+**Cross-Validation Regression Tree Selection for the Wage Data**
+
+A table of model characteristics for different values of $cp$ can be
+obtained using the command `printcp`. (This in fact mirrors the first
+part of the output that we obtain when using the `summary` function of a
+regression tree.) The argument for `printcp` is the most complex model
+to be assessed (i.e. the one corresponding to the smallest value of
+$cp$).
+
+```{r}
+printcp(wage.rp.2)
+```
+
+The `xerror` column in the output table contains cross-validation
+estimates of the (relative) prediction error. The `xstd` is the standard
+error (i.e. an estimate of the uncertainty) for these cross-validation
+estimates. What we see is that the minimum cross-validation error occurs
+when $cp=0.2396$. (Note that any tree grown with $cp$ between this value
+of the next in the table, $cp=0.2018$ will produce the same tree.)
+However, the differences between the values of `xerror` are quite small
+compared to the entries in `xstd`, indicating that the cross-validation
+results do not provide a strong preference for any tree with between 1
+and 31 vertices.
+
+Finally, we compute the mean squared prediction error on the test data,
+using an optimal cross-validation value of the complexity parameter of
+$cp=0.023$.
+
+```{r}
+wage.rp.3 <- rpart(WAGE ~ ., data=wage.train, cp=0.023)
+wage.rp.pred.3 <- predict(wage.rp.3, newdata=wage.test)
+mse.rp.3 <- mean((wage.rp.pred.3 - wage.test$WAGE)^2)
+mse.rp.3
+```
+
+The prediction error of $\textsf{MSE}=`r round(mse.rp.3, 1)`$ is a bit better than that
+obtained using the default value of $cp$, but is less good than we
+obtained with $cp=0.001$. This simply reflects the fact that
+cross-validation results are subject to error, and so are by no means
+certain to identify the best model.
+:::
+
+## Prediction using Neural Networks
+
+### An Introduction to Neural Networks
+
+An artificial neural network (often abbreviated to just 'neural
+network') is a type of prediction model based on a crude representation
+of a human brain. The model comprises a highly interconnected network of
+'neurons' (the nodes of the network) which 'fire' and hence produce an
+output only if the level of input is sufficiently high.
+
+```{r nnetdiag, echo=FALSE, fig.cap="Diagram of a simple artificial neural network."}
+par(mar=c(0,0,0,0))
+plot(c(1,9),c(0,11),type="n",axes=F,xlab="",ylab="")
+symbols(c(2,2,2,2,5,5,5,8),c(1,3.67,6.33,9,2,5,8,5),circle=rep(0.5,8),inches=F,add=T)
+arrows(2.5,1,4.5,2,length=0.1)
+arrows(2.5,1,4.5,5,length=0.1)
+arrows(2.5,1,4.5,8,length=0.1)
+arrows(2.5,3.67,4.5,2,length=0.1)
+arrows(2.5,3.67,4.5,5,length=0.1)
+arrows(2.5,3.67,4.5,8,length=0.1)
+arrows(2.5,6.33,4.5,2,length=0.1)
+arrows(2.5,6.33,4.5,5,length=0.1)
+arrows(2.5,6.33,4.5,8,length=0.1)
+arrows(2.5,9,4.5,2,length=0.1)
+arrows(2.5,9,4.5,5,length=0.1)
+arrows(2.5,9,4.5,8,length=0.1)
+arrows(5.5,2,7.5,5,length=0.1)
+arrows(5.5,5,7.5,5,length=0.1)
+arrows(5.5,8,7.5,5,length=0.1)
+text(2,9,expression(x[1]),cex=1.5)
+text(2,6.33,expression(x[2]),cex=1.5)
+text(2,3.67,expression(x[3]),cex=1.5)
+text(2,1,expression(x[4]),cex=1.5)
+text(5,8,expression(z[1]),cex=1.5)
+text(5,5,expression(z[2]),cex=1.5)
+text(5,2,expression(z[3]),cex=1.5)
+text(8,5,expression(hat(y)),cex=1.5)
+text(2,10.2,"Inputs",cex=1.5)
+text(5,10.2,"Hidden layer",cex=1.5)
+text(8,10.2,"Output",cex=1.5)
+```
+
+An artificial (feed-forward) neural network consists of an ordered
+sequence of layers of neurons, as illustrated in Figure \@ref(fig:nnetdiag). Each
+node in one layer is connected to all nodes in the previous layer,
+through which it receives information, and to all nodes in the next
+layer, to which it sends information. The first layer (working from the
+left, with the network arrayed as in the Figure) comprises the input
+nodes, where predictor information is fed into the network. Next follow
+a number of hidden layers, and finally there is an output node[^28]. In
+principle a neural network can be many hidden layers, with each
+additional layer adding to the flexibility, complexity and computational
+cost of the model. In practice neural networks with just a single hidden
+layer are often preferred. We shall focus on neural networks of this
+type henceforth.
+
+### Building a Neural Network
+
+To implement a neural network we must (i) decide on the number, $M$, of
+nodes in the hidden layer; (ii) devise functions to relate the *derived
+features* $z_1, \ldots, z_M$ (i.e. the values in the hidden layer) to
+the input variables; and (iii) choose a function to describe the
+predicted target $\hat y$ in terms of $z_1, \ldots, z_M$. Now, neural
+networks are rather complex things (we are definitely entering the
+territory of 'black box' prediction models here), and there is little by
+way of theory to help with these choices. In particular, selection of
+the number of hidden nodes is something of an art. Nevertheless, for
+prediction problems we will not need more hidden nodes than the number
+of predictors $p$, where we think of factors in terms of their dummy
+variable representation[^29]. Using $\lceil p/2 \rceil$ hidden nodes is
+often a reasonable place to start, though some further exploration is
+often useful[^30].
+
+The function that relates the derived features to the inputs
+(i.e. predictors) is called the *activation function*, which we shall
+denote by $\phi$. It operates on a linear combination of the predictors,
+so that $z_k = \phi(v_k)$ where
+\begin{equation}
+v_k = \alpha_{0k} + \alpha_{1k} x_1 + \cdots + \alpha_{pk} x_p
+(\#eq:hiddenfeature)
+\end{equation}
+for $k=1,\ldots,M$. The usual choice of
+$\phi$ is the sigmoid function $$\phi(v) = \frac{1}{1 + e^{-v}}$$ which
+is plotted in Figure \@ref(fig:activation).
+
+```{r activation, echo=FALSE, fig.cap="A sigmoid activation function."}
+curve(1/(1+exp(-x)),from=-5,to=5,xlab="v",ylab=expression(phi(v)))
+```
+
+The predicted target $\hat y$ is then derived as a linear combination of
+the hidden features:
+\begin{equation}
+\hat y = \beta_0 + \beta_1 z_1 + \cdots + \beta_M z_M.
+(\#eq:nnetoutput)
+\end{equation}
+
+The parameters $\alpha_{01}, \alpha_{11}, \ldots, \beta_{M}$ of the
+neural network are often referred to as *weights*. They must be
+estimated by fitting the model to training data. We seek to select the
+weights that minimize the residual sum of squares for predictions from
+the neural network, but this process is not straightforward because of
+the complexity of the model (and in particular, the sheer number of
+parameters that need to be estimated). In practice neural networks are
+fitted using a so-called 'back propagation algorithm'.
+
+### Prediction Using Neural Networks in R
+
+The R function for fitting a neural network is `nnet`. This is part of
+the `nnet` package which must be pre-loaded. The syntax to fit a neural
+network (of the type described above) is of the form
+
+```{r, eval=FALSE}
+nnet(y ~ x1 + x2 + x3 + x4, data=mydata, size=2, linout=TRUE)
+```
+
+The specification of the model formula and data frame is familiar, but
+there are two other arguments that require attention. The `size`
+argument specifies the number of nodes in the hidden layer. It has no
+default value. The argument `linout` is logical, and indicates whether
+the relationship between the prediction (output $\hat y$) and the
+derived features is linear (as in Equation \@ref(eq:nnetoutput)) or not.
+The default setting for this
+argument is `FALSE`, whereupon the right-hand side of Equation \@ref(eq:nnetoutput)
+is transformed so that $\hat y$ is forced to
+lie in the interval $[0,1]$. This default setting turns out to be
+appropriate for classification problems (when we are trying to estimate
+probabilities of class membership) but for prediction problems we must
+set `linout=TRUE`.
+
+In addition to the essential arguments just discussed, `nnet` has a
+number of important optional arguments that control the operation of the
+model fitting algorithm. The `decay` argument deserves particular
+attention. It controls the weight updating rate in the back propagation
+algorithm, and can have quite a significant impact on the results. The
+default value is zero, but setting `decay` to a value such as $0.01$ or
+$0.001$ is often a better choice.
+
+The model fitting algorithm used by `nnet` requires initial values to be
+set for the weights. By default, the algorithm selects the starting
+value for each weight randomly on the interval $[-0.5,0.5]$. It turns
+out that the final values of the weights can be quite dependent upon the
+choice of initial values, and as a consequence you may find that the
+fitted neural network (and hence predictions) can vary, even when one is
+running precisely the same code. This variation can be suppressed by
+setting the random number seed with the `set.seed()` command, but the
+fact remains that fitting neural networks using `nnet` is a more
+uncertain and difficult business than fitting either linear regression
+or regression tree models.
+
+Once we have a fitted neural network model, the `predict` command can be
+applied to obtain predictions in the usual way.
+
+::: {.example}
+**Neural Network Prediction for the Wage Data**
+
+We apply neural networks, built on the wage training data, to predict
+wages in the test dataset. In determining the number of hidden nodes to
+select initially, we note that the data frame has 5 numerical
+predictors, namely `EDU`, `SOUTH`, `EXP`, `UNION`, and `AGE`; and 5
+factors, namely `SEX` (with 2 levels), `RACE` (3 levels\", `OCCUP` (6
+levels), `SECTOR` (3 levels) and `MARRIAGE` (2 levels). This gives an
+equivalent number of numerical predictors of
+$p = 5 + 1 + 2 + 5 + 2 + 1 = 16$, and hence suggests that we start by
+trying $p/2 = 8$ nodes in the hidden layer.
+
+```{r}
+library(nnet)
+set.seed(1069)
+wage.nn.1 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE)
+wage.nn.pred.1 <- predict(wage.nn.1,wage.test)
+mse.nn.1 <- mean((wage.nn.pred.1 - wage.test$WAGE)^2)
+mse.nn.1
+set.seed(1069)
+wage.nn.2 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE)
+wage.nn.pred.2 <- predict(wage.nn.2,wage.test)
+mse.nn.2 <- mean((wage.nn.pred.2 - wage.test$WAGE)^2)
+mse.nn.2
+set.seed(1069)
+wage.nn.3 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE, decay=0.01)
+wage.nn.pred.3 <- predict(wage.nn.3,wage.test)
+mse.nn.3 <- mean((wage.nn.pred.3 - wage.test$WAGE)^2)
+mse.nn.3
+set.seed(1069)
+wage.nn.4 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE, decay=0.01)
+wage.nn.pred.4 <- predict(wage.nn.4,wage.test)
+mse.nn.4 <- mean((wage.nn.pred.4 - wage.test$WAGE)^2)
+mse.nn.4
+```
+
+Some points to note:
+
+-   We reinitialize the random number generator before fitting each
+    model so as to improve comparability between models of the same
+    size.
+
+-   The first model has 8 hidden nodes. Given that there are $p+1$
+    weights to estimate per hidden node (the number of $\alpha$
+    parameters in Equation \@ref(eq:hiddenfeature), and 8+1 parameters to estimate for
+    the output nodes (the number of $\beta$ parameters in Equation \@ref(eq:nnetoutput)
+     the model hence has
+    $17\times 8 + 9 = 145$ weights to be determined. The mean prediction
+    error for this model on the artificial test set is
+    $\textsf{MSE}= `r round(mse.nn.1, 1)`$.
+
+-   In the second neural network we try 5 hidden nodes, giving a total
+    of 91 weights to be determined. (Check that you can work out why
+    this is the number of weights in the model.) We get
+    $\textsf{MSE}= `r round(mse.nn.2, 1)`$.
+
+-   The third and fourth models differ from the first and second only in
+    that we specify a value of $0.01$ for the `decay` argument. As a
+    result, the prediction error for the neural net with 8 hidden nodes
+    gets a little worse ($`r round(mse.nn.3, 1)`$) but the error for the
+    network of size 5 improves, to $`r round(mse.nn.4, 1)`$.
+:::
+
+## Summary of Prediction Methods
+
+There are a number of steps involved in statistical prediction. The
+first is to choose a methodology. At one extreme are linear regression
+models, with powerful supporting theory but limited flexibility. We may
+expect linear regression models to perform well in cases where the
+relationships between variables are almost linear, but to struggle when
+this is clearly not the case. At the other extreme are neural networks,
+which can handle more or less any kind of relationships between
+variables, but are so complicated that model fitting and assessment can
+be an uncertain business.
+
+Having selected a methodology, we are faced with the problems of model
+fitting and model selection. In general, the more theory that we have
+available on a type of model, the more straightforward model fitting
+will be, and the more options we will have for model selection. Model
+fitting is implemented using training data, and is usually done with the
+aim of minimizing the residual sum of squares. With regard to model
+selection, in linear regression this is a matter of deciding which
+variables should be in the model, while for regression trees we must
+choose the number of splits in the tree. When we lack theory (or it is
+too complex to implement), we can employ generic approaches like the use
+of validation datasets for model comparison, or cross-validation
+techniques.
+
+We might assess the accuracy of our prediction model. This can be done
+using an artificial test dataset, which should be independent of
+training and validation sets (so as to avoid bias due to unfair 'home
+advantage'). The rich theory for linear regression models allows us to
+assess prediction accuracy (e.g. through prediction intervals) without
+the need for a test dataset, but the results are reliable only when
+model assumptions hold.
+
+Once we have selected what we think is a good prediction model (e.g. a
+neural network with 6 nodes in the hidden layer and some given value of
+the decay parameter) we are in a position to do 'real world' prediction
+on test cases where the target is truly missing. As mentioned in Section
+\@ref(sec:predictionbasics), we should refit our preferred model
+on all the training data before applying it to the real test dataset.
+
+::: {.example}
+**Time for a Final Example on Prediction**
+
+We have covered a lot of detail on various techniques for prediction.
+With such detail comes the danger that you might lose sight of the big
+picture. To try and help, this Example tries to put everything together
+in an easy to follow 'toy' application.
+
+Imagine that you are advising the owner of a shop selling antique clocks
+on pricing. For each clock data is available on two predictor variables,
+as follows:
+
+  ------------- ---------------------------------------------------
+  `Age`         age of clock, in years
+  `Condition`   factor on three levels, `good`, `average`, `poor`
+  ------------- ---------------------------------------------------
+
+The shop has recently sold 50 clocks. For these clocks the sale price is
+available, in addition to the predictor variables. The information on
+these 50 clocks forms the training data. The shop has another 20 clocks
+in stock, awaiting sale. These form the test data.
+
+We must use the training data to create some rule relating the target
+variable `Price` (sale price, in dollars) to the predictor variables.
+Whatever methodology we employ to construct this rule (be it linear
+regression, or neural networks, or whatever) will result in a function
+$f$ that forms a prediction
+$$\widehat {\tt Price} = f({\tt Age}, {\tt Condition})$$ for any given
+values of the predictor variables. We then apply this rule to the unsold
+clocks (the test data), so that in each case we get a predicted price.
+
+Suppose for simplicity that we just consider two methods of prediction:
+linear regression, and regression trees. The R code below creates
+prediction rules using each of these methodologies, assesses their
+efficacy on a validation set, and then applies the better of them to
+make predictions on the test data.
+
+We start by just looking at a print out of some of the data.
+
+```{r, message=FALSE}
+clock.train <- read_csv("data/clock-train.csv")
+clock.test <- read_csv("data/clock-test.csv")
+head(clock.train)
+head(clock.test)
+```
+
+Notice (of course) that the training data includes the sale price,
+whereas the (real) test data does not (which is why we're trying to
+predict it!).
+
+Next, we divide the training data into a new training set and a
+validation (i.e. artificial test) set.
+
+```{r}
+set.seed(442)
+validation.index <- sample(1:50,size=10)
+validation.index
+clock.train.new <- clock.train[-validation.index,]
+clock.validation <- clock.train[validation.index,]
+```
+
+The object `validation.index` contains the numbers of the 10 training
+cases that we randomly select to form the validation set,
+`clock.validation`. (We have chosen 10 as a 20% fraction of the original
+training data, but there would have been nothing wrong with choosing 20,
+say.) The object `clock.train.new` is the new training data, excluding
+the validation cases. Note the use of the `set.seed` command to
+initialize the random number generator, so that we can later recreate
+this precise example if we wish.
+
+We now use the new training data to build a linear regression and
+regression tree prediction models. We then assess their predictive
+accuracy on the validation set.
+
+```{r}
+clock.lm <- lm(Price ~ Age + Condition, data=clock.train.new)
+clock.pred.lm.valid <- predict(clock.lm, newdata=clock.validation)
+clock.pred.lm.valid
+clock.pred.lm.valid.MSE <- mean((clock.pred.lm.valid - clock.validation$Price)^2)
+
+library(rpart)
+clock.rp <- rpart(Price ~ Age + Condition, data=clock.train.new, cp=0.001)
+clock.pred.rp.valid <- predict(clock.rp, newdata=clock.validation)
+clock.pred.rp.valid
+clock.pred.rp.valid.MSE <- mean((clock.pred.rp.valid - clock.validation$Price)^2)
+cbind(clock.validation$Price, clock.pred.lm.valid, clock.pred.rp.valid)
+clock.pred.lm.valid.MSE
+clock.pred.rp.valid.MSE
+```
+
+The third command from the end combines the true sale prices from the
+validation set with the predictions using the linear model and
+regression tree, just for the purposes of illustrating the performance
+of the two methods in this example. As is confirmed by the final mean
+squared error values, the linear model appears much the better for
+prediction in this case.
+
+It is natural to use a linear model to predict the sale prices on the
+real test data (since it has far lower prediction MSE on the validation
+data). However, before we do so, it makes sense to refit the linear
+model to the original training data. The point is that the split into
+new training data and validation has served its purpose (i.e. to decide
+whether regression trees or linear regression is preferable in this
+case). We should now be able to get a slightly better linear regression
+model if we fit it using all 50 training cases, rather than just the 40
+that were retained in the reduced training set.
+
+```{r}
+clock.lm.final <- lm(Price ~ Age + Condition, data=clock.train)
+clock.pred.test <- predict(clock.lm.final, newdata=clock.test)
+data.frame(clock.test$Age, clock.test$Condition, clock.pred.test)
+```
+
+The final command displays the predictions on the test cases alongside
+the predictor variables.
+
+We close this Example by noting that this analysis is simpler than one
+would follow in practice. There was no attempt to tune the methods, for
+instance by examining the effects of including additional terms in the
+linear model (say a quadratic term in `Age`) or adjusting the complexity
+parameter in the regression tree. We also did not consider neural
+networks.
+:::
+
+The previous example has illustrated how one would perform prediction in
+a real problem (and provides a guide for attempting the assignments). For
+Computer Labs 5 and 6 we look at an artificial setting in which we know
+the values of the target variable for the test cases, since one of the
+purposes of those Labs is to learn more about the comparative
+performance of various prediction method methods.
+
+**You should now do Computer Lab 6.**
+
+[^1]: The *predictand* is the variable whose value one is trying to
+    predict. The predictors are those variables that are used to
+    generate the prediction.
+
+[^2]: The sauropods are a class (more precisely, and 'infraorder') of
+    'lizard hipped' dinosaurs with small heads, long necks and tails,
+    and thick legs. Brachiosaurus, Diplodocus, and Apatosaurus are well
+    known examples.
+
+[^3]: There are many alternative methods of prediction available, but
+    the three just listed are the ones that we will focus upon.
+
+[^4]: At Massey, a detailed, intermediate level coverage of linear
+    regression is provided in the paper 161.251 Regression Modelling
+
+[^5]: A linear regression model with two or more predictors is often
+    referred to as a multiple linear regression model.
+
+[^6]: The notation $N(\mu,\sigma^2)$ refers to a normal distribution
+    with mean $\mu$ and variance $\sigma^2$.
+
+[^7]: It actually turns out that one of the indicator variables for each
+    factor is redundant, since we must have a 'baseline' against which
+    other factor levels are measured. Knowledge of the details are not
+    required for this paper.
+
+[^8]: However, note that the $p$ in the equation will no longer
+    correspond to the original number of predictors if some of these
+    were factors that require coding in terms of multiple binary
+    variables.
+
+[^9]: The function name `lm` standard for *linear model*, of which
+    linear regression models are one example. See the paper 161.251 for
+    further details.
+
+[^10]: See paper 161.251 for details.
+
+[^11]: Note that if the data frame `my.test.predictors` also contains
+    values for the target variable (or any other variables) these will
+    be ignored for the purposes of computing the predictions
+
+[^12]: We may assume without loss of generality that the error is
+    centred at zero, so that $f_0 = {\textsf E}[y_0]$ is the mean value
+    of the target.
+
+[^13]: You will not be expected to reproduce the decomposition of MSE in
+    an exam, but you should be able to state the result and understand
+    its consequences.
+
+[^14]: The estimand is the thing we are trying to estimate.
+
+[^15]: Other related methods of variable selection are covered in
+    161.251
+
+[^16]: The `step` function can implement other algorithms for variable
+    selection, but these are beyond the scope of this paper
+
+[^21]: There is some elegant mathematical theory to demonstrate that
+    linear regression models fitted using the method of least squares
+    are optimal (in some natural senses) when the underlying assumptions
+    are valid.
+
+[^22]: Regression trees go under a variety of different names. You may
+    them referred to under the more general acronym CART (classification
+    and regression trees), and they may also be described recursive
+    partitioning methods (for reasons that will soon become clear).
+
+[^23]: The function name `rpart` is an abbreviation of *recursive
+    partitioning*.
+
+[^24]: Note that the node numbers increase as we move down the tree, but
+    that the numbers are not consecutive (there are gaps in the
+    numbering sequence.
+
+[^25]: This is an example of R's clever generic syntax. The `predict`
+    command interprets the type of object to which it is applied, and
+    then computes predictions in the appropriate manner.
+
+[^26]: This is a pruned tree, in the sense that it is much smaller than
+    the tree that would be obtained were we to split until all leaves
+    contain just a single observation.
+
+[^27]: If you are wondering about the difference between a validation
+    data and an artificial test dataset with target values, it is in
+    their usage. Validation datasets are used for model selection; for
+    example, to choose the best size of regression tree. Artificial test
+    datasets with target values are used to estimate prediction errors.
+    The prediction errors observed on the validation dataset will not be
+    unbiased, because (by definition) they will be smallest for the
+    selected model. Use of an independent test dataset means that we can
+    assess that component of prediction error that arises from
+    uncertainty in model selection.
+
+[^28]: Neural networks can also be used to predictor multidimensional
+    targets, when the output layer will comprise multiple nodes.
+
+[^29]: Recall that if we have a factor with $K$ levels, then it can be
+    represented by $K-1$ dummy variables (the $K$th being a redundant
+    'baseline' case). As a consequence, if we had a model with 3
+    numerical predictors and one factor on 4 levels, then there would be
+    $p = 3+ (4-1) = 6$ effective predictors for the purposes of
+    determining $p$
+
+[^30]: The mathematical notation $\lceil x \rceil$ denotes the *ceiling*
+    of the value $x$, which is the smallest integer at least as large as
+    $x$. Hence $\lceil 1.13 \rceil = 2$, for example
+

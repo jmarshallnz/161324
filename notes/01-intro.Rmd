@@ -1,0 +1,207 @@
+# Introduction
+
+```{r, include=FALSE}
+library(tidyverse)
+```
+
+## What is Data Mining?{#sec:intro1}
+
+What is data mining, and how does it differ from the statistics? It's
+difficult (or perhaps we should say impossible) to give a definitive
+answer to those questions. The boundaries between statistics, data
+mining and machine learning are ill defined, and you would likely get
+different answers from a computer scientist and a statistician if asked
+to map out the territories of the respective disciplines.
+
+In this paper you will get a statistician's take on data mining. We
+regard data mining as essentially statistical in nature, albeit with a
+different slant to many other statistics courses that you may encounter
+at university. We'll try to give you a flavour of how data mining
+differs from mainstream classical statistics through a couple of
+examples.
+
+::: {.example}
+**Weight gain in goats**
+
+This example concerns a designed experiment (conducted in Lincoln, New
+Zealand) to investigate the effect of different drenching regimes on
+goats. Goats are drenched as a matter of course to prevent worm
+infestation, but it was conjectured that the standard method of
+drenching was insufficient. A total of 40 goats were divided at random
+into two groups of 20. Each goat was weighed at the start of the year,
+and then again at the end of the year. Groups in the first group were
+treated using a standard drenching program, while those in the second
+underwent an intensive drenching regimen (involving more frequent
+drenches through the year). The variables recorded in the dataset
+`goats` are initial weight,
+weight gain through the year (both measured in kilograms), and treatment
+(either standard or intensive drenching). The data are plotted in Figure
+\@ref(fig:goats) below.
+
+```{r goats, echo=FALSE, message=FALSE, fig.cap="Scatterplot of weight gain against initial weight for goats on standard and intensive drenching regimens."}
+goats <- read_csv("data/goats.csv") %>% mutate(Treatment = as_factor(Treatment))
+plot(Wt.gain ~ Wt.ini, pch=as.numeric(Treatment)^2, col=as.numeric(Treatment),data=goats,xlab="Initial weight",ylab="Weight gain")
+legend("topright",legend=c("intensive","standard"),pch=c(1,4),col=1:2)
+```
+
+The principal question of interest here is whether or not the type of
+drenching program affects a goat's weight gain. A secondary question is
+whether the level of weight gain depends on the goat's initial weight,
+and if so in what way.
+
+We are definitely in the realm of classical statistics here! It is the
+kind of dataset and scientific problem that would have been familiar
+Ronald Fisher and Karl Pearson as they developed the basic theory and
+methods for modern statistics, almost a century ago[^pearson]. The dataset is
+of modest size, with $n=40$ cases and $p=3$ variables (namely weight
+gain; initial weight; and treatment program). Moreover, the analysis of
+these data should be driven by the specific scientific questions just
+discussed. A statistician would use standard tools like regression and
+hypothesis testing[^ancova]. The statistical models used will be easy to
+interpret, with model parameters likely to have some clear physical
+meaning.
+:::
+
+::: {.example}
+**Amazon reviews**
+
+This example contains data on reviews published on Amazon. The dataset
+comprises information on 30 reviews by each of 50 reviewers, giving a
+total of $n=1500$ reviews. For each review, a total of $p=10,000$
+variables are recorded, including word frequency (for example, the
+number of occurrences of the word 'book' in each review); usage of
+digits and punctuation; word and sentence length; and usage frequency of
+words and so on. A scatterplot of two of the variables (number of spaces
+in the review, and number of commas) appears in Figure \@ref(fig:amazon), along
+with histograms displaying the marginal distributions of each variable.
+
+```{r amazon, echo=FALSE, message=FALSE, fig.cap="Plot of number of commas against number of spaces in reviews on Amazon."}
+space_comma <- read_csv("data/amazon_space_comma.csv")
+scatterhist <-  function(x, y, xlab="", ylab="",x.breaks="Sturges",y.breaks="Sturges"){  
+	zones <- matrix(c(2,0,1,3), ncol=2, byrow=TRUE)  
+	layout(zones, widths=c(4/5,1/5), heights=c(1/5,4/5))  
+	xhist <- hist(x, plot=FALSE,breaks=x.breaks)  
+	yhist <- hist(y, plot=FALSE,breaks=y.breaks)  
+	top <- max(c(xhist$counts, yhist$counts))  
+	par(mar=c(4,4,1,1))  
+	plot(x,y,xlab="",ylab="")  
+	par(mar=c(0,3,1,1))  
+	barplot(xhist$counts, axes=FALSE, ylim=c(0, top), space=0)  
+	par(mar=c(3,0,1,1))  
+	barplot(yhist$counts, axes=FALSE, xlim=c(0, top), space=0, horiz=TRUE)  
+	par(oma=c(3,3,0,0))  
+	mtext(xlab, side=1, line=1, outer=TRUE, adj=0, at=0.35)  
+	mtext(ylab, side=2, line=1, outer=TRUE, adj=0, at=0.35)
+} 
+scatterhist(space_comma$Spaces,space_comma$Commas,x.breaks=20,xlab="Number of spaces",ylab="Number of commas")
+```
+
+Perhaps the first thing that stands out in this example, compared to the
+last one, is the sheer quantity of data. Here there are 15 million
+individual pieces of data, whereas we had just $120$ in the goats
+dataset. A second noteworthy point is that the dataset is massively
+multivariate. Classical statistical theory and methods (like linear
+regression, for example) are designed for cases where there are (many)
+more records ($n$) than variables ($p$), but we have quite the reverse
+for the Amazon data.
+
+The Amazon review data were collated, in part, to provide the raw
+material for developing tools for authorship identification. In other
+words, given a particular new review by purported author X, is there an
+automated methodology by which we can examine whether it truly is by X
+by looking at earlier reviews by the same author? This is a
+classification problem (often referred to as a *supervised learning*
+problem by computer scientists). Of course, such a rich dataset can also
+be used to address other problems in stylometry[^stylometry], natural language
+processing[^natlangproc] and linguistics. For example, one might look for
+associations in the use of written language. If someone typically writes
+in long sentences and uses many commas, are they also likely to be a
+relatively heavy user of semi-colons?
+:::
+
+Such classification and association problems are common in data mining.
+Furthermore, the methods and models used to address them are usually
+highly complex and do not have easily interpretable parameters. This
+lack of interpretability is usually inconsequential to the data miner:
+the quality of a classifier, for example, being measured solely in terms
+of its ability to correctly assign individuals to the correct category.
+
+Having explored some of the underlying ideas, we are now in a position
+to list some of the differences between classical statistics and data
+mining. As intimated above, the boundaries between these areas are
+somewhat fluid, so the distinctions that we draw are hardly set in
+stone. Nonetheless, they should provide you with a feel for what data
+mining is all about.
+
+-   Data mining almost always involves large to massive datasets, while
+    the datasets in classical statistical analyses can be quite modest
+    in size. In this paper we focus principally on large datasets (say
+    $10^3$--$10^6$ elements) rather than massive ones, in order to allow
+    you to perform analyses on your home computer.
+
+-   Classical statistical methods are typically designed to deal with
+    situations where there are many more records $n$ than variables $p$.
+    In data mining the reverse will sometimes be true. An important
+    modern instance of this occurs with gene expression data, were we
+    typically have measurements on thousands of genes taken from tens to
+    hundreds of people or specimens.
+
+-   In classical statistics the aim of an analysis is often estimation
+    or testing of some parameter or another. In data mining the problems
+    are more often concerned with classification, prediction, or
+    association. Sometimes a data miner will not have any specific aim
+    beyond developing a better understanding of the data. In that case,
+    data mining is very much an approach to *exploratory data analysis*.
+
+-   Classical statistical models are usually easy to interpret; for
+    example, one can write down the fitted model in a straightforward
+    manner. In data mining the models are typically complex and 'black
+    box' in nature.
+
+## Statistical Computing with R{sec:Rinitial}
+
+This course makes heavy use of the statistics package R. You may have
+met this package before and be confident using it, in which case you
+will be aware how wonderful it is! If not, don't worry. You'll find an
+introduction to R in the second chapter of these notes, and plenty of
+guidance in its use throughout the remainder of the study guide.
+
+For those of you who haven't met R before, you're in for some good news
+-- this package is freely available for download from the website
+`https://www.r-project.org/`. Some even better news is that R is
+state-of-the-art statistical computing, and is widely used package by
+statistics researchers. It is extremely flexible and powerful.
+
+Be warned, however, that R is not 'point and click'. You need to type in
+commands. In fact this is a great thing from a learning perspective,
+since it requires you to think about what you are doing! While you may
+find R hard going to begin with, you will most likely be a fan of the
+package by the end of semester. That's certainly my experience with the
+great majority of students. Nonetheless, it requires practice. You'll
+find a number of Computer Lab Sheets at the end of this Study Guide.
+Don't ignore them -- they are a crucial learning element for this paper.
+
+## Learning Resources{#sec:resources}
+
+The Stream site for the course will be your first port of call to access
+learning resources for the paper. It will be updated regularly during
+semester, so you should check it on a frequent basis.
+
+Data access is typically done by downloading directly from the web, and
+this is usually faciliated for you with code supplied on workshop sheets and
+assignment papers.
+
+[^pearson]: Every student taking a 300-level statistics paper should be at
+    least vaguely familiar with the names Ronald Fisher and Karl
+    Pearson. Look them up on Wikipedia if you're not!
+
+[^ancova]: To be a little more precise, we would use an analysis of
+    covariance (ANCOVA) type of model, something that you can learn
+    about in the paper 161.251 Regression Modelling.
+    
+[^stylometry]: Stylometry is the study of style to determine the origin of a work
+    (linguistic style in the case of authorship of books, artistic style
+    in the case of provenance of paintings, etc.).
+
+[^natlangproc]: Natural language processing is a branch of artificial intelligence
+    concerned with computer handling of human language.

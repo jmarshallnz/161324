@@ -1,0 +1,280 @@
+# Association rule mining
+
+```{r, include=FALSE}
+library(tidyverse)
+library(janitor)
+```
+
+While $K$-means clustering is used primarily for numerical measures, we
+often have data where the variables are categorical. A common database
+type that we haven't yet met comes in the form of a list of sets of
+items. A classical example is that of market basket analysis. A retail
+store has a large number of transactions during a particular time
+period, and is interested whether certain groups of items are
+consistently purchased together. With knowledge of such associations the
+store layout could be designed to place items optimally with respect to
+each other, or the data might be used for cross-selling (discounting an
+item if you purchase the second), catalogue design, or to identify
+customer segments based on purchasing patterns.
+
+A number of other examples are similar to this, however. Results from
+questionnaires (particularly when the questions permit categorical
+answers) yield similar data, and the analyst may be interested in
+associations between the answers to different questions. Data from web
+searches may also be analysed in the same manner. People that search for
+certain terms may be more likely to also search for other terms.
+Further, there's the possibility that improved search results[^paranoid] might
+be gleaned: If a person has previously searched for 'Apple' and later
+searches for 'Leopard' then it may be that they are interested in Mac
+OS 10.5 (codenamed 'Leopard') rather than whether leopards eat apples.
+
+Typically, such datasets consist of a large number of possible items and
+a large number of collections of those items, where each collection may
+contain only a small fraction of the total items available. A
+supermarket for example may have many thousands of products, yet each
+transaction may consist of at most a few hundred items, and in many
+cases fewer than ten items. Table \@ref(tab:market1)
+shows a few entries from a typical transaction
+database.
+
+```{r market1, echo=FALSE}
+marketdb <- tribble(~transaction, ~items,
+              1, c('bread', 'milk'),
+              2, 'beer',
+              3, 'butter',
+              4, c('bread', 'butter', 'milk'),
+              5, c('bread', 'butter'),
+              6, c('bread', 'beer'))
+
+marketdb %>% mutate(items = map_chr(items, paste, collapse=", ")) %>%
+  knitr::kable(caption = "An example supermarket database with six transactions.")
+```
+
+The retailer is primarily interested in whether a product is purchased
+(presence/absence) rather than how many instances of the same item were
+purchased in the same transaction, so the data may typically be
+represented by a binary matrix as in Table \@ref(tab:market2).
+
+```{r market2, echo=FALSE}
+marketdb %>% unnest(items) %>%
+  mutate(count = 1) %>%
+  pivot_wider(names_from=items, values_from=count, values_fill = 0) %>%
+  knitr::kable(caption = "The binary matrix of transactions from Table \\@ref(tab:market1)")
+```
+
+*Association rules* provide information about implications between item
+sets: if a transaction has items from set $A$, do they also tend to have
+items from set $B$? This is an example of a *rule* which is an
+implication of the form $A \Rightarrow B$, where $A, B$ are *itemsets*
+with the requirement that they are disjoint ($A \cap B = \emptyset$).
+$A$ is known as the *antecedent* (or lhs) and $B$ is the *consequent*
+(or rhs) of the rule.
+
+From Table \@ref(tab:market1),
+an example rule for the supermarket might be
+$\{\textrm{milk},\textrm{bread}\} \Rightarrow \{\textrm{butter}\}$, meaning that if the customer
+purchases milk and bread, they also purchase butter. Even with this
+small dataset (just 4 items), there are 50 association rules. In
+general, for $d$ items, the number of association rules is given by
+$$3^d - 2^{d+1} + 1,$$ and thus is exponential in the number of items.
+The majority of these rules are of no use: It will be unlikely that
+there are transactions in the data set that contains the rules, thus we
+need to be able to select the interesting rules from all possible rules,
+without having to generate all possible rules to begin with.
+
+The *support* $\mathop{\mathrm{supp}}(A)$ of an itemset $A$ is defined
+as the proportion of transactions in the database which contain the
+itemset. For the example database in Table \@ref(tab:market1), the itemset
+$\{\textrm{milk},\textrm{bread}\}$ has a support of $2/6$ since it
+occurs in 2 out of the 6 transactions, whereas the itemset
+$\{\textrm{bread}\}$ has support $5/6$. The support of a rule
+$A \Rightarrow B$ is then just the support of $A \cup B$, i.e. the
+proportion of transactions in the database containing all the items in
+the rule.
+
+The *confidence* of a rule is defined as
+$$\mathop{\mathrm{conf}}(A \Rightarrow B) = \frac{\mathop{\mathrm{supp}}(A \cup B)}{\mathop{\mathrm{supp}}(A)},$$
+and can be interpreted as an estimate of the probability $P(B|A)$, the
+probability of finding the consequent of the rule given the antecedent.
+From Table \@ref(tab:market1) we see that the rule
+$\{\textrm{milk}, \textrm{bread}\} \Rightarrow \{\textrm{butter}\}$ has
+confidence $\frac{1/6}{2/6} = 0.5$, so that 50% of the transactions
+containing milk and bread also contain butter.
+
+Interesting association rules are those that satisfy both a minimum
+support clause and a minimum confidence constraint simultaneously. The
+minimal support constraint allows rules to be mined efficiently, as if
+an itemset $B$ has high support, then we know that all subsets of $B$
+must also have high support. This allows algorithms to be designed that
+mine all *maximal frequent itemsets* efficiently.
+
+Even with such constraints, however, there may still be a large number
+of association rules found. Further, one must be careful to consider
+association rules with high support and high confidence as being
+interesting, as example \@ref(exm:coffeetea) shows.
+
+::: {.example #coffeetea}
+**Coffee and tea drinking**
+
+Suppose that 1000 people were asked whether
+they drank tea or coffee, or both. The results of this are given in the
+contigency table \@ref(tab:coffeetea).
+
+```{r coffeetea, echo=FALSE}
+coftea <- tribble(~tea, ~coffee, ~count,
+                  'tea', 'coffee', 150,
+                  'tea', 'no coffee', 650,
+                  'no tea', 'coffee', 50,
+                  'no tea', 'no coffee', 150)
+coftea %>% mutate(tea = as_factor(tea)) %>% uncount(count) %>%
+  tabyl(tea, coffee) %>%
+  adorn_totals(where = c("row", "col"), name = "total") %>%
+  set_names(nm = c("", names(.)[-1])) %>%
+  knitr::kable(caption = "Contigency table of drinking preferences for 1000 people.")
+```
+
+The association rule $\{\textrm{coffee}\}\Rightarrow\{\textrm{tea}\}$
+may be considered, and we find it has relatively high support (15%) and
+confidence (75%). At first glance it might appear that those that drink
+coffee also tend to drink tea. However, the probability of a person
+drinking tea is 80% regardless of whether they drink coffee, and this
+reduces to 75% if they drink coffee. Thus, knowing that a particular
+person drinks coffee actually reduces the chance that they're a tea
+drinker! The high confidence of the rule
+$\{\textrm{coffee}\}\Rightarrow\{\textrm{tea}\}$ is therefore
+misleading. The pitfall of high confidence is due to the fact that the
+confidence measure does not take into account the support of the rule
+consequent. Once we take into account the support of tea drinkers, it is
+no surprise that many coffee drinkers also drink tea.
+:::
+
+A popular measure useful for ranking association rules in terms of
+"interestingness\" is *lift*, which is defined as
+$$\mathop{\mathrm{lift}}(A \Rightarrow B) = \frac{\mathop{\mathrm{supp}}(A \cup B)}{\mathop{\mathrm{supp}}(A)\mathop{\mathrm{supp}}(B)}.$$
+This may be interpreted as the deviation of the support of the rule from
+what might be expected if the antecedent and consequent were
+independent. A large lift value indicates a strong positive association.
+A lift of 1 indicates no association, and a lift smaller than one
+indicates a negative association. The lift of the rule
+$\{\textrm{milk},\textrm{bread}\}\Rightarrow\{\textrm{butter}\}$ is $1$.
+The lift of the rule $\{\textrm{coffee}\}\Rightarrow\{\textrm{tea}\}$ is
+$\frac{0.15}{(0.2)(0.8)} = 0.9375$, indicating a slight negative
+correlation.
+
+While the former statistical criteria for interesting-ness of
+association rules is important, often subjective measures may be of more
+interest to the data-miner. An association might be considered
+uninteresting if it provides only information that was already known (or
+suspected). The associations that provide connections that were not
+previously known are those that are subjectively of interest. For
+example, the association
+$\{\textrm{bread}\}\Rightarrow\{\textrm{butter}\}$ is not subjectively
+interesting, whereas $\{\textrm{nappies}\}\Rightarrow\{\textrm{beer}\}$
+is interesting!
+
+There have been several algorithms developed for mining association
+rules, with the *Apriori* and *Eclat* algorithms being two of the more
+popular techniques. The R package `arules` implements both algorithms.
+
+::: {.example}
+**Household incomes and demographic information**
+
+A total of $N=9409$ questionnaires containg 502 questions were filled
+out by shopping mall customers in the San Francisco Bay area. The
+dataset consists of 14 demographic attributes, one of which is annual
+household income.
+
+We start by loading the data in and checking the frequency of items in
+the dataset with support greater than 5%, given in Figure \@ref(fig:income1).
+
+```{r income1, message=FALSE, warning = FALSE, fig.cap = "The freqency of items in the Income data set with support greater than 5%"}
+library(arules)
+data("Income")
+itemFrequencyPlot(Income, support=0.05, cex.names=0.8)
+```
+
+There are several other variables with support less than 5% - all
+variables can be seen using `labels(Income)$items`. The next step is to
+generate association rules using the `apriori` function. We specify a
+support of 0.01 and confidence of 0.6, yielding just over a million
+rules.
+
+```{r}
+rules <- apriori(Income, parameter=list(support=0.01, confidence=0.6))
+rules
+summary(rules)
+```
+
+The rules may be inspected via the `inspect` command. Sorting the rules
+first based on confidence or lift is useful to obtain the most
+interesting (objectively!) relationships first:
+
+```{r}
+inspect(head(sort(rules, by="confidence"), n=5))
+```
+
+As you can see, there are rules with confidence=1, indicating that all
+transactions in the datasets containing the lhs also contain the rhs.
+The items `dual income=not married` and `marital status=single` are
+clearly giving the same information. We can filter out all such rules
+using the `subset` command[^subset]:
+
+```{r}
+rules <- subset(rules, subset = confidence < 1);
+inspect(head(sort(rules, by="confidence"), n=2))
+```
+
+These are a little more interesting, but hardly surprising - if you're a
+student living with your parents/family, then you're very likely to be
+less than 35 years of age.
+
+The subset command is useful for filtering things down somewhat. We can
+use the `%in%`, `%ain%`, and `%pin%` operators to filter what appears on
+the lhs or rhs of the rules. The `%in%` operator matches any of the
+following complete strings, the `%ain%` operator matches all of the
+strings, and `%pin%` partially matches any of the following strings. Let
+us start by finding rules that associate with high income, with moderate
+lift.
+
+```{r}
+high_income <- subset(rules, subset=rhs %in% "income=$40,000+" & lift > 1.2)
+inspect(head(sort(high_income, by="confidence"), n=3))
+```
+
+This suggests that a college graduate in a household with two incomes
+that own their home is likely to have a high household income, as one
+would expect. A little more interesting is the association with no
+children. Let us look at a different measure of wealth, home ownership.
+Obviously home ownership will be associated with high household income,
+but what about home ownership by those that aren't earning a high annual
+income?
+
+```{r}
+home_own <- subset(rules, subset=lhs %in% "income=$0-$40,000" & 
+                                 rhs %in% "householder status=own" & lift > 1.2)
+inspect(head(sort(home_own, by="confidence"), n=2))
+```
+
+The recurring theme in these rules are older people in a single-income
+household with no children. Finally, we look at one of the variables not
+present in Figure \@ref(fig:income1), i.e. one of those variables that is rare in the
+dataset: whether the person had answered the question regarding how long
+they'd resided in the San Francisco bay area.
+
+```{r}
+new_to_bay <- subset(rules, subset=rhs %in% "years in bay area=1-9" & lift > 1.2)
+inspect(head(sort(new_to_bay, by="lift"), n=5))
+```
+
+With small numbers, one shouldn't read too much into this, but it is
+interesting that the military occupation comes up in the top 5
+association rules.
+:::
+
+**You should now do Computer Lab 11.**
+
+[^paranoid]: or, for the paranoid, a more complete profile of each user.
+
+[^subset]: Note, however, that we may also be filtering out useful
+    information here, so an alternate might be to drop superfluous items
+    instead

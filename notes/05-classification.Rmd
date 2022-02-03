@@ -1,0 +1,1537 @@
+# Classification Methods
+
+```{r, include=FALSE}
+library(MASS)
+library(tidyverse)
+wine <- read_csv("data/wine.csv")
+```
+
+## Introduction to Classification
+
+In classification, our goal is to assign each observation in the test
+dataset to one of a number of pre-specified categories. We do so using
+information from the observed predictor variables (or 'features'), based
+on a classification rule derived using the training data. Applications
+of classification analysis are manifold, ranging from biological
+taxonomy (the assignment organisms to species) to diagnosis of disease,
+to the assessment of credit risk.
+
+As with the prediction problem, in practice we will have training and
+test datasets. For the training data we will have a record of both the
+features and the true class membership for each case. The training data
+can then be used to create a method for linking class membership to the
+features. In the test data we will have just the features. We can then
+apply the classification method developed on the training data to
+allocate each test case to a group.
+
+As we did when discussing prediction, we will a times look at validation
+datasets (i.e. artificial test datasets) in which the true class
+memberships are available. This is for illustrative purposes, helping us
+to compare and contrast various classification technique.
+
+As an example of a classification problem, recall the Italian wine data
+that we met in Exercise 1 of Laboratory 4. Thinking of this as a
+training dataset, we display in Figure \@ref(fig:wineclass) a
+scatterplot of the percentage alcohol content of the wine against its
+hue, with the data plotted using different colour plotting symbols for
+each of the three cultivars. These three groups are quite well separated
+on just the plotted variables, suggesting that we should be able to
+derive a classification method with a high degree of accuracy when using
+information from all the variables.
+
+```{r wineclass, echo=FALSE, fig.cap="Plot of percentage alcohol content against hue for a sample of Italian wines. The coloured plotting symbols distinguish the three different cultivars for the wines."}
+plot(Alcohol ~ Hue, data=wine, col=Cultivar+1)
+```
+
+If we think of class membership as being defined by a categorical target
+variable, then this mirrors the prediction problem studied except for
+the nature of the target. It should therefore be no surprise that some
+of the techniques that we met in the context of prediction can also be
+applied to the classification problem with only minor modifications.
+Tree-based methods and neural networks are two prime examples that will
+be considered in this chapter. We shall also a examine some specialized
+methods for classification, including logistic regression, linear
+discriminant analysis, kernel discriminant analysis and naive Bayes
+classifiers[^1].
+
+In general, no classification method is likely to be 100% accurate. This
+is because there will always be inherent uncertainty on class membership
+based upon the observed features. For example, suppose that we try to
+classify human sex based on height and weight. A person of 185cm and
+85kg is likely to be male, but is not certain to be so. The best we can
+do is to try and evaluate *classification probabilities*. These are the
+probabilities of membership of the possible classes given the observed
+features: ${\textsf P}(\mbox{class} | \mbox{features})$.
+
+We will usually assign each test case to the class with highest
+classification probability. However, this is not always the case, since
+in some situations there are differing costs associated between
+different types of mistake. For example, consider a dermatologist
+classifying each skin lesion as benign or malignant. Mistakenly
+classifying a lesion that is benign to the malignant class will result
+in unnecessary treatment, but that is a less critical error than
+classifying a malignant lesion as benign, when the delay in treatment
+might be fatal. As a consequence, a dermatologist may act as if a lesion
+is malignant (for example, by excising it) even if
+${\textsf P}(\mbox{malignant} | \mbox{features}) = 0.1$.
+
+Our broad approach to classification must be to estimate the
+classification probabilities. There are two ways in which we might do
+this: generational and discriminatory. Discriminatory (or *conditional*)
+methods seek to estimate the classification probabilities directly.
+Generational methods compute the classification problems by first
+estimating related quantities, following a statistical theory for
+classification which we now discuss.
+
+### Statistical Theory for Classification
+
+In classification we assume that each observation belongs to one of a
+finite number of classes, which we will label $1, 2, \ldots, C$. We will
+make each classification based on the observed vector
+$\boldsymbol{x}= (x_1, x_2, \ldots, x_p)$ of variables (features). Let
+the joint probability function[^2] of $\boldsymbol{x}$ for individuals
+in class $j$ be denoted by $f_j$.
+
+Now, suppose that we have some prior ideas about the probabilities of
+each class; denote these by $\pi_1, \ldots, \pi_C$. If the training data
+are a random sample then we can use the relative proportions to provide
+these prior probabilities -- that is, $\pi_j = n_j/n$ where $n_j$ is the
+number of training observations in class $j$, and $n$ is the total
+number of training observations. This is the default method of
+estimating the priors for most classifiers implemented in R. In other
+situations we might have exogenous information about the class
+probabilities. Sometimes we will have no useful information, when the
+best course may be to simply set them equal: $\pi_j = 1/C$ for all
+$j=1,\ldots,C$.
+
+Suppose for now that the probability functions $f_1, \ldots, f_C$ and
+prior probabilities are all known. We observe an individual with feature
+vector $\boldsymbol{x}$. Which class is this individual most likely to
+belong to? To answer this, we must compute the conditional probabilities
+${\textsf P}(j | \boldsymbol{x})$ for $j=1,\ldots,C$. The quantity
+${\textsf P}(j | \boldsymbol{x})$ is the probability that the individual
+belongs to class $j$ given that they have feature vector
+$\boldsymbol{x}$. Now, by Bayes' Theorem[^3] we have
+\begin{equation}
+{\textsf P}(j | \boldsymbol{x}) = \frac{ \pi_j f_j(\boldsymbol{x}) }{f(\boldsymbol{x})}~~~~~~~~~~(j=1,\ldots,C)
+(\#eq:bayes)
+\end{equation}
+where $f(\boldsymbol{x}) = \sum_j \pi_j f_j(\boldsymbol{x})$. Because the
+denominator on the right-hand side of Equation \@ref(eq:bayes)
+does not depend upon the class $j$, it follows that the most probable
+class is the one for which $\pi_j f_j(\boldsymbol{x})$ is largest.
+
+::: {.example}
+**Some Bayesian Reassurance for a Hypochondriac**
+
+A nervous patient has a set of blood test results $\boldsymbol{x}$. He
+surfs the Internet, and finds that the probability that a normal healthy
+individual will return such results is $0.01$, but that for people with
+Erdheim-Chester disease such test results would be reasonably common,
+appearing with probability $0.5$. However, his GP (an avid Bayesian!)
+seems very unconcerned. She notes that this is a classification problem
+with two categories: diseased (class 1) and non-diseased (class 2). It
+is well known that Erdheim-Chester disease is a very rare condition, so
+that $\pi_1 = 0.000001$ (i.e. 1 in a million), and hence
+$\pi_2 = 1 - \pi_1 = 0.999999$. From the test results the GP knows that
+$f_1(\boldsymbol{x}) = 0.5$ and $f_2(\boldsymbol{x}) = 0.01$, but she
+computes the conditional probability of being diseased given the test
+results as
+$${\textsf P}(1 | \boldsymbol{x}) = \frac{ 0.000001 \times 0.5 }{0.000001 \times 0.5 + 0.999999 \times 0.01} \approx 0.00005.$$
+It is extremely unlikely that the patient's worries are well founded.
+:::
+
+### Misclassification Rates and Confusion Matrices
+
+In order to implement classification based on the posterior
+probabilities in Equation \@ref(eq:bayes) we need the prior probabilities $\pi_j$ and the
+probability functions $f_j$ for all classes $j=1,\ldots,C$. Obtaining
+values for $\pi_1,\ldots,\pi_C$ will not usually be a problem, as
+discussed above. The challenge is to obtain estimates of
+$f_1,\ldots,f_C$ from the training data. We shall examine a number of
+options.
+
+-   Assume that $f_1,\ldots,f_C$ are normal probability density
+    functions (for continuous random variables). This leads to the
+    method of linear discriminant analysis (Section \@ref(sec:lda)).
+
+-   Estimate $f_1,\ldots,f_C$ using kernel density estimation. This
+    leads to the method of kernel discriminant analysis (Section \@ref(sec:kda)).
+
+-   Factorize the joint probability functions to facilitate their
+    estimation, leading to naive Bayesian classification (Section \@ref(sec:naive)).
+
+Given this variety of methods, as well as the more generic tree-based
+and neural network classifiers, which should we prefer? We will usually
+want to select the method with the lowest *misclassification rate*. The
+misclassification rate is simply the proportion of observations that are
+assigned to the wrong class. A more detailed analysis of the performance
+of each classifier can be obtained from the *error matrix* or *confusion
+matrix*, which cross-tabulates true and predicted classes. In some cases
+the impact of certain types of misclassification may be far greater than
+others, in which case one my wish to consider a weighted error rate.
+This can occur, for example, in medical testing, where the consequences
+of false positives may be somewhat unpleasant (e.g. unnecessary
+biopsies) but the consequence of false negatives can be fatal
+(e.g. failure to detect a disease while it is still treatable).
+
+::: {.example}
+**Comparison of Tests for Tuberculosis**
+
+The Mantoux and Heaf tests are both used to detect tuberculosis in
+patients. Suppose that they are each applied to 1000 subjects suspected
+of having the disease, giving the following confusion tables. Note that
+disease status is the true class here (positive or negative for
+tuberculosis) and the test result (positive or negative) is the
+predicted class.
+
+```{r, echo=FALSE}
+mantoux <- tribble(~disease, ~test, ~count,
+                   "Disease +", "Test +", 50,
+                   "Disease +", "Test -", 1,
+                   "Disease -", "Test +", 50,
+                   "Disease -", "Test -", 899)
+heaf <- tribble(~disease, ~test, ~count,
+                   "Disease +", "Test +", 40,
+                   "Disease +", "Test -", 11,
+                   "Disease -", "Test +", 30,
+                   "Disease -", "Test -", 929)
+
+list(mantoux %>% pivot_wider(names_from=disease, values_from=count) %>%
+     column_to_rownames("test"),
+     heaf %>% pivot_wider(names_from=disease, values_from=count) %>%
+     column_to_rownames("test")) %>%
+  knitr::kable(
+    caption = 'Performance of the Mantoux (left) and Heaf (right) tests for detecting tuberculosis',
+    valign = 't',
+    booktabs = TRUE
+  )
+```
+
+The overall misclassification rate for the Mantoux test is
+$51/1000 = 5.1\%$, while the over misclassification rate for the Heaf
+test is $41/1000 = 4.1\%$. However, if we assign severity weights 1 to
+false positives and 10 to false negatives, then the weighed error is
+$(50+1 \times 10)/1000 = 0.06$ for the Mantoux test, which is rather
+better than the figure of $(30+11\times 10)/1000 = 0.14$ for the Heaf
+test.
+:::
+
+In practice we will need to estimate the misclassification rate for each
+classifier that we use. Recall from the previous chapter that assessing
+predictive accuracy (in terms of mean squared error) based on
+predictions on the training data led to an overly optimistic assessment.
+The methods enjoyed 'home ground advantage'. The same issue applies in
+classification. If we develop a classification rule on the training
+data, then it will tend to perform especially well on those data, and in
+particular better than it would on real test data. We therefore need a
+more independent method for estimation misclassification rates.
+
+If we have an independent validation dataset for which the correct class
+assignments are know, then misclassification rates can be assessed based
+on performance thereon. As we saw previously, this could be achieve by
+splitting the original training dataset into a smaller (new) training
+set and a separate validation set, typically in a ratio of around 3:1.
+Alternatively, we can employ cross-validation techniques, following
+along the same lines as in Section \@ref(sec:validation)
+(but with the squared error performance
+measure replaced by the misclassification rate).
+
+## Linear Discriminant Analysis{#sec:lda}
+
+### The Method in Theory
+
+Linear discriminant analysis (often abbreviated to LDA) is applicable
+when all the features are quantitative. The method relies critically on
+the assumption that that the joint distributions of the features is
+multivariate normal, with a covariance matrix that is the same from
+class to class. The thing which distinguishes the groups is inter-class
+variation of the vector of feature means.
+
+Consider a very simply case where there are just $C=2$ classes, and just
+$p=2$ numerical features, $x_1$ and $x_2$. Suppose that these features
+are statistically independent, and that the standard deviation of each
+is equal to one (irrespective of class). Finally, let both features have
+mean zero in group 1, and let both features have mean 1 in group 2. In
+other words, if $\mu_{ij}$ is the mean for feature $i$ in group $j$ then
+$\mu_{11} = \mu_{21} = 0$, and $\mu_{21} = \mu_{22} = 1$. Now, using
+standard results for the multivariate normal distribution[^4], we have
+$$\begin{align}
+f_j(\boldsymbol{x}) &= \frac{1}{2 \pi} \exp \left \{ -\frac {(x_1 - x_{1j})^2}{2} \right \}  \exp \left \{ -\frac{(x_2 - x_{2j})^2}{2} \right \}\\
+         &= 
+\left \{
+\begin{array}{ll}
+\frac{1}{2 \pi} \exp \left \{ -\frac{x_1^2}{2} - \frac{x_2^2}{2} \right \}         & \mbox{for class $j=1$}\\
+\frac{1}{2 \pi} \exp \left \{ -\frac{(x_1-1)^2}{2} - \frac{(x_2-1)^2}{2} \right \} & \mbox{for class $j=2$}
+\end{array} 
+\right .\end{align}$$
+If the prior class probabilities are equal
+(i.e. $\pi_1 = \pi_2 = 0.5$) then we will assign an observation
+$\boldsymbol{x}= (x_1, x_2)$ to class $1$ if and only if
+$$\begin{align}
+                 f_1(\boldsymbol{x}) &> f_2(\boldsymbol{x}) \\
+\Rightarrow\quad      \exp\{ (-x_1^2/2 - x_2^2/2)\}  &> \exp\{ (-(x_1-1)^2/2 - (x_2-1)^2/2)\} \\
+\Rightarrow\quad      -x_1^2/2 - x_2^2/2  &> -(x_1-1)^2/2 - (x_2-1)^2/2) \\
+\Rightarrow\quad      x_1^2/2 + x_2^2/2   &<  x_1^2 - 2 x_1 + 1 + x_2^2 - 2 x_2 +1 \\
+\Rightarrow\quad      0  &< - 2 x_1 + 1 - 2 x_2 +1 \\
+\Rightarrow\quad      x_1 + x_2 &<  1\\\end{align}$$
+Time to take stock.
+We have just shown that given an observation $(x_1,x_2)$, we should
+assign it to class 1 if $x_1 + x_2 <  1$, and to class 2 if
+$x_1 + x_2 \ge 1$. (In theory the possibility of equality can be
+ignored, because for truly continuous data we will get precise equality
+with probability zero.) In other words, $x_1 + x_2 <  1$ is a decision
+rule that tell us where to classify the observation (class 1 if true,
+class 2 if false). This can be plotted graphically, as in Figure \@ref(fig:toylda). Notice
+that the boundary of the regions is given by the straight line
+$x_1 + x_2 = 1$, hence the nomenclature *linear* discriminant analysis.
+The combination $x_1 + x_2$ is referred to as a *linear discriminant* or
+a *discriminant variable* because of its role in defining the decision
+rule.
+
+```{r toylda, echo=FALSE, fig.cap = "Plot of decision regions for a linear discriminant analysis with two groups. Any observation in the grey region will be assigned to class 1; any observation in the cyan region will be assigned to class 2."}
+plot((-1):2,(-1):2,type="n",xlab=expression(x[1]),ylab=expression(x[2]), asp=1)
+polygon(c(-3,-3,4),c(4,-3,-3),col=8)
+polygon(c(4,4,-3),c(-3,4,4),col=5)
+lines(c(-3,4),c(4,-3),lwd=2)
+points(0,0,pch=19,col=1)
+points(1,1,pch=19,col=4)
+text(0,-0.15,expression(mu[1]),cex=1.5)
+text(1,1.15,expression(mu[2]),cex=1.5)
+```
+
+The result is very intuitive. Each of observation will be assigned to
+the class for which the mean is closest. While we have demonstrated this
+result for two class problems, it extends naturally to cases with three
+or more classes. In such situations the feature space will be divided
+into multiple regions using line segment boundaries. See Figure \@ref(fig:toylda2) for
+example. If there are more than two features then the boundaries of the
+decision regions will be a defined by the intersection of hyperplanes
+rather than lines.
+
+```{r toylda2, echo=FALSE, fig.cap="Plot of decision regions for a linear discriminant analysis with three groups."}
+plot((-2):2,(-1):3,type="n",xlab=expression(x[1]),ylab=expression(x[2]), asp=1)
+lines(c(-3,0),c(-2,1),lwd=2)
+lines(c(0,3),c(1,-2),lwd=2)
+lines(c(0,0),c(1,4),lwd=2)
+polygon(c(-5,-5,0,0),c(-4,4,4,1),col=5)
+polygon(c(5,5,0,0),c(-4,4,4,1),col="pink")
+polygon(c(-5,0,5),c(-4,1,-4),col=8)
+points(0,0,pch=19,col=1)
+points(1,1,pch=19,col=2)
+points(-1,1,pch=19,col=4)
+text(0,0.2,expression(mu[1]),cex=1.5)
+text(1,1.2,expression(mu[2]),cex=1.5)
+text(-1,1.2,expression(mu[3]),cex=1.5)
+```
+
+### Implementation in R
+
+Linear discriminant analysis can be implemented in R using the `lda`
+function. This is part of the `MASS` library, which must be pre-loaded.
+The syntax for `lda` is of the following form:
+
+```{r, eval=FALSE}
+lda(y ~ x1 + x2, data=mydata, CV=FALSE, prior=c(0.5,0.5))
+```
+
+Here `y` in the formula is the true class, and `x1` and `x2` are
+features. The argument `data` allows specification of a data frame in
+the usual manner. The optional argument `CV` is logical, indicating
+whether or not a cross-validation estimate of the posterior
+probabilities $\{{\textsf P}(j | \boldsymbol{x}) \}$ is required. The
+default is `CV=FALSE`. Finally, prior probabilities can be specified as a
+vector valued argument `prior`. The default is to use the class
+proportions in the data.
+
+Predicted classes from an LDA model are obtained by the `predict`
+function in the usual kind of way.
+
+::: {.example}
+**Prediction for the Wine Data Using LDA**
+
+We start by splitting the wine data into training and test data (which
+we shall refer to throughout this chapter). The `wine` data is in truth
+a relatively straightforward one for classification, so we make things a
+little more challenging by leaving only 100 observations in the training
+set (with the remaining 78 in the validation dataset). We randomize the
+order of the data (to avoid any potential bias in the formation of the
+datasets). These operations are performed in the R code below, where we
+first convert the target variable `Cultivar` (which is numeric by
+default) to a factor.
+
+```{r, message=FALSE}
+wine <- read_csv("data/wine.csv")
+wine$Cultivar <- as.factor(wine$Cultivar)
+set.seed(2021)
+random.order <- sample(1:nrow(wine), size=nrow(wine), replace=FALSE)
+wine <- wine[random.order,]
+wine.train <- wine[1:100,]
+wine.valid <- wine[101:178,]
+head(wine.train)
+```
+
+We initially consider prediction with LDA using all the variables.
+
+```{r, message=FALSE}
+library(MASS)
+wine.lda1 <- lda(Cultivar ~ ., data=wine.train)
+wine.lda1
+wine.lda1.pred <- predict(wine.lda1, newdata=wine.valid)$class
+table(wine.lda1.pred, wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+get_perf <- function(pred, truth) {
+  perf = data.frame(pred=pred, true = truth)
+  perf %>% summarise(wrong = sum(pred != true), total = n(),
+                      perc = round(wrong/total*100,1))
+}
+perf.lda1 <- get_perf(wine.lda1.pred, wine.valid$Cultivar)
+```
+
+Note the following:
+
+-   We have first loaded the `MASS` library, in order to access the
+    `lda` function.
+
+-   The dot on the right-hand side of a model formula has the usual
+    meaning (of all variables in the data frame barring the response on
+    the left-hand side).
+
+-   The `summary` command is not very useful when applied to `lda`
+    fitted models. We therefore examine the fitted object `wine.lda1` by
+    simply typing the name of the object. Much of the resulting output
+    is self explanatory. We note that the table of coefficients of the
+    linear discriminants is a matrix which transforms standardized
+    versions of the original observations to the linear discriminants.
+
+-   The command `predict(wine.lda1, newdata=wine.valid)` obtains class
+    predictions for the observations in `wine.valid`. The resulting
+    object is a *list* with components `class`, `posterior` and `x`. The
+    first of these contains the class predictions (based on maximum
+    posterior probabilities) while the second is a matrix of the
+    aforementioned posterior probabilities. The component `x` includes
+    the 'score' for each observation on the discriminant variables.
+
+-   The command `table(wine.lda1.pred, wine.valid$Cultivar)` generates a
+    cross table of predicted classes against true classes; i.e. the
+    confusion matrix. We see that the overall misclassification rate is
+    $`r perf.lda1$wrong`/`r perf.lda1$total` \approx `r perf.lda1$perc`\%$.
+
+We now consider trying to perform LDA using just the variables
+`Alcohol`, `Color` and `Hue`.
+
+```{r}
+wine.lda2 <- lda(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.lda2.pred <- predict(wine.lda2,wine.valid)$class
+table(wine.lda2.pred,wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+perf.lda2 <- get_perf(wine.lda2.pred, wine.valid$Cultivar)
+```
+
+We get a worse misclassification rate in this case:
+$`r perf.lda2$wrong`/`r perf.lda2$total` \approx `r perf.lda2$perc`\%$. Nonetheless, we used many less variables to
+develop the classification model. The question remains, might we improve
+on the initial (full) model by omitting some of the variables? This is
+another instance of a bias-variance trade-off. In principle we could
+perform some kind of variable selection algorithm to address this
+matter, but it turns out that there are better 'dimension reducing'
+approaches (though these are beyond the scope of this paper).
+:::
+
+Finally, we have used the training sample relative frequencies to define
+the prior probabilities in both of these LDA classifiers. As you will
+see from the output for `wine.lda1`, this gave
+$(\pi_1,\pi_2,\pi_3) = (`r wine.lda1$prior`)$. We can instead specify our
+own prior probabilities through the `prior` argument to LDA. For
+example, suppose that we thought that in practice all three cultivars
+are equally prevalent. Then we could perform classification using the
+prior $(\pi_1,\pi_2,\pi_3) = (1/3,  1/3,  1/3)$ by
+
+```{r, eval=FALSE}
+wine.lda3 <- lda(Cultivar ~ ., data=wine.train, prior=c(1,1,1)/3)
+```
+
+You might like to see what the classifications are like with this
+updated LDA. Given that the prior is only a little different, you should
+expect only small changes from the results obtained using `wine.lda1`.
+
+## Kernel Discriminant Analysis{#sec:kda}
+
+While linear discriminant analysis can work well in many applications,
+it can also fail spectacularly when the boundaries between the groups
+are highly non-linear. Consider, for instance, the (artificial) data set
+displayed in Figure \@ref(fig:circledata). The separation between the red and cyan
+observations is clear to the eye, but linear discriminant analysis
+cannot handle such a scenario.
+
+```{r circledata, echo=FALSE, fig.cap="An artificial dataset for which linear discriminant analysis will completely fail."}
+set.seed(1999)
+x1 <- runif(1000,-2,2)
+x2 <- runif(1000,-2,2)
+y <- rep(1,1000)
+y[sqrt(x1^2+x2^2)<1] <- 2
+y <- as.factor(y)
+circle.df <- data.frame(x1,x2,y)
+circle.df <- circle.df[sqrt(x1^2+x2^2)<2,]
+circle.df <- circle.df[1:500,]
+plot(x2 ~ x1, data=circle.df, pch=19, col=3*as.numeric(y)-1, 
+     xlim=c(-2.2,2.2),ylim=c(-2.2,2.2),xlab=expression(x[1]),ylab=expression(x[2]))
+```
+
+A (far) more flexible approach than LDA is to estimate the probability
+functions $f_1,\ldots,f_C$ using kernel density estimation, as discussed
+in section \@ref(sec:kde). Specifically, we will use the training data from
+each class to construct kernel estimates $\hat f_1, \ldots, \hat f_C$
+when all the predictor variables are continuous. Substituting these
+estimates in Equation \@ref(eq:bayes) leads to *kernel discriminant analysis*.
+
+While kernel discriminant analysis wins over LDA in terms of
+flexibility, the method can be somewhat unreliable when there are large
+numbers of predictor variables. Indeed, kernel density estimation will
+typically prove difficult in more than 5 or 6 dimensions, unless there
+are very large numbers of observations available.
+
+Kernel discriminant analysis is implemented in R using the `kda`
+function within the `ks` library, which must be pre-loaded. The syntax
+is a little different for this function to those we have met previously,
+being of the form
+
+```{r, eval=FALSE}
+kda(x, x.group, eval.points, Hs=...)
+```
+
+where the argument `x` takes a matrix of (numerical) predictors for the
+training set and `x.group` takes a factor describing class membership
+for the observations in the training set. The optional argument `Hs`
+defines the bandwidths for each class (the default usually works well,
+so there is little reason to supply this argument), while `eval.points`
+takes the matrix of predictors for the test set[^5].
+
+The requisite bandwidths can be obtained using the function `Hkda` which
+takes arguments `x` and `x.group` as defined above. This function can
+take some time to run when applied to large datasets. The functions
+`kda` and `Hkda` will not work on data with more than six predictors.
+
+::: {.example}
+**Kernel Discriminant Analysis for the Wine Data**
+
+We apply kernel discriminant analysis to the Italian wine data.
+Specifically, we attempt to classify `Cultivar` based on the three
+predictors `Alcohol`, `Colour` and `Hue`.
+
+```{r}
+library(ks)
+wine.train.X <- wine.train[,c(2,11,12)]
+wine.valid.X <- wine.valid[,c(2,11,12)]
+wine.kda <- kda(wine.train.X, wine.train$Cultivar, eval.points=wine.valid.X)
+wine.kda$x.group.estimate
+table(wine.kda$x.group.estimate, wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+perf.kda <- get_perf(wine.kda$x.group.estimate, wine.valid$Cultivar)
+```
+
+Points to note:
+
+-   The target `Cultivar` is the first column of `wine.train`, and hence
+    may be specified as `wine.train[,1]`.
+
+-   The predictors for this problem are columns 2, 11 and 12
+    respectively of the training dataset, and hence are specified as
+    `wine.train[,c(2,11,12)]`.
+
+-   The output from the `kda` function is a an object containing several
+    named variables. The `x.group.estimate` variable is a factor
+    containing the predicted classes[^6].
+
+-   The error rate using kernel discriminant analysis is
+    $`r perf.kda$wrong`/`r perf.kda$total` \approx `r perf.kda$perc`\%$.
+    This is worse than we obtained using LDA.
+    Hence, while linear boundaries may not be entirely satisfactory for
+    distinguishing between classes, the errors thus arising are of a
+    little less importance than those due to the extra complexity
+    inherent in the kernel approach for this example.
+:::
+
+## Naive Bayes Classifiers{#sec:naive}
+
+As we noted above, kernel discriminant analysis does not usually work at
+all well when there are many predictor variables. Indeed, the R
+implementation of the method can cope with no more than $p=6$. This is a
+reflection of the *curse of dimensionality*, which in essence states
+that many statistical estimation problems become much more difficult in
+high dimensions.
+
+This idea can be illustrated most easily if we consider the situation in
+which the predictor variables are categorical. Specifically, imagine
+that we have $p=10$ factors, each on 3 levels. To specify
+$f_j(\boldsymbol{x})$ we must compute the probability for any
+combination the factors. However, there are $3^{10} = 59049$ different
+combinations. That's a lot! Even if we had a large training set with
+$10000$ observations per class, it would still be the case that we would
+have no training observations for more than $86\%$ of the possible
+factorial combinations. How then can we hope to estimate the
+probabilities thereof?
+
+In naive Bayes classification this problem is addressed by making the
+assumption that all the predictors are statistical independent within
+each class. This means that we can factorize the probability functions
+by
+\begin{equation}
+f_j(\boldsymbol{x}) = f_j(x_1) f_j(x_2) \cdots f_j(x_p)
+(\#eq:factorize)
+\end{equation}
+where $f_j(x_i)$ denotes the marginal probability
+function for predictor $x_i$ in class $j$. To appreciate the extent to
+which this simplifies the problem, let us return to out example with 10
+predictive factors each with 3 levels. In order to estimate the marginal
+probability distribution for any single factor we need only estimate 2
+probabilities[^7]. This in turn means that we need only estimate
+$10\times 2=20$ probabilities in total to fully specify the probability
+function in Equation \@ref(eq:factorize).
+
+::: {.example}
+**Coke or Pepsi?**
+
+A sample of 100 people are questioned as to whether they prefer Coke or
+Pepsi (the target classification). A total of 60 prefer Coke and 40
+prefer Pepsi. The predictive factors are sex and age category (younger
+than 20, or 20 and older) of person. The following results were
+recorded.
+
+```{r, echo=FALSE}
+pepsi <- tribble(~sex, ~age, ~count,
+                   "Male", "Younger", 20,
+                   "Male", "Older", 10,
+                   "Female", "Younger", 10,
+                   "Female", "Older", 20)
+coke <- tribble(~sex, ~age, ~count,
+                   "Male", "Younger", 10,
+                   "Male", "Older", 20,
+                   "Female", "Younger", 5,
+                   "Female", "Older", 5)
+
+list(pepsi %>% pivot_wider(names_from=age, values_from=count) %>%
+     column_to_rownames("sex"),
+     coke %>% pivot_wider(names_from=age, values_from=count) %>%
+     column_to_rownames("sex")) %>%
+  knitr::kable(
+    caption = 'Preference of Pepsi (left) and Coke (right) by sex and age',
+    valign = 't',
+    booktabs = TRUE
+  )
+```
+
+To specify the probability distribution $f_1$ for coke drinkers we must
+compute probabilities for each combination of predictive factors. We can
+do so using the observed proportions. Under the full Bayesian model we
+have $$\hat f_1(\{Male,Older\}) = \tfrac{10}{60} = \tfrac{1}{6}$$ for
+example. Using naive Bayes on the other hand, we obtain
+$$\hat f_1(\{Male,Older\}) \approx \hat f_1(Male) \hat f_1(Older) = \tfrac{30}{60} \times \tfrac{30}{60} = \tfrac{1}{4}.$$
+:::
+
+Naturally there is a price to pay for such a huge reduction in model
+complexity. The assumption of independence of predictors within each
+class is strong, and will almost certainly be incorrect in practice.
+Nonetheless, such a simplification may still be a good idea, based on
+the kind of bias-variance trade off arguments with which you should now
+be familiar.
+
+Naive Bayes classification in R is implemented using the function
+`naiveBayes` within the package `e1071` (which must be pre-loaded, as
+usual). The function has a standard type of syntax, being of the form
+
+```{r, eval=FALSE}
+naiveBayes(formula, data)
+```
+
+Predictions can be obtained by applying the `predict` function to an
+object output from `naiveBayes`. The only small change is that the test
+or validation data in this case must be stripped of irrelevant variables
+(which are simply ignored for prediction for `lda` objects, for
+example). This R implementation of the naive Bayes classifier can take
+both quantitative and categorical predictors. The marginal distributions
+(i.e. the $f_j(x_i)$ mentioned above) for the numerical variables are
+estimated as univariate normal distributions, while marginal
+probabilities for the categorical variables are estimated using
+class-specific proportions.
+
+::: {.example}
+**Naive Bayes Classification for the Wine Data**
+
+We apply naive Bayes classification to the Italian wine data, first
+using all the predictor variables and then using just `Alcohol`,
+`Colour` and `Hue`.
+
+```{r, message=FALSE}
+library(e1071)
+wine.nB.1 <- naiveBayes(Cultivar ~ ., data=wine.train)
+wine.nB.1
+wine.nB.1.pred <- predict(wine.nB.1, newdata=wine.valid[,2:14])
+table(wine.nB.1.pred,wine.valid$Cultivar)
+wine.nB.2 <- naiveBayes(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.nB.2.pred <- predict(wine.nB.2, wine.valid[,c(2,11,12)])
+table(wine.nB.2.pred, wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+perf.nB1 <- get_perf(wine.nB.1.pred, wine.valid$Cultivar)
+perf.nB2 <- get_perf(wine.nB.2.pred, wine.valid$Cultivar)
+```
+
+Points to note:
+
+-   The output for the fitted object `wine.nB.1` is a little antiquated,
+    in that it appears to refer to the case when `naiveBayes` could
+    handle only discrete predictors. In fact the tables are not
+    conditional probabilities, but are instead mean and standard
+    deviation (by group) for numerical predictors.
+
+-   Notice that the test or validation data supplied to the predict
+    functions contains only the columns of `wine.valid` corresponding to
+    predictors in the model.
+
+-   The naive Bayes classifier implement with all predictors has an
+    error rate of $`r perf.nB1$wrong`/`r perf.nB1$total` \approx `r perf.nB1$perc`\%$. With just the predictors
+    `Alcohol`, `Colour` and `Hue` this rises to $`r perf.nB2$wrong`/`r perf.nB2$total` \approx `r perf.nB2$perc`\%$.
+:::
+
+**You should now do Computer Lab 7.**
+
+## Logistic regression
+
+Logistic regression is a type of discriminatory classifier. This, along
+with the other methods of classification in the next section, attempt to
+learn the probability $P(j|\boldsymbol{x})$ directly, rather than
+generating it from the joint probability function within each class and
+prior probabilities via Bayes' Theorem.
+
+Logistic regression learns $P(j|\boldsymbol{x})$ directly by assuming a
+parameteric form for the probability. It is one of a class of methods
+known as *generalised linear models* (GLMs), and is thus closely related
+to linear regression. The generalisation involved is that the
+distribution of the response variable $y$ need not be a normal
+distribution. In particular, logistic regression is primarily concerned
+with a binary (i.e. 0 and 1) response variable, whose expected value
+will be the probability of a response $y=1$. Thus, it is useful for
+classifying data into two groups, which we can associate with the two
+outcomes -- say $y=0$ codes for group 1, and $y=1$ for group 2.
+Extensions to more than two groups will be given in section \@ref(sec:multinomial).
+
+It is linear in the sense that a transformation links a linear
+combination of predictors
+$$\theta(\boldsymbol{x}) = \beta_0 + \beta_1 x_1 + \cdots + \beta_p x_p,$$
+with the probability
+$p(\boldsymbol{x}) = {\textsf P}(y=1 | \boldsymbol{x})$[^11]. This
+transformation is the sigmoid function[^12], also known as the *logistic*
+function:
+$$p(\boldsymbol{x}) = \frac{1}{1+e^{-\theta(\boldsymbol{x})}}.$$ The
+logistic function ensures that the expected outcome is between 0 and 1,
+see the left-hand panel of Figure \@ref(fig:logistic).
+
+```{r logistic, echo=FALSE, fig.cap = "The logistic and logit functions."}
+par(mfrow=c(1,2))
+curve(1/(1+exp(-x)),-6,6,ylab=expression(p),xlab=expression(theta))
+title("logistic function")
+curve(log(x/(1-x)),0.0001,0.9999,xlab=expression(p),ylab=expression(theta))
+title("logit function")
+```
+
+The inverse of the logistic function is the *logit* function
+$$\theta(\boldsymbol{x}) = {\textsf {logit}}(p(\boldsymbol{x})) = \log\left(\frac{p(\boldsymbol{x})}{1-p(\boldsymbol{x})}\right).$$
+See the right-hand panel of Figure \@ref(fig:logistic).
+The logit may also be interpreted
+as the log odds, where the odds are defined as
+$\tfrac{p(\boldsymbol{x})}{1-p(\boldsymbol{x})}$. Odds are an alternate
+scale for interpreting the chance of something happening. Rather than
+writing the probability of it occurring, we instead give a ratio of the
+probability that it occurs to the probability that it does not occur. As
+an example, the odds of something that occurs twice in five are 2:3 --
+you expect it to occur twice for every 3 times it does not occur. Notice
+that, while proportions are restricted between 0 and 1, the odds may
+take any positive number, and hence the log odds may take any real
+number. This makes the log odds appropriate for a linear combination of
+predictors which, if we allow any possible values for the predictors,
+will also produce all real numbers.
+
+The formulation of logistic regression is therefore:
+$$\begin{aligned}
+y_i &\sim \mathsf{Bernoulli}(p(\boldsymbol{x}_i))\\
+{\textsf {logit}}(p(\boldsymbol{x}_i)) &= \beta_0 + \beta_1x_{i1} + \cdots+ \beta_p{x_ik}.\end{aligned}$$
+where
+
+-   $y_i$ is the binary outcome for observation $i$;
+
+-   $\boldsymbol{x}_i = (x_{i1}, \ldots, x_{ip})^\mathsf{T}$ is the
+    vector of predictor variables for the $i$th observation;
+
+-   $p(\boldsymbol{x}_i) = {\textsf P}(y_i = 1 | \boldsymbol{x}_i)$;
+
+-   $\beta_1, \ldots, \beta_p$ are unknown regression coefficients.
+
+Note that, as with linear regression, we can use either quantitative
+variables or factors as predictors. When factors are used, we code them
+as 0/1 dummy variables in the same way as is done for linear regression.
+
+There is then a natural way of interpreting the fitted coefficients for
+factors in terms of odds. Suppose we have a factor with one of its
+levels is coded as the binary variable $x_1$, and let $x_2, \ldots, x_p$
+be other predictors (including any other levels of the factor). Then if
+$x_1$ is a 1, the log odds will be given by
+$${\textsf {logit}}(p(\boldsymbol{x})) = \beta_0 + \beta_1 + \sum_{j=2}^p \beta_j x_j.$$
+If $x_1$ is a 0, the log odds is given by
+$${\textsf {logit}}(p(\boldsymbol{x})) = \beta_0 + \sum_{j=2}^p \beta_jx_j.$$
+Thus, the ratio of the odds, or *odds ratio* associated with $x_1$ is
+given by
+$$\begin{aligned}
+\mathsf{OR}(x_1) &= \frac{e^{\beta_0 + \beta_1 + \sum_{j=2}^p \beta_jx_j}}{e^{\beta_0 + \sum_{j=2}^p\beta_jx_j}}\\
+& = e^{\beta_1}.\end{aligned}$$
+An odds ratio of $x_1$ greater than one
+means the odds that $y=1$ increase when $x_1$ is 1; an odds ratio less
+than one means the odds that $y=1$ decreases when $x_1$ is 1. Thus, the
+odds increase if $\beta_1 > 0$ and decrease if $\beta_1 < 0$.
+
+### Fitting Logistic Regression Models
+
+Unlike linear regression, we cannot estimate the unknown regression
+coefficients $\beta_1, \ldots, \beta_p$ via a closed form expression
+that minimises the sum of squared errors. Instead, we must find the
+regression coefficients by an iterative procedure which attempts to
+maximise the *likelihood* of the data[^13] The likelihood is simply the
+probability of the data regarded as a function of the parameters.
+
+For a particular observation $y_i$, the likelihood for logistic
+regression is
+$$\begin{aligned}
+{\textsf P}(y_i|\boldsymbol{x}_i,\boldsymbol{\beta}) &= \left\{\begin{array}{ll}p & \textrm{if}\quad y_i = 1\\
+1-p & \textrm{if}\quad y_i = 0,\end{array}\right.\\
+&= \left\{\begin{array}{ll}\frac{1}{1 + e^{-\beta_0 - \sum_j \beta_j x_{ij}}} & \textrm{if}\quad y_i = 1\\
+\\
+\frac{e^{-\beta_0 - \sum_j \beta_j x_{ij}}}{1 + e^{-\beta_0 - \sum_j \beta_j x_{ij}}} & \textrm{if}\quad y_i = 0,\end{array}\right.\\
+& = \frac{e^{(-\beta_0 -\sum_j \beta_j x_{ij})(1-y_i)}}{1 + e^{-\beta_0 -\sum_j \beta_i x_{ij}}}.\end{aligned}$$
+Thus, the likelihood of the full data arising, assuming the data are
+independent, is
+\begin{equation}
+L(\boldsymbol{\beta}) = P(\boldsymbol{y}|\boldsymbol{x},\boldsymbol{\beta}) = \prod_{i=1}^n \frac{e^{(-\beta_0 - \sum_j \beta_j x_{ij})(1-y_i)}}{1 + e^{-\beta_0 - \sum_j \beta_j x_{ij}}}.
+(\#eq:likelihood)
+\end{equation}
+The parameter vector $\boldsymbol{\beta}$ that maximises equation
+\@ref(eq:likelihood) will be the one that is most likely to
+produce the data we observe, known as the *maximum likelihood estimate*
+[^14]. In practice, we typically maximise the log-likelihood function
+instead
+$$\begin{aligned}
+\ell(\boldsymbol{\beta}) = \log L(\boldsymbol{\beta}) &= \sum_{i=1}^n \log\left(\frac{e^{(-\beta_0 - \sum_j \beta_j x_{ij})(1-y_i)}}{1 + e^{-\beta_0 - \sum_j \beta_j x_{ij}}}\right)\\
+& = \sum_{i=1}^n \log(e^{(-\beta_0 - \sum_j \beta_j x_{ij})(1-y_i)}) - \log(1 + e^{-\beta_0 - \sum_j \beta_j x_{ij}})\\
+& = \sum_{i=1}^n (-\beta_0 - \sum_j \beta_j x_{ij})(1-y_i) - \log(1 + e^{-\beta_0 - \sum_j \beta_j x_{ij}}).\end{aligned}$$
+There is no closed form solution for the maximum of
+$\ell(\boldsymbol{\beta})$, so the maximum likelihood estimator is
+typically found using numerical techniques such as Newton's method.
+
+Logistic regression models may be fit in R using the `glm` function. The
+basic syntax is
+
+```{r, eval=FALSE}
+glm(formula, family, data)
+```
+
+where
+
+-   `formula` is the model formula,
+
+-   `family` describes the error distribution. Specify `family=binomial`
+    for logistic regression[^15],
+
+-   `data` is the data frame to use (optional).
+
+As with linear regression, the fitted model should be assigned to a
+fitted model object for later use.
+
+The `formula` is of the same form as for linear regression
+
+```{r, eval=FALSE}
+y ~ x1 + x2
+```
+
+where `y` in this case is a binary variable (0/1) and `x1` and `x2` are
+predictor variables, either quantitative or factors.
+
+::: {.example}
+**Logistic regression modelling for Swiss bank notes**
+
+Recall that the swiss bank notes data from Example 4.1 contained
+measurements on 100 forged and 100 genuine Swiss bank notes. On each
+bank note the size of the bottom margin was recorded, as was the
+diagonal length of the note (all measurements in mm). We are interested
+in classifying the notes into forged and genuine classes based on the
+margin and diagonal measurements. The data has been split into training
+and validation sets, containing 120 and 80 notes respectively.
+
+```{r, message=FALSE}
+swiss.train <- read_csv("data/swiss-train.csv")
+swiss.valid <- read_csv("data/swiss-valid.csv")
+swiss.train$type <- as.factor(swiss.train$type)
+swiss.valid$type <- as.factor(swiss.valid$type)
+glimpse(swiss.train)
+swiss.glm.1 <- glm(type ~ margin, family=binomial, data=swiss.train)
+summary(swiss.glm.1)
+swiss.glm.2 <- glm(type ~., family=binomial, data=swiss.train)
+step(swiss.glm.2)
+```
+
+```{r, echo=FALSE}
+beta0 = round(coef(swiss.glm.1)[1], 4)
+beta1 = round(coef(swiss.glm.1)[2], 4)
+```
+
+Some comments on this R snippet.
+
+-   The `type` variable has two levels, `forged` and `genuine` in that
+    order. Thus, `forged` will be taken as the class represented by
+    $y=0$, and `genuine` will be the class represented by $y=1$ in the
+    logistic regression.
+
+-   The `glm` line is fitting a logistic model with `type`, a factor
+    with two possible values as the response. For `swiss.glm.1` there is
+    just a single predictor, `margin`. For `swiss.glm.2` both `margin`
+    and `diagonal` are predictors.
+
+-   For `swiss.glm.1` we see that the coefficient of `margin` is
+    negative, so ${\textsf P}(y=1 | \texttt{margin})$ (i.e. probability
+    of genuine note) decreases as `margin` increases.
+
+-   For `swiss.glm.1` linear predictor is
+    $\theta(\texttt{margin}) = \beta_0 + \beta_1 \texttt{margin}$. The
+    maximum likelihood estimates for the parameters are
+    $\hat \beta_0 = `r beta0`$ and $\hat \beta_1 = `r beta1`$.
+
+-   The *Deviance* mentioned in the output is the logistic regression
+    analogue of sum of squares in linear regression.
+
+-   As with linear regression, there is the question of what selection
+    of predictor variables provide a model with best bias-variance
+    trade-off. Again, mirroring our discussion of linear regression for
+    prediction, we can use backwards variable selection implemented to
+    minimze AIC as a way of finding a reasonable set of predictor
+    variables. In this particular case we see that the model
+    `swiss.glm.1` has a lower AIC than either of the models that can be
+    obtained by removing a single predictor, so the backwards variable
+    selection algorithm (implemented using `step`) terminates
+    immediately.
+:::
+
+### Logistic Regression as a classifier
+
+When using logistic regression as a classifier, for a given value of the
+predictors $\boldsymbol{x}$ we would classify as a 1 if
+${\textsf P}(Y=1|\boldsymbol{x}) > {\textsf P}(Y=0|\boldsymbol{x})$ and
+as 0 otherwise. i.e. we classify as a 1 if
+$$\frac{{\textsf P}(Y=1|\boldsymbol{x})}{{\textsf P}(Y=0|\boldsymbol{x})} > 1.$$
+Now, ${\textsf P}(Y=1|\boldsymbol{x}) = p(\boldsymbol{x})$, and thus
+${\textsf P}(Y=0|\boldsymbol{x}) = 1-p(\boldsymbol{x})$. Hence, we
+classify as a 1 if $$\begin{aligned}
+& & \frac{P(Y=1|\boldsymbol{x})}{P(Y=0|\boldsymbol{x})} &> 1,\\
+& \iff & \frac{p(\boldsymbol{x})}{1-p(\boldsymbol{x})} &> 1,\\
+& \iff & \log(\frac{p(\boldsymbol{x})}{1-p(\boldsymbol{x})}) &> 0,\\
+& \iff & {\textsf {logit}}(p(\boldsymbol{x})) &> 0.\\
+& \iff & \beta_0 + \beta_1x_1 + \cdots \beta_px_p &> 0.\end{aligned}$$
+This gives a simple formula for classifying: evaluate the linear
+predictor and assign to class 1 if positive and class 0 if negative.
+
+::: {.example}
+**Classifying the Swiss Bank Notes data**
+
+Recall from the previous example that the model `swiss.glm.1` had
+$\theta(\texttt{margin}) = \beta_0 + \beta_1 \texttt{margin}$ with
+maximum likelihood estimates $\hat \beta_0 = `r beta0`$ and
+$\hat \beta_1 = `r beta1`$. It follows that the fitted model (based on
+training data) has linear predictor
+$\hat \theta(\texttt{margin}) = `r beta0` `r beta1`~\texttt{margin}$. We
+would hence classify a test case to genuine notes (coded by $y=1$) if
+and only if $$\begin{aligned}
+`r beta0` `r beta1`~\texttt{margin} \ge 0 &\Leftrightarrow& \texttt{margin} \le \frac{`r beta0`}{`r -beta1`} \\
+                                      &\Leftrightarrow& \texttt{margin} \le `r round(-beta0/beta1,3)`~~~.\end{aligned}$$
+A quick exploration of the data should persuade you that this is a
+natural result: most of the forged notes are detectable by their
+surprisingly large bottom margins.
+:::
+
+The `predict` command on a fitted model object from `glm` by default
+returns predictions from the linear predictor, rather than on the
+original scale of the data. This is exactly what we want in this case,
+as we can assign the positive predictions to the second class (class 1),
+and the negative productions to the first class (class 0). This may be
+achieved in a number of ways, as shown in the following example.
+
+::: {.example}
+**More on Classifying the Swiss Bank Notes data**
+
+We continue our example on the Swiss bank notes with the following R
+snippet. We start by looking a predictions on the default (logit) scale,
+and on the probability (response) scale.
+
+```{r}
+swiss.glm.2.logit <- predict(swiss.glm.2, newdata=swiss.valid)
+head(swiss.glm.2.logit)
+swiss.glm.2.pr <- predict(swiss.glm.2, newdata=swiss.valid, type="response")
+head(swiss.glm.2.pr)
+```
+
+The vector `swiss.glm.2.logit` contains the predicted logits for the
+validation cases. Hence for validation case 1 (the predictors for which
+we denote by the vector $\boldsymbol{x}_0$),
+$$\theta(\boldsymbol{x}_0) = \log \left ( \frac{p(\boldsymbol{x}_0)}{1 - p(\boldsymbol{x}_0)} \right ) = `r round(swiss.glm.2.logit[1], 2)` .$$
+It follows that
+$${\textsf P}(y=1 | \boldsymbol{x}_0) = 1/(1+e^{-\theta(\boldsymbol{x}_0)}) = 1/(1+e^{`r -round(swiss.glm.2.logit[1], 2)`}) \approx 1.$$
+
+Each test case will be assigned to the genuine class (coded $y=1$) if
+and only if it has a posterior probability $p(\boldsymbol{x}) > 0.5$, or
+equivalently if and only if its linear predictor
+$\theta(\boldsymbol{x}_0) > 0$. Working on the linear predictor scale,
+we can obtain coded predictions in (at least) two equivalent ways.
+
+```{r}
+swiss.glm.pred <- predict(swiss.glm.2,swiss.valid)
+swiss.glm.pred <- swiss.glm.pred > 0
+swiss.glm.pred
+swiss.glm.pred[swiss.glm.pred==TRUE] <- "genuine"
+swiss.glm.pred[swiss.glm.pred==FALSE] <- "forged"
+swiss.glm.pred <- as.factor(swiss.glm.pred)
+swiss.glm.pred
+swiss.glm.pred <- predict(swiss.glm.2,swiss.valid)
+swiss.glm.pred <- cut(swiss.glm.pred, breaks=c(-Inf,0,Inf),
+                      labels=levels(swiss.valid$type))
+swiss.glm.pred
+table(swiss.glm.pred, swiss.valid$type)
+```
+
+```{r, echo=FALSE}
+perf.glm <- get_perf(swiss.glm.pred, swiss.valid$type)
+```
+
+Some comments on this R snippet.
+
+-   The first method of obtaining the classifications takes a few lines
+    of code, but all should be familiar. All that is going on is a
+    little manipulation of the object `swiss.glm.pred` to turn it into a
+    vector with the requisite levels.
+
+-   The second approach uses the `cut` command. This takes the values
+    from the linear predictor and breaks it into classes specified by
+    `breaks`, labelling the classes by the `labels`. The `breaks`
+    argument here specifies two classes: One from $-\infty$ to $0$, and
+    one from $0$ to $+\infty$. We label them the same as the levels of
+    the `type` factor.
+
+-   The confusion matrix tabulates the predicted class versus the true
+    class from the `swiss.valid` set. This shows that all but one of the
+    bank notes has been correctly classified, a misclassification rate
+    of just $`r perf.glm$wrong`/`r perf.glm$total`$.
+:::
+
+Logistic regression, particularly when being applied to data sets that
+can be relatively easily classified, can end up creating a perfect
+classifier based on the training data. In this case there is no unique
+solution for the maximum likelihood estimate of the coefficients --
+there are an infinite number of possibile coefficients that will produce
+the same perfect predictions. We illustrate this with a slight change of
+the Swiss bank notes data.
+
+::: {.example #swiss5}
+**Classification of modified Swiss Bank Notes**
+
+Consider the following R snippet, where we have changed a single
+observation in the `swiss.train` data set slightly. The plot is given in
+Figure \@ref(fig:swiss5).
+
+```{r swiss5, fig.cap="Forged (black) and genuine (red) Swiss bank notes from Example \\@ref(exm:swiss5)"}
+swiss2.train <- swiss.train
+swiss2.train$diagonal[103] <- 140.2
+plot(diagonal ~ margin, col=type, data=swiss2.train)
+swiss2.glm <- glm(type ~ ., family=binomial, data=swiss2.train)
+```
+
+Some comments on the R code.
+
+-   `glm` gives two warning messages, firstly that the algorithm did not
+    converge, and secondly that fitted probabilities that were
+    numerically no different than 0 or 1 occurred.
+
+-   Figure \@ref(fig:swiss5)
+    suggests there is a line that perfectly separates the data into the
+    two groups. It is this perfect separation based on a linear
+    estimator that causes `glm` to not find a unique maximum likelihood
+    estimate, and thus fail to converge. Further, the predicted
+    probabilities on the training set are indistinguishable from 0
+    and 1.
+
+-   In this particular case, the coefficients found from the model lead
+    to a perfect fit of the training data. However, the algorithm used
+    to find the maximum likelihood estimators may fail to converge for
+    other reasons, such as collinearity of the predictors, or a lack of
+    data (no observations) for certain combinations of factors.
+:::
+
+### Extending Logistic Regression to more than two classes {#sec:multinomial}
+
+Logistic regression extends naturally to more than two categories by
+moving from a single probability of success $p$ to the probability of
+each class $p_c$ for $c \in 1, \ldots, C$ where $C$ is the number of
+classes. We then model $p_c$ as
+$$p_c = \left\{ \begin{array}{ll}\frac{\displaystyle 1}{\displaystyle 1 + \sum_{m=2}^C e^{-\beta_{m0} - \sum_{j=1}^k \beta_{mj}x_j}} & \textrm{if } c=1\\
+\\
+\frac{\displaystyle e^{-\beta_{c0} - \sum_{j=1}^k \beta_{cj}x_j}}{\displaystyle 1 + \sum_{m=2}^C e^{-\beta_{m0} - \sum_{j=1}^k \beta_{mj}x_j}} &   \textrm{if } c\in \{2, \ldots, C\}.
+\end{array}\right.$$ Notice that we now have $C-1$ lots of $k$
+coefficients to estimate, one set for each of the classes excluding one.
+The last class need not have separate estimators, as the probabilities
+$p_c$ must sum to one[^16].
+
+Such models are typically referred to as *multinomial* regression
+models, as they extend the binomial distribution to trials with more
+than 2 outcomes.
+
+The `multinom` function in the `nnet` library utilises neural networks
+to fit multinomial regression models. We illustrate this with an
+analysis of the Italian wine data.
+
+::: {.example}
+**Multinomial Regression for the Wine Data**
+
+We perform classification using the `multinom` function from the `nnet`
+library.
+
+```{r, message=FALSE}
+library(nnet)
+wine.mn <- multinom(Cultivar ~ ., data=wine.train)
+summary(wine.mn)
+wine.mn.pred <- predict(wine.mn, newdata=wine.valid)
+table(wine.mn.pred, wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+perf.mn <- get_perf(wine.mn.pred, wine.valid$Cultivar)
+```
+
+Some comments:
+
+-   The summary for `multinom` objects gives the values of the
+    coefficients for classes 2 and 3 but not for class 1, as that is
+    then determined as the probabilities sum to 1.
+
+-   The `predict` function in multinomial regression returns the classes
+    directly.
+
+-   A misclassification rate of $`r perf.mn$wrong`/`r perf.mn$total` \approx `r perf.mn$perc`\%$ is
+similar to that achieved earlier.
+
+We continue by attempting to fit a model containing just the variables
+`Alcohol`, `Color`, and `Hue`.
+
+```{r}
+wine.mn2 <- multinom(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.mn2.pred <- predict(wine.mn2, newdata=wine.valid)
+table(wine.mn2.pred, wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+wine.mn2 <- get_perf(wine.mn2.pred, wine.valid$Cultivar)
+```
+
+We get a worse misclassification rate in this case of
+$`r wine.mn2$wrong`/`r wine.mn2$total` \approx `r wine.mn2$perc`\%$. Nonetheless,
+this used significantly fewer
+variables in the model. Might we improve on the full model by omitting
+some of the variables? We now consider a variable selection algorithm.
+:::
+
+### Model selection
+
+As with linear regression, model selection is necessary for logistic
+regression in order to eliminate variables that are only weakly
+informative (or not informative at all) for classification. Eliminating
+such a variable will increase the bias of the model but reduce the
+variance, as we need not estimate a coefficient for those variables.
+This variance/bias trade-off requires a balance between model fit and
+model complexity.
+
+The Akaike Information Criterion (AIC) may be used in logistic
+regression in the same way as it was used in linear regression. Indeed,
+we can utilise the `step` function to perform backwards elimination from
+a full model.
+
+::: {.example}
+**Multinomial model selection for the Wine Data**
+
+We use the `step` function on the full model `wine.mn` to produce a
+model with reduced AIC.
+
+```{r}
+wine.mn3 <- step(wine.mn, trace=FALSE)
+summary(wine.mn3)
+wine.mn3.pred <- predict(wine.mn3, newdata=wine.valid)
+table(wine.mn3.pred, wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+wine.mn3 <- get_perf(wine.mn3.pred, wine.valid$Cultivar)
+```
+
+Some comments on this R snippet.
+
+-   The `step` command can be used in the same way as for linear
+    regression.
+
+-   The final model contained `Alcohol`, `Flav`, and `Proline` as
+    predictors.
+
+-   The final model has a misclassification rate of $`r wine.mn3$wrong`/`r wine.mn3$total` \approx `r wine.mn3$perc`\%$
+    which is worse than the full model, however it contains only 3
+    predictors.
+:::
+
+## Other Methods of Classification
+
+The classifiers that we have considered to date have either been based
+on Equation \@ref(eq:bayes) using various explicit models for the probability
+functions $\{f_j\}$ or, in the case of Logistic regression, based on a
+functional form of the probabilities $P(j | \boldsymbol{x})$. We now
+turn to some classification techniques that are more model-free in
+nature, namely k-nearest neighbour classifiers, classification trees and
+neural networks. The first of these is designed to work with
+quantitative predictors only, but the latter pair can also incorporate
+factors.
+
+### k-Nearest Neighbour Classification
+
+The idea behind k-nearest neighbour classification is to find the $k$
+data points in the training set that are most similar to the test
+observation at hand, and then assign the test case to the most common
+class for these proximate training data. This general idea should ring
+some bells -- we discussed nearest neighbour imputation for handling
+missing values.
+
+Two important issues to consider are the scaling of the data, and the
+choice of $k$. With regard to the former, note that k-nearest neighbour
+classification is (usually) based on Euclidean distances between
+observations. This means that if there is disparity in the scales of the
+variables, those taking larger values will tend to dominate.
+Furthermore, it means that the methodology will not be scale invariant.
+For example, changing the unit of measurement for a variable from metres
+to centimetres will change the resulting classifier, which is
+undesirable. If the raw variables are on comparable, natural scales then
+this may not be a significant problem, but otherwise it will usually be
+wise to transform the predictors so that they have common means and
+standard deviations.
+
+Turning to the choice of $k$, the usual considerations of the
+bias-variance trade-off apply. A small value of $k$ (e.g. $k=1$) will
+result in a method with considerable variability. A large value of $k$
+will reduce the variability (since the choice of class will now be
+determined by majority vote over a larger number of observations), but
+at the expense of introducing bias (since we will be comparing
+observations with greater disparity in the pattern of predictor values).
+
+The method of k-nearest neighbour classification is implemented in R by
+the function `knn`, which is part of the `class` package (which must be
+pre-loaded). The syntax is
+
+```{r, eval=FALSE}
+knn(train, test, cl, k = 1)
+```
+
+where the argument `train` takes the matrix of training set predictor
+variables; `test` takes the matrix of test set predictor variables; `cl`
+takes the vector of training set classes; and `k` specifies the number
+of near neighbours to use. The output from the function is a vector of
+class predictions for the test data.
+
+::: {.example}
+**k-Nearest Neighbour Classification for the Wine Data**
+
+We perform classification using the k-nearest neighbour method. Our
+first attempt is based on the raw predictor data. We then examine
+results when these data are transformed to a common scale.
+
+```{r, message=FALSE}
+library(class)
+wine.knn.1 <- knn(wine.train[,2:14], wine.valid[,2:14], wine.train$Cultivar, k=5)
+wine.knn.1
+table(wine.knn.1, wine.valid$Cultivar)
+wine.train.scale <- wine.train[,2:14]
+wine.valid.scale <- wine.valid[,2:14]
+wine.means <- apply(wine.train.scale, 2, mean)
+wine.sds <- apply(wine.train.scale, 2, sd)
+wine.train.scale <- scale(wine.train.scale, center=wine.means, scale=wine.sds)
+wine.valid.scale <- scale(wine.valid.scale, center=wine.means, scale=wine.sds)
+wine.knn.2 <- knn(wine.train.scale, wine.valid.scale, wine.train$Cultivar, k=5)
+wine.knn.2
+table(wine.knn.2, wine.valid$Cultivar)
+wine.knn.3 <- knn(wine.train.scale, wine.valid.scale, wine.train$Cultivar, k=10)
+table(wine.knn.3, wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+perf.knn1 <- get_perf(wine.knn.1, wine.valid$Cultivar)
+perf.knn2 <- get_perf(wine.knn.2, wine.valid$Cultivar)
+```
+
+Points to note:
+
+-   The results using the data on the raw scale are not very impressive.
+    The overall misclassification rate is $`r perf.knn1$wrong`/`r perf.knn1$total` \approx `r perf.knn1$perc`\%$.
+    Changing the value of $k$ from our choice of $5$ makes little
+    difference.
+
+-   The functions
+    
+    ```{r, eval=FALSE}
+    wine.means <- apply(wine.train.scale, 2, mean)
+    wine.sds <- apply(wine.train.scale, 2, sd)
+    ```
+
+    apply the functions `mean` and `sd` to the second margin (i.e. the
+    columns) of the matrix `wine.train.scale`, and hence output the
+    vector of predictor means and standard deviations respectively for
+    the training data.
+
+-   We use these means and standard deviations to centre and scale
+    respectively both the training and test data predictors. (It is
+    essential that both training and test data are transformed in
+    exactly the same way.) This is done using the `scale` command in R,
+    with centre (to be subtracted from data) and scale (by which data
+    are divided) specified by the arguments in the natural way.
+
+-   The classifier works far better using the transformed predictors.
+    With $k=5$ we get an overall misclassification rate of
+    $`r perf.knn2$wrong`/`r perf.knn2$total` \approx `r perf.knn2$perc`\%$.
+    The results using $k=10$ nearest neighbours
+    are a little worse (but still much improved on the classification
+    based on the raw data).
+:::
+
+### Classification Trees
+
+The regression trees introduced in Section \@ref(sec:regtree)
+are easily adapted to the problem of
+classification. We will continue to use binary trees, but with the
+sequence of splits now chosen so as to most improve classification (as
+opposed to prediction) performance. This means that we need to modify
+the sum of squares error criterion that was used to assess splits with
+regression trees.
+
+A common option (and the default with the R function `rpart`) is to
+measure node *impurity* using the *Gini splitting index*. The Gini index
+measures how often a randomly selected observation would be
+misclassified if the class labels of all observations at the node were
+randomly reallocated, and so is given by
+\begin{equation}
+G = \sum_{j=1}^C \hat p_j (1 - \hat p_j) = 1 - \sum_{j=1}^C \hat p_j^2
+(\#eq:gini)
+\end{equation}
+where $\hat p_j$ is the proportion of observations at
+the node in question which are of class $j$. Note that if the node is
+entirely pure, in the sense that only observations from one class are
+present, then $G = 0$. On the other hand, if the observations at the
+node are equally split between all classes, then $G = 1 - 1/C$ (the
+maximum value it can take). We will seek splits that minimize Gini index
+and hence minimize impurity.
+
+An alternative (which can be implemented using `rpart`) is to instead
+aim to minimize the cross-entropy information criterion
+\begin{equation}
+I_E = \sum_{j=1}^C \hat p_j \log(\hat p_j).
+(\#eq:entropy)
+\end{equation}
+
+::: {.example}
+**Growing Classification Trees for the Wine Data**
+
+We grow a classification tree for the wine data using the default
+settings.
+
+```{r, message=FALSE}
+library(rpart)
+wine.rp.1 <- rpart(Cultivar ~ . ,data=wine.train)
+wine.rp.1.prob <- predict(wine.rp.1, newdata=wine.valid)
+head(wine.rp.1.prob)
+wine.rp.1.pred <- predict(wine.rp.1, newdata=wine.valid, type="class")
+table(wine.rp.1.pred, wine.valid$Cultivar)
+```
+```{r, echo=FALSE}
+perf.rp1 <- get_perf(wine.rp.1.pred, wine.valid$Cultivar)
+```
+
+This R snippet should largely be self explanatory, although the
+behaviour of the `predict` command warrants a mention. When applied to a
+classification tree, the default action is to output a matrix of
+posterior probabilities. Hence the first observation in the validation
+dataset is assigned posterior probabilities of $`r paste(round(wine.rp.1.prob[1,],2), collapse=",")`$
+respectively for the three cultivars.
+
+If we wish to obtain single class predictions (based on maximal
+posterior probabilities) then we must specify the `type` argument to be
+`class`. With this option we obtain a confusion table, and see that the
+overall misclassification rate is $`r perf.rp1$wrong`/`r perf.rp1$total` \approx `r perf.rp1$perc`\%$.
+
+```{r winetree, echo=FALSE, fig.cap="Classification tree for the wine data."}
+plot(wine.rp.1, compress=TRUE, margin=0.1)
+text(wine.rp.1)
+```
+
+The tree employed is displayed in Figure \@ref(fig:winetree). It is
+very simple, being built on just the variables `Colour` and `Flav`.
+Nonetheless, it is difficult to improve on this. Changing the
+complexity parameter to `cp=0.0001` (output not shown) results in no
+change to the model, for example.
+:::
+
+### Neural Networks for Classification
+
+Neural networks for classification work much like neural networks for
+prediction, although the model fitting criterion is changed from least
+squares (as it was for prediction). The R implementation `nnet` handles
+situations with two classes a little differently to cases with three or
+more classes. In the former case there is need for just one output node,
+and model fitting is done with respect to the entropy criterion of
+Equation \@ref(eq:entropy). When the target variable has three or more
+classes, the number of output nodes equals the number of classes, and
+fitting is done using conditional maximum likelihood estimation[^17]. In
+either case, the the output is a classification probability (and so
+constrained to the interval $[0,1]$) given by
+$$\hat p = \psi(\beta_0 + \beta_1 z_1 + \cdots + \beta_M z_M)$$
+where $z_1,\ldots,z_M$ are the derived features of the hidden nodes, and
+$\psi$ is a sigmoid transformation of the form that we saw previously in
+Figure \@ref(fig:activation). With the R function `nnet` this means that
+the argument `linout` must be set to `FALSE` (which is the default, so
+there is no need to do so explicitly).
+
+::: {.example}
+**Neural Network Classification for the Wine Data**
+
+We will apply a neural network for classifying the Italian wine data. As
+we saw in Computer Lab 6, the `nnet` function does not work well if
+there is significant variation in the scales of the predictor variables.
+This is certainly the case with the wine data; for example, in the
+training set the variable `Proline` ranges from 290 to 1680, while
+`Non.Flav` ranges from 0.14 to 0.66. We therefore begin by transforming
+all the predictors on to the interval $[0,1]$ (again following the
+techniques from Lab 6).
+
+```{r}
+library(nnet)
+set.seed(1000)
+wine.train.scale <- wine.train
+wine.valid.scale <- wine.valid
+wine.train.max <- apply(wine.train[,2:14], 2, max)
+wine.train.scale[,2:14] <- sweep(wine.train[,2:14], 2, wine.train.max, FUN="/")
+wine.valid.scale[,2:14] <- sweep(wine.valid[,2:14], 2, wine.train.max, FUN="/")
+wine.nn.1 <- nnet(Cultivar ~ . , size=7, data=wine.train.scale)
+wine.nn.1.prob <- predict(wine.nn.1, newdata=wine.valid.scale)
+head(wine.nn.1.prob)
+wine.nn.1.pred <- predict(wine.nn.1, newdata=wine.valid.scale, type="class")
+table(wine.nn.1.pred, wine.valid$Cultivar)
+```
+
+```{r, echo=FALSE}
+perf.nn1 <- get_perf(wine.nn.1.pred, wine.valid$Cultivar)
+```
+
+As with prediction using `rpart`, the default action of the `predict`
+function is to produce posterior class probabilities. We can get most
+probable class predictions by setting the argument `type` to `class`
+when implementing `predict`. The overall misclassification rate is
+$`r perf.nn1$wrong`/`r perf.nn1$total` \approx `r perf.nn1$perc`\%$,
+although it should be remembered that results
+from `nnet` may vary a little depending on the (random) choice of
+initial conditions. It follows that running the above code with a
+different setting of `set.seed` may give a slightly different error
+rate.
+:::
+
+## High Class Classifiers
+
+We have discussed a variety of techniques for classification. As usual,
+the ones that require the greatest number of assumptions regarding the
+data will typically perform best when those assumptions hold, but can do
+very poorly when they do not. Given that in practice we will not know
+for certain what assumptions are valid, many data miners prefer to use
+more flexible tools like classification trees and neural networks.
+
+In these notes we have provided an outline of how each method works.
+Nonetheless, there is considerable scope for tinkering with the details!
+In particular, much time and effort continues to be expended in
+attempting to improve classification accuracy by fractions of one
+percent. There are frequently competitions on the Internet where teams
+of researchers seek to obtain the best classifications possible. At
+present, Kaggle (`www.kaggle.com`) hosts arguably the most well known
+website for such competitions.
+
+**You should now do Computer Lab 9.**
+
+[^1]: As the names of the first two listed techniques suggest,
+    statistical classification can also be referred to as discriminant
+    analysis. As we saw earlier, *supervised learning* is another name
+    for classification, favoured in computer science and related areas.
+
+[^2]: We use the somewhat ambiguous term *probability function* to refer
+    to the probability mass function for discrete random variables, or
+    the probability density function for continuous random variables, as
+    appropriate.
+
+[^3]: Bayes' Theorem is a result of huge importance in Statistics. The
+    result is credited to English mathematician and Presbyterian
+    minister, Reverend Thomas Bayes (1701?-1760).
+
+[^4]: If you would like to learn more about the multivariate normal
+    distribution, and the theory of statistics in general (which is both
+    wonderfully elegant and useful) then you should consider taking the
+    paper 161.200.
+
+[^5]: Note that older versions of the `ks` library use `y` in place of
+    `eval.points`, and also require input for the argument `Hs`.
+
+[^6]: In older versions of the `ks` library, the `kda` function returned
+    the predicted classes directly, negating the need to append
+    `$x.group.estimate`.
+
+[^7]: We need estimate only 2 of the probabilities because the third is
+    then determined by the constraint that the probabilities in a
+    distribution must sum to one.
+
+[^11]: Beware of a possible notational confusion between
+    $p=p(\boldsymbol{x})$, the probability of a response $y=1$ given
+    predictors $\boldsymbol{x}=(x_1, \ldots, x_p)^\mathsf{T}$, and $p$
+    the number of predictors. The distinction will usually be obvious by
+    the context. Moreover, we will usually write $p(\boldsymbol{x})$ for
+    the probability, emphasising its dependence on the predictor
+    variables.
+
+[^12]: Recall the sigmoid function was also used for the activation
+    function in neural networks.
+
+[^13]: If the mathematics that follows below is beyond you, do not worry:
+    you won't be examined on this. We include it for the mathematically
+    interested. Nonetheless, be aware that if you want to learn more
+    about statistics and data mining, then it is important to learn
+    enough mathematics so that you can cope with this type of material.
+
+[^14]: The maximum likelihood estimate in linear regression is given by
+    the least squares solution, as the log-likelihood reduces to the sum
+    of squared residuals.
+
+[^15]: The `glm` function may be used for more than just logistic
+    regression. It can be used in place of `lm` for linear regression
+    via `family=gaussian`, or used for Poisson regression via
+    `family=poisson`.
+
+[^16]: For the same reason, we required only one probability $p$ for the
+    binary case, as the other probability was necessarily $1-p$.
+
+[^17]: We do not cover the details of conditional maximum likelihood
+    here. An introduction to the method of maximum likelihood estimation
+    is provided in the paper 161.304 Statistical Modelling.
