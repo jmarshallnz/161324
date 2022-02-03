@@ -6,7 +6,7 @@ bookdown::gitbook:
         <li><a href="./">161.324 Data Mining</a></li>
       after: |
         <li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
-    edit: https://github.com/jmarshallnz/161324_notes/edit/BRANCH/%s
+    edit: https://github.com/jmarshallnz/161324/edit/main/notes/%s
     download: ["pdf", "epub"]
 bookdown::pdf_book:
   includes:
