@@ -225,7 +225,7 @@ plotting symbols (that's plotting character 19).
 plot(W.Ht~H.Ht, xlab="Husband's height", ylab="Wife's height", col=2, pch=19, data=husbands)
 ```
 
-In Figure \@ref(fig:scater2) the colour is just for show, but colour can
+In Figure \@ref(fig:scatter2) the colour is just for show, but colour can
 also be useful if the data divide into groups. Suppose, for example,
 that we think that the married couples' height data may vary depending
 on whether or not they married young -- say before the husband was 30.
