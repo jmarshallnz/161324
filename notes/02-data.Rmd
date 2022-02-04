@@ -1,12 +1,8 @@
 # Data Acquisition and Processing
 
-> Errors using inadequate data are much less than those using no data at
-> all.\
-> *Charles Babbage*
-
 ## Obtaining Data
 
-Several datasets are provided for your study of 161.223. They come from
+Several datasets are provided for your study of data mining. They come from
 a variety of fields, including business and commerce, ecology, finance
 and genetics. As mentioned previously, all of the datasets that we shall
 study are large, but none are massive. Any computer less than about ten
@@ -28,13 +24,10 @@ data. Finally, those who fancy a challenge might like to visit the
 Kaggle website `www.kaggle.com`. Kaggle runs a series of classification
 and prediction competitions, some with quite large prizes available!
 
-## Loading Data into R [\[sec:dataload\]]{#sec:dataload label="sec:dataload"}
+## Loading Data into R{#sec:dataload}
 
-We have already met a couple of ways of loading data into R in section
-[\[sec:data-import-1\]](#sec:data-import-1){reference-type="ref"
-reference="sec:data-import-1"}. As you may recall, the `scan` command
-reads in text from a file and loads it as a single variable, while
-`read.table` accesses data stored in tabulated text format and loads it
+One method of reading data into R is using `read.table`. This
+accesses data stored in tabulated text format and loads it
 as a data frame.
 
 By default `read.table` assumes that the columns of the target text file
@@ -43,13 +36,15 @@ comprises data items rather than column (variable) names. These options
 can be altered by setting the `sep` and `header` arguments of the
 function `read.table`. The first of these specifies the column separator
 character, which should be appear between speech marks in the function
-call. The second takes logical arguments. It is `F` by default (i.e. the
-first row of the data is not a header), but can be set to `T`.
+call. The second takes logical arguments. It is `FALSE` by default (i.e. the
+first row of the data is not a header), but can be set to `TRUE`.
 
 This might be easier to see through a specific example, so consider the
 following command:
 
-    fires <- read.table(file="forestfires.csv",sep=",",header=T)
+```{r, eval=FALSE}
+fires <- read.table(file="forestfires.csv", sep=",", header=TRUE)
+```
 
 This reads data from the file `forestfires.csv`, a comma separated
 values text file, and assigns the result to a data frame named `fires`.
@@ -59,7 +54,9 @@ achieved using the function `read.csv`, which is the same as
 `read.table` except for the default settings for `sep`, `header` etc.
 Hence
 
-    fires <- read.csv(file="forestfires.csv")
+```{r, eval=FALSE}
+fires <- read.csv(file="forestfires.csv")
+```
 
 produces exactly the same result as the code above.
 
@@ -70,7 +67,7 @@ format: for instance, Excel has the option to save spreadsheets as
 `.csv` (comma separated valued) files. These can then be read into R. As
 an alternative, the R package `Foreign` includes some functions for
 direct importation into R from native file types for some packages
-(including Minitab, S, SAS, SPSS, Stata, and Systat)[^1].
+(including Minitab, S, SAS, SPSS, Stata, and Systat)[^otherpackages].
 
 ## Organizing the Data in R
 
@@ -78,7 +75,7 @@ The common format for datasets is as a matrix, with records (also known
 as observations, cases, or units) as rows and variables (also known as
 attributes) as columns. The information in each column may be numerical
 (in the case of quantitative variables) or categorical (in the case of
-factors[^2]). For example, the first six rows of the goats data (as
+factors[^factors]). For example, the first six rows of the goats data (as
 displayed in R) are
 
     Treatment       Wt.ini  Wt.gain
@@ -93,16 +90,16 @@ where the row numbers identify individual goats, and the columns
 correspond to the variables in the obvious manner. The number of records
 is usually denoted $n$, and the number of variables $p$.
 
-The name for a data structure of this type is a *data frame*. You
-already met R data frames in section
-[\[sec:Rdataframes\]](#sec:Rdataframes){reference-type="ref"
-reference="sec:Rdataframes"}. As we just saw, this is the type of object
+The name for a data structure of this type is a *data frame*.
+As we just saw, this is the type of object
 that is created when you employ the `read.table` command. However, on
 occasions you may find that your dataset requires some manipulation in R
 to get it into our preferred format. We will illustrate this through a
 specific example.
 
-**Example . : Bad Goats**\
+::: {.example}
+**Bad Goats**
+
 Some researchers (fortunately a minority nowadays) like to organize data
 so that columns refer to specific groups. For example, one could arrange
 the goats data in a text file with four columns, with the first pair
@@ -125,49 +122,26 @@ Suppose that you are presented with this text file? How can you
 manipulate it to obtain the nice 'records as rows' format? The following
 R snippet will do the trick.
 
-    > bad.goats <- read.table(file="bad-goats.txt",header=T)
-    > head(bad.goats)
-      iniS gainS iniI gainI
-    1   21     5   18     9
-    2   24     3   18     8
-    3   21     8   19     8
-    4   22     7   19     8
-    5   23     6   19    11
-    6   26     4   21     8
-    > grp.size <- nrow(bad.goats)
-    > grp.size
-    [1] 20
-    > Wt.ini <- c(bad.goats$iniS,bad.goats$iniI)
-    > Wt.ini
-     [1] 21 24 21 22 23 26 22 23 24 20 27 28 28 30 18 27 19 20 19 22 18 18 19 19 19
-    [26] 21 20 21 23 23 25 25 26 24 24 25 26 27 30 29
-    > Wt.gain <- c(bad.goats$gainS,bad.goats$gainI)
-    > Wt.gain
-     [1]  5  3  8  7  6  4  8  6  7  5  5  2  4  5 10  3  8  6  6  3  9  8  8  8 11
-    [26]  8  7  6  5  7  6  9  3  7  5  7  7  5  3  8
-    > Treatment <- factor(c(rep("standard",grp.size),rep("intensive",grp.size)))
-    > Treatment
-     [1] standard  standard  standard  standard  standard  standard  standard 
-     [8] standard  standard  standard  standard  standard  standard  standard 
-    [15] standard  standard  standard  standard  standard  standard  intensive
-    [22] intensive intensive intensive intensive intensive intensive intensive
-    [29] intensive intensive intensive intensive intensive intensive intensive
-    [36] intensive intensive intensive intensive intensive
-    Levels: intensive standard
-    > goats <- data.frame(Treatment,Wt.ini,Wt.gain)
-    > head(goats)
-      Treatment Wt.ini Wt.gain
-    1  standard     21       5
-    2  standard     24       3
-    3  standard     21       8
-    4  standard     22       7
-    5  standard     23       6
+```{r}
+bad.goats <- read.table(file="data/bad-goats.txt", header=TRUE)
+head(bad.goats)
+grp.size <- nrow(bad.goats)
+grp.size
+Wt.ini <- c(bad.goats$iniS,bad.goats$iniI)
+Wt.ini
+Wt.gain <- c(bad.goats$gainS,bad.goats$gainI)
+Wt.gain
+Treatment <- factor(c(rep("standard",grp.size),rep("intensive",grp.size)))
+Treatment
+goats <- data.frame(Treatment,Wt.ini,Wt.gain)
+head(goats)
+```
 
 OK, don't panic! I know there may seem to be a lot going on there, but
 it really isn't very complicated.
 
 -   The first command,
-    `bad.goats <- read.table(file="bad-goats.txt",header=T)`, simply
+    `bad.goats <- read.table(file="data/bad-goats.txt", header=TRUE)`, simply
     reads in the badly formatted data from the text file, and assigns it
     to a data frame `bad.goats`.
 
@@ -186,22 +160,28 @@ it really isn't very complicated.
     data frame `df`. Hence `bad.goats$iniS` is the variable `iniS`
     within the data frame `bad.goats`. It follows that
 
-        Wt.ini <- c(bad.goats$iniS,bad.goats$iniI)
+    ```{r, eval=FALSE}
+    Wt.ini <- c(bad.goats$iniS, bad.goats$iniI)
+    ```
 
     creates a vector `Wt.ini` which is the concatenation of all the
     initial weights, with those from the standard treatment group
     included first. Similarly,
 
-        Wt.gain <- c(bad.goats$gainS,bad.goats$gainI)
+    ```{r, eval=FALSE}
+    Wt.gain <- c(bad.goats$gainS, bad.goats$gainI)
+    ```
 
     creates the variable `Wt.gain` by concatenating the vectors of
     weight gains from the standard and treatment groups respectively.
 
--   The command `c(rep("standard",grp.size)` creates a character vector
+-   The command `c(rep("standard", grp.size)` creates a character vector
     containing the word 'standard' replicated 20 (i.e. `grp.size`)
     times. Therefore
 
-        factor(c(rep("standard",grp.size),rep("intensive",grp.size)))
+    ```{r, eval=FALSE}
+    factor(c(rep("standard",grp.size),rep("intensive",grp.size)))
+    ```
 
     produces a *factor* with two levels, `standard` and `intensive`,
     with the first 20 elements being the former and the final 20
@@ -209,31 +189,20 @@ it really isn't very complicated.
 
 -   Finally, the `data.frame` command is used to produce a new data
     frame, in precisely the desired format.
+:::
 
 We have one final comment on data organization before we move on.
 Remember that when you use `read.table`, R will assume by default that
 any column of numbers corresponds to a quantitative variable. Consider
 the following example.
 
-    > fossils <- read.table(file="../data/fossils.txt",header=T)
-    > fossils
-        bite species
-    1  17.50       1
-    2  15.62       1
-    ....
-    22 13.80       2
-    23 17.70       2
-    24 13.11       3
-    25  6.38       3
-    26 14.00       3
-    27 16.75       3
-    > sqrt(fossils$species)
-     [1] 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000 1.000000
-    ....
-    [25] 1.732051 1.732051 1.732051
-    > fossils$species <- as.factor(fossils$species)
-    > sqrt(fossils$species)
-    Error in Math.factor(fossils$species) : sqrt not meaningful for factors
+```{r, error=TRUE}
+fossils <- read.table(file="data/fossils.txt", header=TRUE)
+fossils
+sqrt(fossils$species)
+fossils$species <- as.factor(fossils$species)
+sqrt(fossils$species)
+```
 
 Here we are dealing with a (small) dataset comprising the bite sizes
 measured on 27 fossils of prehistoric fish. These fish are classified by
@@ -245,7 +214,7 @@ using the `as.factor` command. Once R recognizes that `species` is a
 factor (i.e. a categorical variable) it will no longer permit such
 numerical operations.
 
-## Missing Values [\[sec:missing1\]]{#sec:missing1 label="sec:missing1"}
+## Missing Values{#sec:missing1}
 
 Real datasets often contain missing values. The reasons are various. For
 example, in socio-economic surveys some respondents are unwilling to
@@ -255,7 +224,7 @@ record information from all the experimental units: perhaps someone
 dropped a Petri dish, or one of the lab rats died. When missing values
 are present we need to think carefully about what should be done about
 them, and provide details of what was done in any reported analysis of
-the data[^3].
+the data[^droppingout].
 
 When you are presented with data in a text file, the presence of missing
 values might be indicated in any of the following ways.
@@ -289,7 +258,7 @@ values might be indicated in any of the following ways.
 -   A common alternative is to represent missing values in a text file
     by `NA` (for '**n**ot **a**vailable'). Of course, one has to be
     careful that the string NA does not have some credible meaning in a
-    text field[^4].
+    text field[^nasodium].
 
 Regardless of the representation of missing values in the text file,
 once that data are in R the missing values are denoted by `NA`. R
@@ -297,11 +266,11 @@ recognizes missing values as a special type of data, and has methods for
 handling datasets with missing values when conducting certain kinds of
 analysis. Nonetheless, in many cases the presence of one or more missing
 values will prevent R from returning a numerical result. We will look at
-ways of dealing with this problem in section
-[\[sec:missing\]](#sec:missing){reference-type="ref"
-reference="sec:missing"}.
+ways of dealing with this problem in section \@ref{sec:missing}.
 
-**Example . : Husbands and Wives**\
+::: {.example}
+**Husbands and Wives**
+
 To illustrate handling of missing values we turn to a modestly sized
 dataset on husbands and wives. (The data source is Hand, Daly, Lunn,
 McConway and Ostrowski (1993), *A Handbook of Small Datasets*, Chapman
@@ -320,39 +289,17 @@ The data contain a number of missing values, represented in the text
 file of the data by the number 9999. These data are processed in the
 following R snippet.
 
-    > husbands <- read.table(file="../data/husbands.txt",header=T)
-    > str(husbands)
-    'data.frame':   199 obs. of  5 variables:
-     $ H.Age         : int  49 25 40 52 58 32 43 42 47 31 ...
-     $ H.Ht          : int  1809 1841 1659 1779 1616 1695 1730 1753 1740 1685 ...
-     $ W.Age         : int  43 28 30 57 52 27 52 9999 43 23 ...
-     $ W.Ht          : int  1590 1560 1620 1540 1420 1660 1610 1635 1580 1610 ...
-     $ H.Age.Marriage: int  25 19 38 26 30 23 33 30 26 26 ...
-    > summary(husbands)
-         H.Age            H.Ht          W.Age             W.Ht     
-     Min.   :20.00   Min.   :1559   Min.   :  18.0   Min.   :1410  
-     1st Qu.:33.00   1st Qu.:1691   1st Qu.:  32.5   1st Qu.:1560  
-     Median :43.00   Median :1725   Median :  43.0   Median :1600  
-     Mean   :42.62   Mean   :1732   Mean   :1491.9   Mean   :1602  
-     3rd Qu.:52.00   3rd Qu.:1774   3rd Qu.:  55.0   3rd Qu.:1650  
-     Max.   :64.00   Max.   :1949   Max.   :9999.0   Max.   :1760  
-     H.Age.Marriage  
-     Min.   :  16.0  
-     1st Qu.:  22.0  
-     Median :  24.0  
-     Mean   : 225.8  
-     3rd Qu.:  28.0  
-     Max.   :9999.0  
-    > mean(husbands$W.Age)
-    [1] 1491.894
-    > husbands$W.Age[husbands$W.Age==9999] <- NA
-    > mean(husbands$W.Age)
-    [1] NA
-    > mean(husbands$W.Age,na.rm=T)
-    [1] 40.68235
-    > husbands$H.Age.Marriage[husbands$H.Age.Marriage==9999] <- NA
-    > mean(husbands$H.Age.Marriage,na.rm=T)
-    [1] 25.3641
+```{r}
+husbands <- read.table(file="data/husbands.txt", header=TRUE)
+str(husbands)
+summary(husbands)
+mean(husbands$W.Age)
+husbands$W.Age[husbands$W.Age==9999] <- NA
+mean(husbands$W.Age)
+mean(husbands$W.Age, na.rm=TRUE)
+husbands$H.Age.Marriage[husbands$H.Age.Marriage==9999] <- NA
+mean(husbands$H.Age.Marriage, na.rm=TRUE)
+```
 
 Some points to note.
 
@@ -380,22 +327,23 @@ Some points to note.
     optional argument `na.rm=T` (i.e. remove missing values) then we get
     the mean for the remaining data. In the case of wives' ages, that is
     just over 40.
+:::
 
-[^1]: R can also interact with database systems like MySQL, although the
+[^otherpackages]: R can also interact with database systems as well, although the
     process is a little more complex.
 
-[^2]: As noted previously, categorical variables in R are typically
+[^factors]: As noted previously, categorical variables in R are typically
     referred to as factors. The different categories themselves are
     termed the *levels* of the factor. Hence the factor `Treatment` in
     the goats dataset has two levels, `standard` and `intensive`
     distinguishing the drenching routine employed.
 
-[^3]: An important example occurs with data from clinical trials, where
+[^droppingout]: An important example occurs with data from clinical trials, where
     the statistical analysis is typically expected to account for
     *intention to treat*. This prevents a misleadingly statistical
     results in cases where subjects who are responding poorly have a
     disproportionate chance of dropping out of the trial.
 
-[^4]: You might run into problems if the data include a list of chemical
+[^nasodium]: You might run into problems if the data include a list of chemical
     elements, for example! The chemical symbol for sodium is Na, from
     the Latin word *natrium*.
