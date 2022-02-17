@@ -1,0 +1,50 @@
+/* custom.css */
+.left-code {
+/* color: #777; */
+  width: 38%;
+  height: 92%;
+  float: left;
+}
+
+.right-plot {
+  width: 60%;
+  float: right;
+  padding-left: 1%;
+}
+
+/* custom.css */
+.left-code-wide {
+/* color: #777; */
+  width: 58%;
+  height: 92%;
+  float: left;
+}
+
+.right-out-narrow {
+  width: 40%;
+  float: right;
+  padding-left: 1%;
+}
+
+.remark-slide-number {
+  position: inherit;
+}
+
+.remark-slide-number .progress-bar-container {
+  position: absolute;
+  bottom: 0;
+  height: 4px;
+  display: block;
+  left: 0;
+  right: 0;
+}
+
+.remark-slide-number .progress-bar {
+  height: 100%;
+  background-color: red;
+}
+
+.center-fig {
+  margin: auto;
+  width: 75%;
+}
