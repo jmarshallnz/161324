@@ -1,0 +1,348 @@
+---
+title: "Workshop 1: `ggplot2` and `dplyr`"
+output: html_document
+---
+
+## Introduction
+
+In this workshop we get to grips with the basics of using `ggplot2` to produce plots, and `dplyr` for manipulating data.
+
+For some of you, this workshop will be largely revision: Nonetheless we strongly recommend you run through it to refamiliarise yourself with the basics of the `tidyverse` set of packages.
+
+For others, this may be new - you may be familiar with R and RStudio (and even RMarkdown), but may not be familiar with the `tidyverse` set of packages: They take some getting used to, but contain a consistent, powerful set of functions for wrangling data and producing plots. Nonetheless, they're not compulsory - we don't mind if you prefer base R functions, or data.table, or anything else for that matter - as long as you understand what you're doing and can effectively produce graphics or manipulate data then all is good.
+
+**Before you start, make sure you can Knit this document in RStudio.**
+
+We start by loading in the `tidyverse` and `palmerpenguins` packages (for data).
+
+```{r setup, message=FALSE}
+library(tidyverse)
+library(palmerpenguins)
+
+penguins
+```
+
+Some notes:
+
+- When you run this code chunk you'll get some startup messages that some packages are being attached, and that some functions conflict with others (`dplyr::lag()` for example will now be overriding `stats::lag()`). These are fine, as this is what we want, but it is important to take note of these, as sometimes loading a package may override a function that you want kept[^MASS].
+
+- The `palmerpenguins` package includes the `penguins` data which we'll be using below. When you loaded this R Markdown document into RStudio you may have been prompted (via a yellow bar at the top) to install these packages. If you haven't, and get an error - that's OK, just click on the `Packages` menu in the bottom right and "Install", then type in the name of the package.
+
+- Naming the code chunk `setup` means that it is treated specially by R markdown - when you run any of the chunks further down, it will ensure that the `setup` chunk is run first. This can be quite handy when writing R markdown documents.
+
+## Charting with `ggplot2`
+
+Recall that the `ggplot2` package uses the grammar of graphics to create charts. It's a little bit 'wordy' - i.e. you tend to have to write a reasonable amount of code to get a chart, but it is very consistent, and once past very simple charts is very powerful. Just about everything about the chart can be tweaked.
+
+We start with a simple scatter plot of the `penguins` data:
+
+```{r}
+ggplot(data = penguins) +
+  geom_point(
+    mapping = aes(x = flipper_length_mm,
+                  y = body_mass_g)
+    )
+```
+
+Recall that the recipe for a `ggplot` chart is:
+1. Use `ggplot` to create an empty chart.
+2. Assign some data to it via the `data` argument to `ggplot`. We've used the `penguins` data.
+3. Choose a geometry layer, in this case `geom_point` for points.
+4. Map the aesthetics (a mapping from features of the chart to columns in our data). In this case we've mapped the `x` axis to `flipper_length_mm` and the `y` axis to `body_mass_g`.
+
+Notice that we've named all the parameters (`data`, `mapping`, `x`, `y`) that we're passing to the functions (`ggplot`, `geom_point`, `aes`). This is just style - we could have just as easily used `ggplot(penguins) + geom_point(aes(flipper_length_mm,body_mass_g))` as in each case the named parameter is just the first (or in the case of `y` the second) argument to each of the functions. We recommend you name parameters rather than not: While it takes more typing (you can use tab-complete, i.e. type first few characters, press TAB, to speed it up) it allows your code to be self-documenting. While I always remember that the first argument to `ggplot()` is `data` and the first to `geom_point()` is `mapping`, I don't always remember that the second argument to `aes` is `y` - and I have no idea what the 3rd argument is!
+
+### Try yourself
+
+1. Try adding `colour = 'purple'` as an additional argument to `geom_point`, after the mapping argument.
+2. Try adding `colour = 'purple'` as an additional argument to `aes` inside `geom_point`. Which is the appropriate spot for colours points purple? This is **setting** an aesthetic.
+3. Try mapping the `colour` aesthetic to the `species` column of the `penguins` data.
+
+You should have noticed that the values in the `flipper_length_mm` and `body_mass_g` are rounded, so that the points appear to be uniformly spaced in some instances. Indeed, it is feasible that there are pairs of points in the data that are identical, so that the points might be placed directly on top of each other. We can't tell in this plot if this is the case or not, as there is no depth to the chart.
+
+There is two potential ways to fix this:
+
+1. Adding some *jitter* via using `geom_jitter`. This adds some random noise to the x or y values before plotting so we can tell if there is multiple points close to each other.
+
+2. Add some transparency to the points by setting `alpha` (the aesthetic for transparency) to something smaller than 1 (`alpha = 1` is the default, which is opaque. `alpha = 0` is fully transparent).
+
+Both of these methods will allow the *ink density* to reveal where there is more data - areas with more points will appear darker than areas with fewer points.
+
+### Try yourself
+
+1. Implement each of the above methods to assess whether they help in this case.
+2. You could try both at once, or try altering the amount of jitter (see the help for `geom_jitter`, or Google!)
+
+In the example above we used just one layer, `geom_point`, but we can add multiple layers if we like. e.g.
+
+```{r}
+ggplot(data = penguins) +
+  geom_point(mapping = aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_smooth(mapping = aes(x = flipper_length_mm, y = body_mass_g))
+```
+
+Note the repetition here in that the `mapping` is defined twice. We can simplify this by noting that the `ggplot` function also has a `mapping` argument, and any layer without one will inherit this mapping, simplifying the code to:
+
+```{r}
+ggplot(data = penguins, mapping = aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point() +
+  geom_smooth()
+```
+
+Ofcourse, we can override the mapping if we like, e.g. to map `colour` to `species`.
+
+### Try yourself
+
+1. Add a `mapping` argument to `geom_point()` in the code above to map the colour of points to species.
+2. Alternatively, modify the `aes()` function in the `ggplot` bit to map the colour of points and the smooth to species.
+
+Recall that for one-dimensional summaries we can use histograms or density plots, e.g.
+
+```{r}
+ggplot(data = penguins, mapping = aes(x = flipper_length_mm)) +
+  geom_histogram()
+```
+
+Obviously the histogram doesn't require the `y` aesthetic to be mapped, as it is computed by the histogram.
+
+### Try yourself
+
+1. Modify the above to use `geom_density()` instead.
+2. Try mapping `colour` or `fill` to species of the density and histogram. You should notice that the histogram stacks (i.e. the second histogram bars start on top of the first), while the densities start at zero.
+3. Try altering the histogram coloured by species so the bars don't stack. Check out the `position` argument to `geom_histogram` for this (Google, or look up help).
+4. Have a play with the `adjust` argument of `geom_density`: Values greater than 1 will result in more smoothing, values less than one less smoothing[^adjust].
+5. Switch to using `geom_boxplot()` instead. Note that with boxplots you have the option of mapping the `y` aesthetic to something such as `species` - ofcourse you can still map the `colour` or `fill` as well!
+
+Recall that you can label charts using the `labs` command. Remember that the arguments to `labs` are the aesthetics (i.e. `x`, `y`, `colour`, `fill`) in addition to `title`, `subtitle`, `caption`.
+
+### Try yourself
+
+1. Modify some of your above plots to provide better axis labels, a title and perhaps a caption with the data source or with details of who made the plot (you!)
+
+## Data manipulation with `dplyr`
+
+Recall that `dplyr` is the main package in the `tidyverse` for manipulating data. There are essentially 6 key verbs/functions for you to know about in addition to a bunch of handy shortcuts:
+
+ - `filter`: choose rows based on some criteria.
+ - `arrange`: reorder rows based on some criteria.
+ - `select`: choose or reorder columns.
+ - `mutate`: add or modify columns
+ - `summarise`: reduce a bunch of rows down to a single summary row.
+ - `group_by`: group the data so that the above operations apply per group.
+
+We start by reading in some data on the number of school students in New Zealand broken down by school, gender, ethnicity and level. The data comes from 
+
+https://www.educationcounts.govt.nz/statistics/school-rolls
+
+and is read in using:
+
+```{r}
+roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/roll_nomacrons.csv")
+roll
+```
+
+You should see there are 103,598 rows for 5 different variables (`School`, `Gender`, `EthnicGroup`, `Level`, `Students`)
+
+We'll start by using `filter` to select rows that satisfy one or more conditions. This is useful for quickly obtaining subsets of interest (indeed, the `subset` command from base R works similarly).
+
+This next code block filters all rows where `EthnicGroup` is set to `Maori`. Notice the use of two equals for 'is equal to'
+
+```{r}
+filter(roll, EthnicGroup == "Maori")
+```
+
+More than one row may be selected by separating different conditions with commas (for AND) or the vertical pipe symbol (for OR). e.g. compare the following:
+
+```{r}
+filter(roll, EthnicGroup == "Maori", Gender == "Female")
+filter(roll, EthnicGroup == "Maori" | Gender == "Female")
+```
+
+A helper function for 'one of these options' is `%in%`. e.g. these two are equivalent:
+
+```{r}
+filter(roll, Level == "Year 1" | Level == "Year 2")
+filter(roll, Level %in% c("Year 1", "Year 2"))
+```
+
+### Try yourself:
+
+1. Find all rows corresponding to Queen Elizabeth College students in Year 9.
+2. Find all rows where there are more than 100 Year 9 Asian students.
+3. Find all rows where the school name starts with the letter 'G' (hint: you can use School > 'G' for this, but using `str_starts` might be better!)
+
+You can `arrange` (sort) row output based on the values in each column, and can arrange by more than one column at once. The first column specified will be sorted first, and then all entries that are the same on that column will then be sorted by the second and multiple columns.
+
+You can use `desc()` to sort in descending order.
+
+```{r}
+arrange(roll, Gender, EthnicGroup, Level)
+arrange(roll, desc(Students))
+```
+
+### Try yourself
+
+1. Arrange the roll rows by number of students.
+2. Find all rows where the ethnicity is Pacific, arranging them by decreasing number of students. (Hint: First filter down to Pacific students, then arrange)
+3. Which school has the highest number of International fee paying students at Year 13? (Hint: 'International fee paying' is an option for `EthnicGroup`)
+
+## The pipe operator
+
+Recall that the `pipe` operator is useful for combining these type of operations together.
+
+In the last set of exercises you combined `filter` and `arrange` together. It is very common when data wrangling to have to combine multiple functions like this to get a 'pipeline' that goes from the original data frame to the subset, arranged how you like.
+
+For example, your answer for finding which school has the highest number of international fee paying students at year 13 might look like
+
+```{r}
+internationals = filter(roll, EthnicGroup == "International fee paying")
+y13internationals = filter(internationals, Level == "Year 13")
+arrange(y13internationals, desc(Students))
+```
+
+The data frames `internationals` and `y13internationals` here are really only temporary - we only use them to make our code look a little more readable. We could instead do:
+
+```{r}
+arrange(filter(filter(roll, EthnicGroup == "International fee paying"), Level == "Year 13"), desc(Students))
+```
+
+But this is hard to read! Instead, we could use the pipe operator, `%>%` (insertable via `Ctrl`-`Shift`-`M`)[^basepipe]. What this does is takes what you provide on the left hand side and "pipes" it as the first argument into the function you provide on the right hand side. Any other arguments to the function then just get placed in the function as usual. So the above could be written:
+
+```{r}
+roll %>%
+  filter(EthnicGroup == "International fee paying") %>%
+  filter(Level == "Year 13") %>%
+  arrange(desc(Students))
+```
+
+And be read "Take roll, filter so that EthnicGroup is International fee paying, then filter to Year 13 students and arrange by descending number of students."
+
+### Try yourself
+
+1. Try doing a few of the above exercises utilising the pipe instead. i.e. all statements should start `roll %>%`.
+
+The `select` command from `dplyr` allows you to select columns you wish to keep based on their name.
+ 
+- Ranges can be used using `A:C` to pick columns A through C
+- Columns can be removed through negation `-A`.
+- `everything()` will return all remaining columns.
+- `starts_with()` can be handy if you have several columns with a common prefix.
+
+Try the following examples to understand what they do:
+
+```{r}
+roll %>% select(School, EthnicGroup, Students)
+roll %>% select(-School, Number=Students)
+roll %>% select(Students, Level, everything())
+```
+
+### Try yourself
+
+1. Rearrange the `roll` data set so that `Students` and `Level` are first.
+2. Rename the `School` column to `Name` keeping all other columns.
+3. Try part 2 using `rename` instead of `select`.
+
+`mutate()` adds new variables using functions of existing columns. You can overwrite columns as well.
+
+```{r}
+roll %>% mutate(Proportion = Students/sum(Students))
+clean = roll %>% mutate(Level = as.numeric(substring(Level, 6)))
+```
+
+### Try yourself
+
+1. Using the `clean` dataset, create a new column combining ethnicgroup and gender with `paste`.
+2. Redo part 1, so that the original two columns are removed.
+3. Create a new variable "Age" with the typical age of students in each year level (Year 1 students are typically 5 years old).
+4. Investigate using the `unite` function from `tidyr` to do what you did in part 1 and 2.
+
+The `summarise()` function reduces our dataset down to just a single row containing some summary. Try the following examples to understand what they do. Notice in the second example that we can use variables we've computed (`Total`) in other summaries.
+
+```{r}
+clean %>% summarise(Rows = n())
+clean %>% summarise(Total = sum(Students), Average = Total/n())
+```
+
+### Try yourself
+
+1. Find the largest (maximum) number of students in any row.
+2. Find the median number of students in a row.
+3. What is the lowest and highest year levels in the data?
+4. Find the number of Maori students in year 9 (hint: `filter` then `summarise`)
+
+The true power of `dplyr` comes with the `group_by()` operation, which allows all of the rest of the operations we've learned about (plus more!) to be performed simultaneously on subgroups of the data.
+
+The idea with `group_by()` is to collect rows together to be treated as a unit using one or more variables. All the other commands then operate per-group. For example, we can easily find the number of students per school by grouping by school and then adding up the number of students with `summarise`:
+
+```{r grouping}
+clean %>% group_by(School) %>% summarise(Total = sum(Students))
+```
+
+### Try yourself
+
+1. How many students of each ethnicity are there?
+2. How many students are there of each gender?
+3. Which school has the most female students in year 13?
+4. Produce a graph of the total number of students by year level. Hint: First get the data frame you want, and then use `ggplot` with `geom_col`.
+5. Alter your graph from 4 so as to include gender.  Hint: You'll need to group by two variables for this.
+
+## Missing values
+
+You probably noticed earlier that when plotting the `penguins` data, `ggplot` informed us that it had removed missing values. These are recorded as `NA` in R, and will need to be accounted for when summarising:
+
+```{r}
+penguins %>% summarise(mean_flipper_length = mean(flipper_length_mm))
+```
+Adding `na.rm=TRUE` to the `mean` function will fix this.
+
+Another way that missing values can turn up is where they are **implicitly** missing. e.g. in the `roll` data, there are no `NA` entries at all, however there is missing data. e.g. if we tried to find the average number of each gender across schools, we might try[^grouping]:
+
+```{r}
+roll %>% group_by(Gender, School) %>%
+  summarise(Students = sum(Students)) %>%
+  group_by(Gender) %>%
+  summarise(MeanStudents = mean(Students))
+```
+
+However, this will be wrong, as there are no entries where the number of students in a category is 0, yet we know ofcourse that some schools will have no students of a particular ethnicity, gender and level combination. e.g. single gender schools.
+
+```{r}
+roll %>% filter(Students == 0)
+```
+
+We can see this by totalling up students by school and gender, and then taking a look at some schools:
+
+```{r}
+roll %>% group_by(Gender, School) %>%
+  summarise(Students = sum(Students)) %>%
+  filter(str_detect(School, "Grammar")) %>%
+  arrange(School)
+```
+
+One fix for this is using the `complete()` function from `tidyr`. This adds additional combinations to the data, though note that we will need to `ungroup()` things first, so that it can operate across both genders simultaneously[^ungroup]:
+
+```{r}
+roll %>% group_by(Gender, School) %>%
+  summarise(Students = sum(Students)) %>%
+  ungroup() %>%
+  complete(Gender, School) %>%
+  filter(str_detect(School, "Grammar")) %>%
+  arrange(School)
+```
+
+We can also fill in these missing values, because we know they should be 0.
+
+### Try yourself
+
+1. Add the necessary code above to fill in the `NA` values to be `0`. You can do this using the `fill` parameter of `complete`, or alternatively the `replace_na()` function.
+2. With the `NA` values replaced, recompute the mean number of male and female students across all schools.
+
+[^MASS]: A common issue is loading `MASS` after `dplyr` - the `MASS::select()` function then overrides `dplyr::select()` which results in very opaque error messages when you try and `select()` columns from a `data.frame`.
+
+[^adjust]: This is an example of the *bias-variance trade-off*. By smoothing more we will reduce the variance of the estimate (as we're estimating the density at each location by using more of the data) but will increase bias (as the estimate depends on points far away from the location). Conversely, by smoothing less we decrease bias (the estimate depends only on points nearby) but increase variance (we're using fewer points to estimate at each location). At some point we have a sweet spot! We'll see this same principle over and over in this course.
+
+[^basepipe]: The pipe `%>%` is from the package `magrittr`. This was introduced quite a long time ago, so lots of code you see will use this, and we'll use it as well. There is also a pipe operator in base R, introduced in R v4.1.0, which uses the character combination `|>`. You can use whichever you prefer, and can configure RStudio accordingly so that Ctrl-Shift-M inserts your preferred pipe.
+
+[^ungroup]: You can also ungroup by adding the `group="drop"` to the `summarise()` command.
+
+[^grouping]: Note that the second `group_by(Gender)` here is not required: After we `summarise()`, the second group (`School`) is automatically stripped, as we only have one row for that (as we've summarised across the different schools now). So the grouping will have already dropped down to `Gender`. Note that `summarise()` will tell you this.

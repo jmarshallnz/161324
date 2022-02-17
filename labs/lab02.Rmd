@@ -1,0 +1,223 @@
+---
+title: "Workshop 2: Pivoting, joining, tidying, data visualisation"
+output: html_document
+---
+
+Today we'll use a new dataset for schools alongside the school roll data, and some new data from the Ministry of Health. We'll start by loading in the roll and schools data, along with loading the `readxl` package for reading data directly from an excel spreadsheet:
+
+```{r, message=FALSE}
+library(tidyverse)
+library(readxl)
+
+roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/roll_nomacrons.csv")
+schools <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools.csv")
+
+clean <- roll %>% mutate(Level = as.numeric(substring(Level, 6)))
+clean
+```
+
+We'll be looking at how to summarise by more than one group, and how to turn that into a table. In addition, we'll look at how we can join datasets together to summarise student level information by school level information (e.g. by region).
+
+**Make sure you can Knit this document successfully before you make changes.**
+
+## Using `pivot_wider` to turn tidy data into wide data
+
+Up to now, all the data we've been playing with has been **tidy**: each row consists of a single observation and each column is a separate variable.
+
+e.g. for this data we have a column for gender and another column for number of students: we don't have separate columns counting males and females - the counts are all in one column, and which groups that count applies to are denoted in the other columns.
+
+This makes it easy to do data manipulation, and also makes it easy to plot stuff, as `ggplot2` and `dplyr` (indeed, the whole `tidyverse` suite of packages) works best if the data are tidy.
+
+But, sometimes we want things in other forms. The following example tables up the total number of students by gender and ethnicity:
+
+```{r}
+ethnicity_by_gender <- clean %>%
+  group_by(EthnicGroup, Gender) %>%
+  summarise(Students = sum(Students))
+ethnicity_by_gender
+```
+
+It would be nicer if we could make this into a table so that we had one row for each ethnic group, and separate columns for the gender totals. We can do this using `pivot_wider`. The key arguments are `names_from` which is the column that provides the new column names, and `values_from` which is the column that provides the values that should go in the new columns.
+
+```{r}
+ethnicity_by_gender %>%
+  pivot_wider(names_from = Gender, values_from = Students)
+```
+
+Notice we have the exact same information, it's just in a more human-readable form. It's not in a form that's easier to plot though! `ggplot` would struggle with these data, as we don't have a single "Count" column for the y-axis to use.
+
+### Try yourself
+
+1. Create a table with total number of male and female students in each year level. (Hint: `group_by` sex and year level then `summarise`. Once done, `pivot_wider` to a table).
+2. Create a table with the number of each ethnic group in each year level.
+3. Try adding a "Total" column to the ethnic group by gender table. You could do this before the `pivot_wider` by using a `mutate` with `sum(Students)`.
+4. Try creating a table with the percentage of female and male students within each ethnic group. You can add a new column with `mutate()` and get the percentage by using `Students/sum(Students)` within each ethnic group.
+
+## Looking at the `schools` data
+
+Start by taking a look at the `schools` data:
+
+```{r}
+schools
+```
+
+### Try yourself
+
+1. How many schools are there in the Palmerston North Territorial Authority?
+2. Of the schools in Palmerston North, how many are co-ed, single-sex girls or single-sex boys? *You can use `count(SchoolGender)` for this.*
+3. Produce a chart of the decile distribution of schools in Palmerston North in the Primary sector.
+
+## Joining datasets with `left_join`
+
+If we want to summarise the student information across schools, we'll need to join the two datasets together. Generally this is done by matching one or more "key" columns in both datasets. The most common way to do this is via a **left** join, where every row in the dataset we supply on the left is kept, and we match it to rows in the dataset on the right that share the same information across the key columns.
+
+The following will do this:
+
+```{r}
+all_data <- clean %>% left_join(schools)
+all_data
+```
+
+Notice that the `left_join` function automatically found which column to match on (based on matching column names) and that we end up with the same number of rows in this case, as each row in the clean roll dataset only matches a single school. We do, ofcourse, get the additional variables from the `schools` dataset.
+
+We can now use the `all_data` dataset to answer questions using the variables from both datasets:
+
+### Try yourself
+
+1. How many students are there in each Regional Council?
+2. How many girls and boys are in schools with a religious affiliation?
+3. Produce a chart to compare the ethnic makeup of secondary schools in Decile 10 versus those in Decile 1, excluding international fee paying students.
+
+## Small multiple plots
+
+In workshop 1 you produced a graph of the total number of students by year level and gender. You should have got something like this:
+
+```{r}
+year_by_gender <- clean %>% group_by(Level, Gender) %>% summarise(Total = sum(Students))
+ggplot(year_by_gender) +
+  geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
+```
+
+This is an interesting graph as it shows that males tend to leave school earlier than females. We might be interested to see if there are any patterns in other variables, such as in ethnicity (or perhaps by region - we'll see how to get that information later).
+
+To do this, we want to produce the same plot for each ethnicity. Now, we could just go ahead and create separate plots by using `filter`
+
+```{r}
+eu_year_by_gender <- clean %>% filter(EthnicGroup == "European") %>% group_by(Level, Gender) %>% summarise(Total = sum(Students))
+ggplot(eu_year_by_gender) +
+  geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
+as_year_by_gender <- clean %>% filter(EthnicGroup == "Asian") %>% group_by(Level, Gender) %>% summarise(Total = sum(Students))
+ggplot(as_year_by_gender) +
+  geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
+```
+
+But that gets quite awkward! Fortunately, `ggplot` can do grouping for us via the `facet_wrap` or `facet_grid` commands. These produce what is known as 'small multiple' plots - basically divide the plot up into subplots, and in each subplot we show a different group with consistent style/axes etc. 
+
+To do this, we'll need to group by EthnicGroup as well as Level and Gender, and then use `facet_wrap`:
+
+```{r}
+ethnicity_by_year_by_gender <- clean %>% group_by(EthnicGroup, Level, Gender) %>% summarise(Total = sum(Students))
+ggplot(ethnicity_by_year_by_gender) +
+  geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge') +
+  facet_wrap(vars(EthnicGroup))
+```
+
+The `vars` helper function here is there so that `facet_wrap` knows to look for the named column in the data frame.
+
+### Try yourself
+
+1. Try altering the above plot so that it uses a different y-axis for each plot. This can be useful when there's differing numbers of students in each group. Hint: see the help for `facet_wrap`.
+2. Instead of colouring by gender, produce separate plots by both `Gender` and `Ethnicity` by supplying both to `facet_wrap`.
+3. Try out `facet_grid` instead for the second one.
+
+## Tidying data
+
+Sometimes[^allthetime] the data we're given isn't in the nice, tidy form we've seen so far. Often it's on a spreadsheet, and that spreadsheet will include a bunch of junk that might be useful if a person is looking at it (e.g. notes, totals, averages etc) but is useless for actually working with the data.
+
+As an example, let's look at some real-world data by downloading the **1 July 2021 to 30 September 2021** immunisation data from here:
+
+https://www.health.govt.nz/our-work/preventative-health-wellness/immunisation/immunisation-coverage/national-and-dhb-immunisation-data
+
+Click on the link and load the excel sheet for 1 July 2021 to 30 September 2021 into Excel. Let's suppose we want the information in the `Ethnicity` sheet (sheet 2).
+
+Notice that there are several issues with these data:
+
+1. There are merged cells with Ethnicity.
+2. The same information (counts of immunisations, counts of eligible, percentage information) is repeated across multiple columns.
+3. There is information rows at the top.
+4. Column names are distributed across multiple rows.
+5. The Milestone age is only filled in on some rows, and is otherwise to be inferred from the lines/boxes on the spreadsheet (i.e. data is encoded in the presentation).
+6. There are summaries in rows as well as data (e.g. the Total row alongside the DHB rows, the "All Milestones" row).
+7. There is 'key' and other note information down the bottom of the spreadsheet.
+8. There is a special entry 'n/s' for suppressed data. There is also '-' for missing data.
+
+This is a lot of problems to deal with. We're going to keep things quite simple. Our goal today is to read in the "Total" data for the all milestones across the DHBs (i.e. we're going to not worry about the Ethnicity data).
+
+We'll start by automatically downloading the file we want and loading it into R using the `readxl` package:
+
+```{r}
+download.file(url = "https://www.health.govt.nz/system/files/documents/pages/q1-21-22-imms-coverage-ethnicity-and-deprivation-quarterly-1-july-30-sept-2021-for-v0-3.xlsx",
+              destfile = "immunisation.xlsx")
+excel_sheets("immunisation.xlsx")
+imm <- read_excel("immunisation.xlsx", sheet="Ethnicity")
+glimpse(imm)
+```
+
+Notice that this is basically junk. All the column types are character, and are unnamed except for the first, which is named after the notice at the top. We can skip some fo the junk using the `skip` parameter. We're going to skip 3 rows to try and get something useful in the first row of data:
+
+```{r}
+imm <- read_excel("immunisation.xlsx", skip=3)
+imm
+```
+Ok, this is getting somewhere. We have generally got the data we want there, but notice the names aren't that useful, and we have all the ethnicity information which would be useful to have, but we're going to keep things simple and just keep the first 5 columns. We can ofcourse do that with select. In this case, the names to use aren't all that useful, so we might instead use numbers:
+
+```{r}
+imm_cleanish <- imm %>% select(Milestone = 1, DHB = 2, Eligible = 3, Immunised = 4, Proportion = 5)
+imm_cleanish
+```
+
+This isn't too bad! Our next step will be to filter some things out. e.g. we don't want the "All milstone Coverage"[^typo] row, and we don't want the "National Total" rows, so let's filter those out. To see how we did, we'll use `count`:
+
+```{r}
+imm_cleaner <- imm_cleanish %>% filter(Milestone != "All Milstone Coverage",
+                               DHB != "National Total")
+imm_cleaner %>% count(DHB)
+imm_cleaner %>% count(Milestone)
+```
+
+Yay! This is looking really nice now - we have 20 DHBs, each with 7 rows, and 7 milestones each with 20 DHBs. Looks great! One thing we note though is the 'Eligible' column is of type `chr` (short for character) instead of numbers. Let's fix that:
+
+```{r}
+imm_clean <- imm_cleaner %>% mutate(Eligible = as.numeric(Eligible))
+imm_clean
+```
+Nice. As a final check, let's see if the Proportion column is correct, by computing it ourselves:
+
+```{r}
+imm_clean %>% mutate(PropCheck = Immunised/Eligible) %>%
+  filter(abs(PropCheck - Proportion) > 1e-6)
+```
+
+Neat - the proportion seems to be accurate. Now we can do some charting.
+
+### Try yourself
+
+Your goal is to use the `imm_clean` dataset to produce the plot below:
+
+```{r}
+knitr::include_graphics("https://www.massey.ac.nz/~jcmarsha/161324/labs/immunisation.png")
+```
+
+Some hints:
+
+ - The `fct_rev` command is useful to reverse the order of a factor variable.
+ - The `fct_relevel` command is useful for redefining the order of a factor variable.
+ - The line is at 90% - this is the goal for each of these milestones.
+ - The bars are coloured based on whether the proportion has reached or surpassed the 90% goal.
+ - The colours are `#C582B2` (pink) and `#B7B7B2` (grey).
+ - The bars are slightly transparent with `alpha=0.9`.
+ - The chart uses `theme_minimal`.
+ - Don't worry about font size as this is display-specific.
+
+[^allthetime]: Almost all the time.
+[^typo]: Real data has typos All. The. Time.
