@@ -39,9 +39,12 @@ weight gain through the year (both measured in kilograms), and treatment
 \@ref(fig:goats) below.
 
 ```{r goats, echo=FALSE, message=FALSE, fig.cap="Scatterplot of weight gain against initial weight for goats on standard and intensive drenching regimens."}
-goats <- read_csv("data/goats.csv") %>% mutate(Treatment = as_factor(Treatment))
-plot(Wt.gain ~ Wt.ini, pch=as.numeric(Treatment)^2, col=as.numeric(Treatment),data=goats,xlab="Initial weight",ylab="Weight gain")
-legend("topright",legend=c("intensive","standard"),pch=c(1,4),col=1:2)
+goats <- read_csv("../data/goats.csv") %>% mutate(Treatment = as_factor(Treatment))
+ggplot(goats) +
+  geom_point(aes(x=Wt.ini, y=Wt.gain, shape=Treatment, col=Treatment)) +
+  labs(x = "Initial weight", y="Weight gain") +
+  scale_colour_manual(values = c("black", "red")) +
+  scale_shape_manual(values = c("circle open", "cross"))
 ```
 
 The principal question of interest here is whether or not the type of
@@ -76,24 +79,18 @@ in the review, and number of commas) appears in Figure \@ref(fig:amazon), along
 with histograms displaying the marginal distributions of each variable.
 
 ```{r amazon, echo=FALSE, message=FALSE, fig.cap="Plot of number of commas against number of spaces in reviews on Amazon."}
-space_comma <- read_csv("data/amazon_space_comma.csv")
-scatterhist <-  function(x, y, xlab="", ylab="",x.breaks="Sturges",y.breaks="Sturges"){  
-	zones <- matrix(c(2,0,1,3), ncol=2, byrow=TRUE)  
-	layout(zones, widths=c(4/5,1/5), heights=c(1/5,4/5))  
-	xhist <- hist(x, plot=FALSE,breaks=x.breaks)  
-	yhist <- hist(y, plot=FALSE,breaks=y.breaks)  
-	top <- max(c(xhist$counts, yhist$counts))  
-	par(mar=c(4,4,1,1))  
-	plot(x,y,xlab="",ylab="")  
-	par(mar=c(0,3,1,1))  
-	barplot(xhist$counts, axes=FALSE, ylim=c(0, top), space=0)  
-	par(mar=c(3,0,1,1))  
-	barplot(yhist$counts, axes=FALSE, xlim=c(0, top), space=0, horiz=TRUE)  
-	par(oma=c(3,3,0,0))  
-	mtext(xlab, side=1, line=1, outer=TRUE, adj=0, at=0.35)  
-	mtext(ylab, side=2, line=1, outer=TRUE, adj=0, at=0.35)
-} 
-scatterhist(space_comma$Spaces,space_comma$Commas,x.breaks=20,xlab="Number of spaces",ylab="Number of commas")
+space_comma <- read_csv("../data/amazon_space_comma.csv")
+g1 <- ggplot(space_comma) + geom_point(aes(x=Spaces, y=Commas), alpha=0.5) +
+  labs(x = "Number of spaces", y = "Number of commas")
+g2 <- ggplot(space_comma) + geom_histogram(aes(x=Spaces), bins=20, fill='grey70', col='grey30') + theme_void()
+g3 <- ggplot(space_comma) + geom_histogram(aes(y=Commas), bins=20, fill='grey70', col='grey30') + theme_void()
+library(patchwork)
+
+g2 + plot_spacer() + g1 + g3 +
+  plot_layout(ncol = 2, 
+    nrow = 2, 
+    widths = c(4, 1),
+    heights = c(1, 4))
 ```
 
 Perhaps the first thing that stands out in this example, compared to the
@@ -158,7 +155,7 @@ mining is all about.
     manner. In data mining the models are typically complex and 'black
     box' in nature.
 
-## Statistical Computing with R{sec:Rinitial}
+## Statistical Computing with R{#sec:Rinitial}
 
 This course makes heavy use of the statistics package R. You may have
 met this package before and be confident using it, in which case you
@@ -176,20 +173,25 @@ Be warned, however, that R is not 'point and click'. You need to type in
 commands. In fact this is a great thing from a learning perspective,
 since it requires you to think about what you are doing! While you may
 find R hard going to begin with, you will most likely be a fan of the
-package by the end of semester. That's certainly my experience with the
-great majority of students. Nonetheless, it requires practice. You'll
-find a number of Computer Lab Sheets at the end of this Study Guide.
-Don't ignore them -- they are a crucial learning element for this paper.
+package by the end of semester. That's certainly our experience with the
+great majority of students. Nonetheless, it requires practice.
 
-## Learning Resources{#sec:resources}
+A crucial learning element of this course are the practical computing workshops.
+Not only do they allow you to practice what you're learning, but they
+also teach you some techniques that will be useful for other courses.
 
-The Stream site for the course will be your first port of call to access
-learning resources for the paper. It will be updated regularly during
-semester, so you should check it on a frequent basis.
+## The tidyverse
 
-Data access is typically done by downloading directly from the web, and
-this is usually faciliated for you with code supplied on workshop sheets and
-assignment papers.
+Our philosphy is to use the `tidyverse` as much as we practically can.
+If you haven't used the functionality in the `tidyverse` much in the
+past, then we can recommend the online text "R for Data Science" by the author
+of much of the tidyverse, Hadley Wickham:
+
+https://r4ds.had.co.nz
+
+In addition, the main tidyverse website is a useful resource:
+
+https://tidyverse.org
 
 [^pearson]: Every student taking a 300-level statistics paper should be at
     least vaguely familiar with the names Ronald Fisher and Karl

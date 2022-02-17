@@ -26,182 +26,140 @@ and prediction competitions, some with quite large prizes available!
 
 ## Loading Data into R{#sec:dataload}
 
-One method of reading data into R is using `read.table`. This
-accesses data stored in tabulated text format and loads it
-as a data frame.
+We'll be mostly using the `readr` package for reading data into R. This is
+part of the (https://tidyverse.org)[tidyverse] set of packages. In general
+we'll be using the tidyverse throughout, at least where we can.
 
-By default `read.table` assumes that the columns of the target text file
-are separated by white space, and that the first row of the text file
-comprises data items rather than column (variable) names. These options
-can be altered by setting the `sep` and `header` arguments of the
-function `read.table`. The first of these specifies the column separator
-character, which should be appear between speech marks in the function
-call. The second takes logical arguments. It is `FALSE` by default (i.e. the
-first row of the data is not a header), but can be set to `TRUE`.
+We'll start most of our code with:
+
+```{r, message=FALSE}
+library(tidyverse)
+```
+
+We'll tend to use CSV (comma separated value) files, for which the
+`read_csv()` command is appropriate.
+
+By default, this should work out of the box for just about all data
+sets we use, but some poorly formatted data may need alternatives.
 
 This might be easier to see through a specific example, so consider the
 following command:
 
-```{r, eval=FALSE}
-fires <- read.table(file="forestfires.csv", sep=",", header=TRUE)
+```{r}
+fires <- read_csv(file="../data/forestfires.csv")
 ```
 
 This reads data from the file `forestfires.csv`, a comma separated
-values text file, and assigns the result to a data frame named `fires`.
-The separator is set to a comma, and the first row of `forestfires.csv`
-is interpreted as variable names. Exactly the same effect can be
-achieved using the function `read.csv`, which is the same as
-`read.table` except for the default settings for `sep`, `header` etc.
-Hence
+values text file, which is located in the folder `../data` which means
+"up to the parent folder and into the data folder". The result
+is assigned to a data frame named `fires`.
+Note that has also given us a message about how it has interpreted
+the various columns in `forestfires.csv`, with some being interpreted
+using `col_double()` (numeric, such as `X`, `Y`) and some being interpreted
+using `col_character()` (character string, such as `month` and `day`).
 
-```{r, eval=FALSE}
-fires <- read.csv(file="forestfires.csv")
-```
-
-produces exactly the same result as the code above.
-
-The facility to load data from text files in any (sane) format provides
+The facility to load data CSV files provides
 the means for importing data from many statistical, spreadsheet and
 database packages. Most such packages can save files in a plain text
 format: for instance, Excel has the option to save spreadsheets as
 `.csv` (comma separated valued) files. These can then be read into R. As
 an alternative, the R package `Foreign` includes some functions for
 direct importation into R from native file types for some packages
-(including Minitab, S, SAS, SPSS, Stata, and Systat)[^otherpackages].
+(including Minitab, S, SAS, SPSS, Stata, and Systat)[^otherpackages], and
+the `readxl` package can read directly from `.xlsx` Excel files.
 
 ## Organizing the Data in R
 
-The common format for datasets is as a matrix, with records (also known
+The common format for datasets is as an array, with records (also known
 as observations, cases, or units) as rows and variables (also known as
 attributes) as columns. The information in each column may be numerical
 (in the case of quantitative variables) or categorical (in the case of
 factors[^factors]). For example, the first six rows of the goats data (as
 displayed in R) are
 
-    Treatment       Wt.ini  Wt.gain
-    1  standard     21       5
-    2  standard     24       3
-    3  standard     21       8
-    4  standard     22       7
-    5  standard     23       6
-    6  standard     26       4
+```{r, echo=FALSE, message=FALSE}
+goats <- read_csv("../data/goats.csv")
+head(goats)
+```
 
 where the row numbers identify individual goats, and the columns
 correspond to the variables in the obvious manner. The number of records
 is usually denoted $n$, and the number of variables $p$.
 
-The name for a data structure of this type is a *data frame*.
+The name for a data structure of this type is a *tibble* or *data frame*[^tibble].
 As we just saw, this is the type of object
-that is created when you employ the `read.table` command. However, on
-occasions you may find that your dataset requires some manipulation in R
-to get it into our preferred format. We will illustrate this through a
-specific example.
+that is created when you employ the `read_csv` command.
+
+Sometimes you may wish to create a data set directly rather than reading it in
+from a file. This is generally useful for small data sets, and can be done using
+the `tibble`, `data.frame`, or `tribble` functions, as we demonstrate with the
+following example.
 
 ::: {.example}
-**Bad Goats**
+**Creating data in R**
 
-Some researchers (fortunately a minority nowadays) like to organize data
-so that columns refer to specific groups. For example, one could arrange
-the goats data in a text file with four columns, with the first pair
-being initial weight and weight gain for the standard treatment group,
-and the second pair being initial weight and weight gain for the
-intensive drenching group. The text file (which we will call
-`bad-goats.txt` below) would then look something like this
+Suppose we wish to create a small data set that looks something like this:
 
-    "iniS"  "gainS" "iniI"  "gainI"
-    21      5       18      9
-    24      3       18      8
-    21      8       19      8
-    22      7       19      8
-    ....
+    x       y    group
+    21      5        A
+    24      3        A
+    21      8        B
+    22      7        B
+    34      1        C
+    18      8        C
 
-where the column names specify the variable and the group in the natural
-way.
+where we have three columns `x`, `y` and `group` and six entries.
 
-Suppose that you are presented with this text file? How can you
-manipulate it to obtain the nice 'records as rows' format? The following
-R snippet will do the trick.
+We can define this a number of ways as the below code illustrates.
 
 ```{r}
-bad.goats <- read.table(file="data/bad-goats.txt", header=TRUE)
-head(bad.goats)
-grp.size <- nrow(bad.goats)
-grp.size
-Wt.ini <- c(bad.goats$iniS,bad.goats$iniI)
-Wt.ini
-Wt.gain <- c(bad.goats$gainS,bad.goats$gainI)
-Wt.gain
-Treatment <- factor(c(rep("standard",grp.size),rep("intensive",grp.size)))
-Treatment
-goats <- data.frame(Treatment,Wt.ini,Wt.gain)
-head(goats)
+one <- data.frame(x = c(21, 24, 21, 22, 34, 18),
+                  y = c(5, 3, 8, 7, 1, 8),
+                  group = c("A", "A", "B", "B", "C", "C"))
+two <- tibble(x = c(21, 24, 21, 22, 34, 18),
+                  y = c(5, 3, 8, 7, 1, 8),
+                  group = rep(c("A", "B", "C"), each=2))
+three <- tribble(~x, ~y, ~group,
+                 21, 5, "A",
+                 24, 3, "A",
+                 21, 8, "B",
+                 22, 7, "B",
+                 34, 1, "C",
+                 18, 8, "C")
+one
+two
+three
 ```
 
-OK, don't panic! I know there may seem to be a lot going on there, but
-it really isn't very complicated.
+As you can see, each of these give the same data, but the method
+of construction is a little different:
 
--   The first command,
-    `bad.goats <- read.table(file="data/bad-goats.txt", header=TRUE)`, simply
-    reads in the badly formatted data from the text file, and assigns it
-    to a data frame `bad.goats`.
+- The `data.frame` method returns a `data.frame` rather than a `tibble`,
+so the printing is a little different.
 
--   The next command, `head(bad.goats)`, prints out the first size rows
-    of this data frame.
+- The `tibble` method is otherwise the same as the `data.frame` method,
+though we have used the `rep` command here to repeat the `A`, `B`, `C` 
+groupings each two times. This only slightly saves on typing!
 
--   The function `nrow` returns the number of rows in a data frame or
-    matrix, so `grp.size <- nrow(bad.goats)` stores the number of rows
-    in our data frame `bad.goats` as the object `grp.size`. Now if you
-    think about it, the number of rows in this data frame is just the
-    number of recorded weights for each goat in each group, and is hence
-    the group size. Of course, you might have remembered that this was
-    20, but the code demonstrates what to do if you don't.
-
--   Recall that the syntax `df$variable` refers to a `variable` within a
-    data frame `df`. Hence `bad.goats$iniS` is the variable `iniS`
-    within the data frame `bad.goats`. It follows that
-
-    ```{r, eval=FALSE}
-    Wt.ini <- c(bad.goats$iniS, bad.goats$iniI)
-    ```
-
-    creates a vector `Wt.ini` which is the concatenation of all the
-    initial weights, with those from the standard treatment group
-    included first. Similarly,
-
-    ```{r, eval=FALSE}
-    Wt.gain <- c(bad.goats$gainS, bad.goats$gainI)
-    ```
-
-    creates the variable `Wt.gain` by concatenating the vectors of
-    weight gains from the standard and treatment groups respectively.
-
--   The command `c(rep("standard", grp.size)` creates a character vector
-    containing the word 'standard' replicated 20 (i.e. `grp.size`)
-    times. Therefore
-
-    ```{r, eval=FALSE}
-    factor(c(rep("standard",grp.size),rep("intensive",grp.size)))
-    ```
-
-    produces a *factor* with two levels, `standard` and `intensive`,
-    with the first 20 elements being the former and the final 20
-    elements the latter.
-
--   Finally, the `data.frame` command is used to produce a new data
-    frame, in precisely the desired format.
+- The `tribble` command (row-wise tibble) is the one that is most natural
+for entering data that is tabular like this. The tilde character `~` is
+used for specifying the names, and then everything else is just separated
+by commas, and because it is filled row-wise rather than column-wise can
+be written so that it maintains the natural ordering.
 :::
 
 We have one final comment on data organization before we move on.
-Remember that when you use `read.table`, R will assume by default that
+Remember that when you use `read_csv`, R will assume by default that
 any column of numbers corresponds to a quantitative variable. Consider
 the following example.
 
 ```{r, error=TRUE}
-fossils <- read.table(file="data/fossils.txt", header=TRUE)
+fossils <- read_csv(file="../data/fossils.csv")
 fossils
-sqrt(fossils$species)
-fossils$species <- as.factor(fossils$species)
-sqrt(fossils$species)
+fossils %>% mutate(sqrt(species))
+fixed_fossils <- fossils %>% mutate(species = as.factor(species))
+fixed_fossils
+fixed_fossils %>% mutate(sqrt(species))
 ```
 
 Here we are dealing with a (small) dataset comprising the bite sizes
@@ -213,6 +171,29 @@ are merely labels here. We can turn the numeric variable into a factor
 using the `as.factor` command. Once R recognizes that `species` is a
 factor (i.e. a categorical variable) it will no longer permit such
 numerical operations.
+
+The `visdat` package is useful for visualising a `data.frame` or `tibble`
+to assess things like variable types.
+
+::: {.example}
+**Visualising variable types in the airquality dataset**
+
+The `airquality` dataset, included with R in the `datasets` package, contains
+153 observations on 6 variables (`Ozone`, `Solar.R`, `Wind`, `Temp`, `Month`,
+and `Day`). We can visualise the structure of these using the `vis_dat()` function
+from `visdat`:
+
+```{r}
+library(visdat)
+vis_dat(airquality)
+```
+
+As can be seen, `vis_dat()` shows us that the first 5 columns are 'integer' type
+(whole numbers) while the `Wind` column is 'numeric' (double precision real value).
+
+We can also see where missing values are - in particular the `Ozone` variable has a bunch
+of missing values.
+:::
 
 ## Missing Values{#sec:missing1}
 
@@ -232,17 +213,7 @@ values might be indicated in any of the following ways.
 -   In a comma separate file (`.csv`) a missing value will often be
     indicated by an absence of any value between two consecutive commas.
     These missing values will be handled appropriately by R when using
-    `read.csv` (or `read.table` with the right settings).
-
--   In a tab delimited text file there may simply be white space at a
-    particular element. As before, the missing values will (usually) be
-    correctly handled by the `read.table` command.
-
--   If row entries are separate by variable white space in a text file,
-    the it can be difficult to handle missing values (unless they appear
-    only in the last variable, when the `fill` option of `read.table`
-    can be helpful). It is probably safest in this case to ask for the
-    data in a better format!
+    `read_csv`.
 
 -   Sometimes missing values are specified in text files by sequences
     like `9999` or `-9999`. This generally works OK, so long as the
@@ -251,13 +222,13 @@ values might be indicated in any of the following ways.
     disadvantages of this representation is that it is possible that the
     presence of the missing values will go unnoticed, and the data will
     get analysed as if the 9999 entries are *bona fide* data. Note that
-    it is possible to set the argument `na.strings` of `read.table` so
+    it is possible to set the argument `na` of `read_csv` so
     that R will correctly interpret missing values specified in this
     manner.
 
 -   A common alternative is to represent missing values in a text file
     by `NA` (for '**n**ot **a**vailable'). Of course, one has to be
-    careful that the string NA does not have some credible meaning in a
+    careful that the string `NA` does not have some credible meaning in a
     text field[^nasodium].
 
 Regardless of the representation of missing values in the text file,
@@ -289,44 +260,59 @@ The data contain a number of missing values, represented in the text
 file of the data by the number 9999. These data are processed in the
 following R snippet.
 
-```{r}
-husbands <- read.table(file="data/husbands.txt", header=TRUE)
-str(husbands)
-summary(husbands)
-mean(husbands$W.Age)
-husbands$W.Age[husbands$W.Age==9999] <- NA
-mean(husbands$W.Age)
-mean(husbands$W.Age, na.rm=TRUE)
-husbands$H.Age.Marriage[husbands$H.Age.Marriage==9999] <- NA
-mean(husbands$H.Age.Marriage, na.rm=TRUE)
+```{r, render = knitr::normal_print}
+husbands <- read_csv(file="../data/husbands.csv")
+glimpse(husbands)
+skimr::skim(husbands)
+husbands %>% summarise(mean(W.Age))
+husb_fixed <- husbands %>%
+  naniar::replace_with_na(replace = list(W.Age = 9999,
+                                         H.Age.Marriage = 9999))
+husb_fixed %>%
+  summarise(mean(W.Age),
+            mean(W.Age, na.rm=TRUE),
+            mean(H.Age.Marriage, na.rm=TRUE))
 ```
 
 Some points to note.
 
--   The command `str` provides a short summary of a data frame,
-    including the variable type (in this example `int`, i.e. integer for
+-   The command `glimpse` provides a short summary of a data frame,
+    including the variable type (in this example `dbl`, i.e. integer for
     all variables) and a listing of the first few elements for each
     variable.
 
--   The `summary` command applied to a data frame gives six figure
-    summaries for all numerical variables. Note that `W.Age` and
-    `H.Age.Marriage` have maximum values of 9999, corresponding to
+-   The `skimr::skim` command applied to a data frame gives summaries for
+    all variables. Note that `W.Age` and
+    `H.Age.Marriage` have maximum (`p100`) values of 9999, corresponding to
     missing data.
 
 -   If we carelessly forget to recode the missing values, then we will
     get nonsense in numerical values. For example, it would appear that
     the mean age of the wives is just a shade under 1500 years.
 
--   The syntax `husbands$W.Age[husbands$W.Age==9999] <- NA` selects all
-    entries of the vector `W.Age` (in the data frame `husbands`) that
-    are currently 9999 and replaces them with the missing value
-    indicator `NA`.
+-   The `replace_with_na` function from the `naniar` package (as it is not
+    already loaded via `library`, we utilise this function by prefacing
+    with the package name and two colons) replaces the entries given in
+    the `replace` list with `NA`. In this case we've asked to replace 9999
+    in both the `W.Age` and `H.Age.Marriage` columns. We've saved the result
+    into the `husb_fixed` tibble.
 
 -   Applying the function `mean` to a variable containing missing values
     will by default return `NA` as a result. However, if we set the
-    optional argument `na.rm=T` (i.e. remove missing values) then we get
+    optional argument `na.rm=TRUE` (i.e. remove missing values) then we get
     the mean for the remaining data. In the case of wives' ages, that is
     just over 40.
+    
+In this example, as the special value that denotes missingness is consistent
+across all columns, we could use the `na` argument of `read_csv`. It defaults
+to `c("", "NA")`, to detect the empty string or the string NA, but we could
+replace this with `"9999"`:
+
+```{r, message=FALSE, render = knitr::normal_print}
+husbands <- read_csv(file="../data/husbands.csv", na="9999")
+husbands %>% skimr::skim()
+```
+
 :::
 
 [^otherpackages]: R can also interact with database systems as well, although the
@@ -337,6 +323,9 @@ Some points to note.
     termed the *levels* of the factor. Hence the factor `Treatment` in
     the goats dataset has two levels, `standard` and `intensive`
     distinguishing the drenching routine employed.
+
+[^tibble]: There are some subtle differences between tibbles and data.frames. Hopefully
+we won't hit too many of them!
 
 [^droppingout]: An important example occurs with data from clinical trials, where
     the statistical analysis is typically expected to account for

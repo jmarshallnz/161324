@@ -1,384 +1,12 @@
-# Exploratory Data Analysis
-
-## Exploratory Data Analysis in Data Mining
-
-Exploratory data analysis (EDA) seeks to provide an overview of a
-dataset, for example through numerical and graphical summaries. The aim
-is to detect interesting patterns in the data, without recourse to the
-construction of elaborate statistical models or the application of
-formal hypothesis tests.
-
-The philosophy behind EDA has much in common with that for data mining
-(in particular, eschewing classical parametric modelling and inference).
-It is therefore no surprise that EDA techniques provide a useful set of
-tools for the data miner.
-
-As mentioned above, the use of statistical graphics is fundamental to
-EDA. In this chapter we look at some basic statistical graphics in R.
-We also consider the effects of having
-missing values in a dataset, and what can be done to handle problems
-that may arise because of this.
-
-## Basic Graphical Plots in R
-
-### Histograms
-
-The histogram is a simple method for visualizing the distribution of a
-single variable. It is constructed as follows:
-
-1.  Divide the real line into bins (typically assumed to be of equal
-    width).
-
-2.  Plot the (normalized) frequency (number) of data in each bin.
-
-::: {.example}
-**Histograms for Swiss Bank Note Data**
-
-The data set `swiss` contains measurements on 100 forged Swiss bank
-notes and 100 real Swiss bank notes. On each bank note the size of the
-bottom margin was recorded, as was the diagonal length of the note (all
-measurements in mm). This kind of data is important for the development
-of automatic methods for detecting fraudulent bank notes. In this
-example we will look at histograms of bottom margins for the forged
-notes.
-
-The histogram in Figure \@ref(fig:swiss1) was produced using the default
-settings for the `hist` function in R.
-
-```{r swiss1, echo=FALSE, fig.cap="Histogram of margin sizes for forged Swiss back notes."}
-swiss <- read.table("data/swiss.txt", header=FALSE)  
-swiss.forged.margin <- swiss[,1]   
-hist(swiss.forged.margin) 
-```
-
-In this histogram the column heights correspond to the raw frequencies
-(counts) of values in each bin. An alternative is to scale the histogram
-so that the aggregate area under the histogram bars is 1, and the area
-of each individual bar is equal to the proportion of the data in the
-corresponding interval. We can get this alternative scaling by setting
-the `probability` argument as true. See the code below.
-
-```{r swiss2, echo=FALSE, fig.cap="Histogram of margin sizes for forged Swiss back notes with scaling to probability scale."}
-hist(swiss.forged.margin, probability=TRUE)
-```
-
-The appearance of a histogram depends on the bin widths and the bin
-'anchor point' (that is the left hand edge of the far left bin). To
-illustrate this point the histograms in Figure \@ref(fig:swiss3) are
-derived from the same data using various bin widths and anchor points.
-We note that the default choice of bin-width for histograms in R is
-usually pretty good. Dealing with the issue of anchor points is more
-problematic, and requires the more sophisticated methodology that we
-introduce in Section \@ref(sec:kde).
-
-```{r swiss3, echo=FALSE, fig.cap="More histograms of margin sizes for forged Swiss back notes."}
-par(mfrow=c(2,2))
-hist(swiss.forged.margin, breaks=seq(7,13,by=1), col=5, main="") 
-hist(swiss.forged.margin, breaks=seq(7,13,by=0.5), col=5, main="") 
-hist(swiss.forged.margin, breaks=seq(6.75,13.25,by=0.5), col=5, main="") 
-hist(swiss.forged.margin, breaks=seq(7,13,by=0.2), col=5, main="") 
-```
-
-We finish this example histograms by supplying (and commenting upon) the
-R code used to produce Figures \@ref(fig:swiss1), \@ref(fig:swiss2) and
-\@ref(fig:swiss3).
-
-```{r, eval=FALSE}
-swiss <- read.table("swiss.txt", header=FALSE)  
-swiss.forged.margin <- swiss[,1]   
-hist(swiss.forged.margin)
-hist(swiss.forged.margin, probability=TRUE)
-par(mfrow=c(2,2))
-hist(swiss.forged.margin, breaks=seq(7,13,by=1), col=5, main="") 
-hist(swiss.forged.margin, breaks=seq(7,13,by=0.5), col=5, main="") 
-hist(swiss.forged.margin, breaks=seq(6.75,13.25,by=0.5), col=5, main="") 
-hist(swiss.forged.margin, breaks=seq(7,13,by=0.2), col=5, main="") 
-```
-
--   The text file `swiss.txt` does not contain column headers.
-
--   The syntax `swiss.forged.margin <- swiss[,1]` assigns the first
-    column of the data frame `swiss` to the object
-    `swiss.forged.margin`.
-
--   `hist(swiss.forged.margin)` plots the histogram (with default
-    settings for parameters).
-
--   The syntax `par(mfrow=c(2,2))` divides the graphics device (plotting
-    window in this case) into a 2 by 2 array. This means that the next
-    four plots appear as panels in a single plotting window.
-
--   In the later plots, the `breaks` argument of `hist` specifies the
-    breaks between bins. The argument `col=5` specifies the plotting
-    colour for the histogram bars (colour 5 is cyan), while `main=""`
-    indicates that the main title should be contain no characters
-    (i.e. be blank).
-:::
-
-### Normal Probability Plots
-
-The normal distribution[^gaussian] plays a central role in Statistics. One
-reason for this is the Central Limit Theorem, which (loosely) says that
-the mean of sufficiently many random variables will have an approximate
-normal distribution. It follows that any variable that might be thought
-of as the result of averaging many small effects may well follow a
-normal distribution, at least approximately.
-
-It is often of interest to assess whether an observed variable is
-normally distributed. A popular graphical method for assessing this is
-the normal Q-Q plot (or normal probability plot). The normal Q-Q plot
-works by plotting the quantiles of the observed data against the
-quantiles of the theoretical normal distribution. If the data are
-normally distributed then the sample quantiles will match quite closely
-to the theoretical quantiles, and hence the Q-Q plot will deliver an
-approximately straight line.
-
-::: {.example}
-**Normal as the Next Guy**
-
-In this Example we generate a sample of $n=1000$ normal random variables
-(from a normal distribution with mean $\mu=3$ and variance
-$\sigma^2 = 2^2$) and then produce a normal Q-Q plot for these data. The
-command `rnorm` produces simulations from the normal distribution, with
-arguments specifying the sample size (`n`), mean and standard deviation,
-while `qqnorm` produces a normal Q-Q plot.
-
-```{r qqnorm1, fig.cap="A normal Q-Q plot for simulated normal data."}
-y <- rnorm(n=1000,mean=3,sd=2)
-qqnorm(y)
-```
-
-The resulting plot is displayed in Figure \@ref(fig:qqnorm1). As
-one would expect, the plot is very linear, confirming that the data are
-drawn from a normal distribution.
-:::
-
-::: {.example}
-**That Isn't Normal Currency**
-
-We now produce a normal Q-Q plot for the bottom margin of the Swiss bank
-notes.
-
-```{r qqnorm2, fig.cap="A normal Q-Q plot for Swiss bank note data."}
-qqnorm(swiss.forged.margin)
-shapiro.test(swiss.forged.margin)
-```
-
-The Q-Q plot is displayed in Figure \@ref(fig:qqnorm2). It
-displays a moderate departure for linearity (particularly in the
-left-hand tail) suggestive of possible non-normality. To investigate
-further, we apply the Shapiro-Wilk test of normality to the data (using
-the R command `shapiro.test`). The null hypothesis for this test is that
-the data are drawn from a normal distribution, so that small p-values
-indicate rejection of this hypothesis and hence indicate doubt about the
-normality of the data. In this case we have a p-value of $0.011$,
-providing some evidence that the data are not normally distributed.
-:::
-
-### Scatterplots
-
-Scatterplots are a means of visualizing bivariate data. Things to look
-for include trends, the presence of outliers (that is, observations that
-seem very different to the main body), and any clustering.
-
-The basic command to produce a scatterplot is `plot`. For variables `x`
-and `y` the syntax `plot(x,y)` and `plot(y ~ x)` produce identical
-results. Note, however, that the latter format allows specification of a
-data frame (in which `x` and `y` might be located) while the former does
-not.
-
-::: {.example}
-**Scatterplots for the Husbands and Wives Data**
-
-Recall that the husbands and wives data includes observations on height
-(in mm) and age (in years). We will start with a simple scatterplot of
-wife's height against her husband's height.
-
-```{r, echo=FALSE}
-husbands <- read.table("data/husbands.txt", header=TRUE)
-husbands$W.Age[husbands$W.Age==9999] <- NA
-husbands$H.Age.Marriage[husbands$H.Age.Marriage==9999] <- NA
-```
-
-```{r scatter1, fig.cap="Scatterplot of wife's height against husband's height."}
-plot(husbands$H.Ht,husbands$W.Ht)
-```
-
-The result is shown in Figure \@ref(fig:scatter1). From this plot we can see an obvious positive
-relationship between the variables. There are no apparent clusters, and
-no extreme outliers (though the tallest wife has a moderately short
-husband, producing a data point that is somewhat out of the ordinary).
-
-The plot itself could be beautified in a number of ways. For example, we
-could label the axes (with something other than the object names in R),
-change the plotting symbol or change the colour of the data points. Such
-changes can be implemented by specifying values for optional arguments
-in the function `plot`. For example, the `xlab` and `ylab` arguments
-control axis labels; the argument `col` controls the plotting colour;
-and `pch` controls the plotting character (open circles, crosses,
-triangles, closed circles etc.). The code below uses these options to
-plot the data in red (that's colour 2 for R, although writing
-`col="red"` would work just the same) and uses closed circles as
-plotting symbols (that's plotting character 19).
-
-```{r scatter2, fig.cap="Beautified scatterplot of wife's height against husband's height."}
-plot(W.Ht~H.Ht, xlab="Husband's height", ylab="Wife's height", col=2, pch=19, data=husbands)
-```
-
-In Figure \@ref(fig:scatter2) the colour is just for show, but colour can
-also be useful if the data divide into groups. Suppose, for example,
-that we think that the married couples' height data may vary depending
-on whether or not they married young -- say before the husband was 30.
-The code below produces a scatterplot in which the couples where the
-husband is over 30 when married appear as red points, and those where
-the husband was less than 30 appear as black points.
-
-```{r scatter3, fig.cap="Scatterplot of wife's height against husband's height with data grouped by husband's age on his wedding day."}
-older <- (husbands$H.Age.Marriage >= 30)
-older
-older <- older+1
-older
-plot(W.Ht ~ H.Ht, xlab="Husband's height",ylab="Wife's height", col=older, pch=19, data=husbands)
-legend("topleft", legend=c("Younger","Older"), col=1:2, pch=19)
-```
-
-Points to note:
-
--   The command `older <- (husbands$H.Age.Marriage >= 30)` creates a
-    *logical vector* `older` which is `TRUE` for husbands who are 30 or
-    older on their wedding day, and `FALSE` otherwise.
-
--   When a logical vector is involved in a numeric calculation, `TRUE`
-    is interpreted as one and `FALSE` as zero. Hence `older <- older+1`
-    replaces the original vector `older` with one where there are 2s for
-    husbands married at 30 or later, and 1s for husbands married earlier
-    than 30.
-
--   When the vector `older` is specified as the `col` argument to
-    `plot`, each data point is plotted using the colour specified by
-    `older` (so colour 2 [red] for older husbands, and colour 1
-    [black]) for younger ones.
-
--   The command beginning `plot` is very long, and would come off the
-    end of the page if entered without a break. If we hit the `RETURN`
-    key in the middle of typing the text, the cursor would change to
-    a `+` (rather than the usual `>`): R is waiting for the
-    completion of the command.
-
--   The `legend` command adds a legend to a plot. The `legend` argument
-    to the `legend` function specifies the text in the legend; the `col`
-    and `pch` arguments specify the plotting symbol colour and type; and
-    the first argument indicates where the legend should be placed in
-    the plot. Use the help system to discover the appropriate syntax for
-    alternative placements.
-
--   Looking at the scatterplot, there is little evidence that the
-    relationship between husbands' and wives' heights is different
-    between the younger and older husband groups.
-:::
-
-Interpreting scatter plots can become difficult if
-
--   there are many repeated data;
-
--   the data set is very large.
-
-With regard to (i), overlaying of data points can mask the true density
-of observations, while for huge datasets there may be so many points
-that the large sections of the plotting window become uniform black ink.
-
-::: {.example}
-**Scatterplots for the Adult Dataset**
-
-Don't worry (or get too expectant!) -- the adult dataset is very tame.
-It contains data from the 1994 census in the U.S. This particular
-dataset contains records for 32561 adults with 15 variables, so unlike
-the relatively small husbands dataset (which we introduced for
-illustrative purposes) this really is data mining territory. The data
-are available for download as the (large) text file `adult.txt`.
-
-In this example we will look at the relationship between the variable
-`edu.n`, a numerical summary of educational level achieved, and `Age`
-(age in years). We first try a standard scatterplot, displayed in Figure
-\@ref(fig:scatter4).
-
-```{r scatter4, fig.cap = "Scatterplot of educational level achieved against age, based on a sample of 32561 adults from a U.S. census."}
-adult <- read.table("data/adult.txt", sep=",", header=TRUE)
-plot(edu.n ~ Age, ylab="Educational level", data=adult)
-```
-
-It is quite difficult to make out much detail in this plot, because most
-plotted points are overlaid many times. For instance, the ink density
-provides little guidance as to which educational levels of attainment
-are most common.
-
-One way to address the problem of repeated data points is to *jitter*
-the data. Jittering is the process of adding a small amount of noise to
-data. In can be implemented in R using the `jitter` command. We can
-therefore obtain a jittered scatterplot, as displayed in Figure \@ref(fig:scatter5).
-
-```{r scatter5, fig.cap = "Jittered scatterplot of educational level achieved against age, based on a sample of 32561 adults from a U.S. census."}
-plot(jitter(edu.n) ~ jitter(Age),xlab="Age",ylab="Educational level",data=adult)
-```
-
-Notice in this second scatterplot that the visible ink density reveals
-structure that was largely hidden in the previous plot.
-:::
-
-Scatterplots display the relationship between only two (numerical)
-variables. Faced with a data set with more than two such variables, one
-option for exploring the data is to produce scatterplots of all pairs of
-variables. This generally only works well for modest number of
-variables. It can be achieved automatically in R by using the `pairs`
-command, which may be applied to a (numerical) matrix or data frame. For
-example, `pairs(husbands)` produces the array of scatterplots displayed
-in Figure \@ref(fig:scatter6) for the husbands data. As one might expect,
-the relationship between husbands' and wives' ages is particularly
-strong.
-
-```{r scatter6, echo=FALSE, fig.cap="Scatterplots for every pair of variables from the husbands and wives dataset."}
-pairs(husbands)
-```
-
-### Boxplots
-
-Scatterplots are for visualizing the relationship between two numerical
-variables. If you want to explore the relationship between a numerical
-variable and a categorical variable (i.e. a factor), then boxplots (also
-known as a box-and-whisker plots) are useful. In R, if the numerical
-variable is stored as the object `x` and the factor as `A`, then the
-appropriate syntax is
-
-```{r, eval=FALSE}
-boxplot(x ~ A)
-```
-
-where the function `boxplot` can take additional arguments to specify a
-data frame and control various graphical parameters (e.g. colour and
-width of boxes).
-
-::: {.example}
-**Boxplots for the Adult Data**
-
-We return to the adult data, but now focus on the numerical variable
-`hrs.per.wk` (average number of hours worked per week) and the factor
-`relationship` (which describes status within a family unit). The
-standard boxplot in Figure \@ref(fig:box1) was produced by the code
-
-```{r box1, fig.cap="Boxplots of hours worked per week, grouped by position in family, from the adult dataset."}
-boxplot(hrs.per.wk ~ relationship, ylab="Hours per week", data=adult)
-```
-
-We can beautify the plot a bit by adding some colour to the boxes and
-narrowing the width of the boxes, which tend to be unattractively wide
-when the factor has just a few levels (i.e. categories). The code
-
-```{r box2, fig.cap="Colourful boxplots of hours worked per week, grouped by position in family, from the adult dataset."}
-boxplot(hrs.per.wk ~ relationship, ylab="Hours per week", boxwex=0.4, col=5, data=adult)
-```
-
-produces the refined boxplots in Figure \@ref(fig:box2). Note that
-colour 5 is cyan, and that the argument `boxwex` controls box widths.
+# Missing values
+
+Dealing with missing values is a critical part of the data mining process. It is
+typical that variables in our data will be incomplete, where one (or often thousands)
+of observations may be missing that measure.
+
+In some cases we may be able to fill in these gaps through judicious use of other
+variables for which the data are not missing. In other cases it may be best to discard
+variables or observations for which we have little data.
 
 ## Dealing with Missing Values{#sec:missing}
 
@@ -435,6 +63,32 @@ worth keeping in mind that the conclusions drawn from any data mining
 procedure may be sensitive to the assumptions that we make about missing
 values.
 
+### Visualising missing values
+
+It is useful to get an overview of where missing values are, as that may
+assist us in determining how to procede. For example, if almost all the
+missingness is confined to just one variable (column), removing that
+variable from subsequent analyses may be the way to go. Or, if missingness
+is instead confined to a small number of observations (rows) then removing
+those rows might be more appropriate. Or a combination thereof!
+
+The `vis_miss()` function in the `visdat` package is useful for this.
+
+::: {.example}
+**Visualising missingness in the airquality data**
+
+We can use `vis_miss` directly on the `airquality` data.frame:
+
+```{r}
+library(visdat)
+vis_miss(airquality)
+```
+From this we see that most of the missingness (4.8% overall) is contained in the `Ozone` column,
+which is 24.2% missing. The `Solar.R` column then contains relatively small number of missing rows (7)
+while the other rows are complete. Depending on the analyses, it might be appropriate to remove
+the `Ozone` variable before continuing on.
+:::
+
 ### Working with Complete Cases
 
 The impact that missing data will have on any subsequent analysis will
@@ -468,6 +122,12 @@ This is a matrix with ones on the long-diagonal (corresponding to a
 perfect correlation of any variable with itself) and pair correlations
 as the off-diagonal elements[^paircorr].
 
+```{r, echo=FALSE, message=FALSE}
+library(tidyverse)
+husbands <- read_csv("../data/husbands.csv") %>%
+  naniar::replace_with_na(replace = list(W.Age = 9999, H.Age.Marriage = 9999))
+```
+
 ```{r}
 cor(husbands)
 ```
@@ -484,8 +144,7 @@ One way of handling this is to delete all records which are incomplete
 (i.e. contain at least one missing value).
 
 ```{r}
-nrow(husbands)
-husbands2 <- husbands[complete.cases(husbands),]
+husbands2 <- husbands %>% filter(complete.cases(.))
 nrow(husbands2)
 cor(husbands2)
 ```
@@ -495,13 +154,13 @@ Points to note:
 -   We start off with 199 records, which is the number of rows in the
     data frame (which can be found using the `nrow` function).
 
--   The command `complete.cases(husbands)` returns a logical vector,
+-   The command `complete.cases()` returns a logical vector,
     with `TRUE` for each row of the data frame which is a complete case
     (i.e. does not contain missing values) and `FALSE` for incomplete cases.
 
--   The syntax `husbands2 <- husbands[complete.cases(husbands),]`
-    creates a new data frame `husbands2` comprising just the complete
-    records from `husbands`.
+-   The `filter(complete.cases(.))` command filters based on running
+    `complete.cases` on all the data, specified by the special `.` argument.
+    This can be useful in `dplyr` data processing chains.
 
 -   The complete case data frame has 169 rows, indicating that there
     were 30 ($=199-169$) incomplete records.
@@ -544,36 +203,24 @@ The following R code replaces missing values by the variable mean for
 the first of these variables .
 
 ```{r}
-HusWife <- husbands
-HusWife$W.Age
-mean(HusWife$W.Age, na.rm=TRUE)
-HusWife$W.Age[is.na(HusWife$W.Age)] <- mean(HusWife$W.Age, na.rm=TRUE)
-HusWife$W.Age
+library(naniar)
+HusWife <- husbands %>%
+  mutate(W.Age.New = impute_mean(W.Age),
+         H.Age.Marriage.New = impute_mean(H.Age.Marriage))
+HusWife %>% filter(is.na(H.Age.Marriage))
 ```
 
 Points to note:
 
--   We start by copying the data frame `husbands` to another data frame
-    `HusWife`. Our reason for this is that mean imputation is probably
-    not the best approach to imputation for this dataset -- we do it
-    here merely for illustrative purposes. We therefore want to retain
-    the unimputed version of `husbands` for later use.
+-   We start by loading the `naniar` package which is useful for dealing with
+    missing values in a `tidyverse`-centric way.
+    
+-   The `mutate()` command then creates two new columns (with `.New` appended),
+    using the `impute_mean()` function to do the imputation.
 
--   As you may recall, the optional argument `na.rm=TRUE` causes the `mean`
-    function to calculate a mean by excluding missing values. Without
-    that argument the `mean` function will return `NA` for any variable
-    with missing entries.
-
--   The function `is.na` applied to a vector returns a logical vector
-    indicating whether or not each entry is missing (with `TRUE`
-    corresponding to missing values). Hence
-
-    ```{r, eval=FALSE}
-    HusWife$W.Age[is.na(HusWife$W.Age)] <- mean(HusWife$W.Age, na.rm=TRUE)
-    ```
-
-    replaces all the missing values of `HusWife$W.Age` by
-    `mean(HusWife$W.Age, na.rm=TRUE)`, as required.
+-   Alternatively, we could have used `husbands %>% impute_mean_all()` to do this
+    same operation - it will impute all missing values from every column using the
+    mean of the remaining data.
 :::
 
 Mean imputation ignores the correlation structure in the data, in the
@@ -586,7 +233,9 @@ Obviously the imputed values muddle what is otherwise a rather clear
 trend between the two variables.
 
 ```{r impute1, echo=FALSE, fig.cap="Scatterplot of wife's age against husband's age for the mean imputed dataset. Imputed values are coloured red."}
-plot(W.Age ~ H.Age, data=HusWife, col=1+is.na(husbands$W.Age),pch=19)
+ggplot(HusWife) +
+  geom_point(mapping = aes(y=W.Age.New, x=H.Age, col=is.na(W.Age))) +
+  scale_colour_manual(values = c("black", "red"), guide="none")
 ```
 
 A more plausible approach to imputation (for numerical variables) is to
@@ -600,21 +249,19 @@ mean of wives' ages (which is 40.7 years).
 
 To put this in practice we need to be precise about what we mean by
 'similar records' in the above paragraph. If the data are numerical,
-then we can measure similarity (or rather *dis*similarity) by the
-Euclidean distance between records[^eucliddist]. For a record with a missing
-value on some given variable, we can then find the $k$ nearest complete
-cases (using Euclidean distance based on the variables for which we do
-have data). The mean of the variable in question for these $k$ *near
+then we can measure similarity (or rather *dis*similarity) by the distance
+between records. There are various metrics that we could use, such
+as the Euclidean distance [^eucliddist]. In practice, we'll be using
+Gower's distance which is more stable than Euclidean distance, as
+it first divides the values in each variable by the range, prior to computing
+the Manhattan, or absolute distance[^manhattandist]. If we have non-numeric
+data then it uses simple matching. For a record with a missing value on some
+given variable, we can then find the $k$ nearest complete
+cases (using Gower's distance based on the variables for which we do
+have data). The median of the variable in question for these $k$ *near
 neighbours* can then be used as a replacement for the missing value.
 This methodology is known as *k nearest neighbour imputation*. It is
-implemented in R by the function `kNNImpute`, the code for which can be
-loaded directly into R by issuing the command
-
-```{r, eval=FALSE}
-source("http://www.massey.ac.nz/~jcmarsha/161324/kNNImpute.R")
-```
-
-which also loads supporting code.
+implemented in R using the `kNN` function from the `VIM` package.
 
 In practice we must choose a value for $k$. The crux of the issue is as
 follows. If we choose a small $k$ then the imputed value will be
@@ -628,64 +275,35 @@ quite distant from (and hence quite unlike) the record in question.
 There are a number of sophisticated automated methods for choosing $k$,
 but for in many cases $k=5$ is a reasonable rule-of-thumb to use.
 
-There is one final aspect of $k$ nearest neighbour imputation that
-requires attention. Euclidean distance is sensitive to the scaling of
-the variables. For example, in the husbands and wives dataset, heights
-are measured in millimetres, so that a difference of 30 corresponds to
-just 3cm which might be considered a rather modest height difference.
-However, ages are measured in years, where a 30 year age difference is
-extreme. It follows that there will often be an advantage in computing
-distances (or dissimilarities) based on a scaled version of the data,
-where all variables have comparable spreads. The argument `x.scale` for
-the function `kNNImpute` controls whether or not such scaling is
-employed. The default setting (`x.scale=TRUE`) is to use scaling.
-Setting `x.scale=FALSE` results in no data scaling when computing
-distances.
-
 ::: {.example}
 **$k$ Nearest Neighbour Imputation for the Husbands and WivesData**
 
 In this example we impute values for the missing data on `W.Age` and
 `H.Age.Marriage` using k nearest neighbour imputation.
 
-```{r}
-source("http://www.massey.ac.nz/~jcmarsha/161324/kNNImpute.R")
-husbands.imp <- kNNImpute(husbands, k=5, x.scale=FALSE)$x
-husbands.imp2 <- kNNImpute(husbands, k=5, x.scale=TRUE)$x
+```{r, message=FALSE}
+library(VIM)
+husbands.imp <- husbands %>% kNN(k = 5)
 ```
 
 Points to note:
 
--   As mentioned above, the function `kNNImpute` must be loaded using
-    the `source` command prior to use.
+-   The `library(VIM)` command is loading the `VIM` library.
 
--   The function `kNNImpute` returns an R *list* object, with components
-    `x` and `missing.matrix`. The former contains a data matrix with
-    imputations in place of missing values, while the latter describes
-    the pattern of missing values in the input data frame (as a logical
-    matrix). The elements of a list can be accessed using syntax of the
-    form `list$component` (just like referring to variables in a data
-    frame). Hence `kNNImpute(husbands, k=5)$x` returns a matrix version
-    of the data frame `husbands` with missing values replaced by
-    imputations obtained using the 5 nearest neighbour method.
-
--   This imputed data matrix is stored as `husbands.imp` in the unscaled
-    case, and `husbands.imp2` in the scaled case.
+-   The `kNN()` command does the imputation - by default it will impute
+    using all columns. By default it will also return additional columns
+    named `<column_name>_imp` which states whether the values in that column
+    were imputed.
 
 Finally, Figure \@ref(fig:impute2) displays scatterplots of wife's age against
-husband's age using the imputed data sets just created. As before, the
-imputed values are coloured red. It is clear that k nearest neighbour
+husband's age using the imputed data set just created. As before, the
+imputed values are coloured blue. It is clear that k nearest neighbour
 imputation does a far better job than mean imputation for this dataset.
-Furthermore, the right-hand plot looks rather better than the left-hand
-(in terms of the plausibility of the imputed values) illustrating the
-importance of scaling the data when working with distance methods.
 
-```{r impute2, echo=FALSE, fig.cap="Scatterplot of wife's age against husband's age for k nearest neighbout imputed datasets. The left-hand plot shows the results when imputation is carried out on the raw data; the right-hand plot when imputation is performed with scaling. In both cases imputed values are coloured red."}
-par(mfrow=c(1,2))
-plot(W.Age ~ H.Age, data=husbands.imp, col=1+is.na(husbands$W.Age),pch=19)
-title("No scaling")
-plot(W.Age ~ H.Age, data=husbands.imp2, col=1+is.na(husbands$W.Age),pch=19)
-title("With scaling")
+```{r impute2, echo=FALSE, fig.cap="Scatterplot of wife's age against husband's age for the k nearest neighbout imputed dataset using $k=5$. Imputed values are coloured red."}
+ggplot(husbands.imp) +
+  geom_point(mapping=aes(x=H.Age, y=W.Age, col=W.Age_imp)) +
+  scale_colour_manual(values = c("black", "red"), guide = "none")
 ```
 
 :::
@@ -717,8 +335,6 @@ straightforward.
 
 While interesting, the details of these alternative methods of
 imputation are beyond the scope of this course.
-
-**You should now do Computer Lab 3.**
 
 [^gaussian]: The normal distribution is sometimes referred to as the Gaussian
     distribution after German mathematician (and absolute genius) Carl
@@ -752,3 +368,13 @@ imputation are beyond the scope of this course.
     $$d_{ij} = \sqrt{ \sum_{\ell=1}^p (x_{i\ell} - x_{j\ell})^2 }$$
     where $x_{i\ell}$ is the value of the $\ell$th variable for the
     $i$th case.
+    
+
+[^manhattandist]: Manhattan distance is the distance between points as if you were
+    in downtown Manhattan, so that you can only walk along the grid (horizontal or
+    vertical). The Manhattan distance between the
+    $i$th and $j$th records is defined by
+    $$d_{ij} = \sum_{\ell=1}^p |x_{i\ell} - x_{j\ell}|$$
+    where $x_{i\ell}$ is the value of the $\ell$th variable for the
+    $i$th case, and $|x|$ denotes the absolute value of $x$.
+

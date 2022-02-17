@@ -13,26 +13,16 @@ link-citations: yes
 github-repo: jmarshallnz/161324
 ---
 
-# About
+```{r setup}
+knitr::opts_chunk$set(comment = "#>")
+library(ggplot2); theme_set(theme_minimal())
+```
 
-This is the `index.Rmd` file which will be our first chapter...
+# Preface {-}
 
-Week 1: Introduction, what is datamining/statistical learning ISLR 2
+This is the study guide for 161.324 Data Mining at Massey University.
 
-Week 2: Some more intro stuff maybe. Something about missing values? Not in ISLR???
+It is put together based on existing notes from previous courses, updated in 2022 to utilise
+the tidyverse suite of packages.
 
-Week 3: Linear regression ISLR 3
-
-Week 4: Validation? ISLR 5?
-
-Week 5: Model selection, beyond linear model. ISLR 6/7?
-
-Week 6/7: Classification ISLR 4?
-
-Week 8/9: Trees, forests ISLR 8
-
-Week 10: SVM? ISLR 9
-
-Week 11: Clustering ISLR 12
-
-Week 12: Something, something... (Text analysis?)
+It will be progressively updated over time.
