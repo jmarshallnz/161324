@@ -1,0 +1,20 @@
+---
+title: "Workshop 3: Missing values and imputation"
+output: html_document
+---
+
+We'll be looking at:
+
+- Using `skim` to summarise data.
+- Using `vis_dat` to visualise missing values.
+- Recoding missing values using the `naniar` package.
+- Impute missing values using the mean.
+- Impute missing values with k-nearest neighbours.
+
+Start by downloading lab03.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab03.Rmd
+
+There are a bunch of packages you'll likely need to install - you'll probably get them listed in a yellow bar at the top of the editor pane.
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**

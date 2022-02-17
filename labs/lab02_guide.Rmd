@@ -1,0 +1,20 @@
+---
+title: "Workshop 2: Pivoting, joining, tidying, data visualisation"
+output: html_document
+---
+
+We'll be looking at:
+
+- How to summarise by more than one group
+- How to turn that into a table by pivoting the data wider.
+- How to join dataset together.
+- How to create 'small multiple' charts.
+- How to tidy up and create a chart from some very messy data.
+
+Start by downloading lab02.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab02.Rmd
+
+You may be prompted to install the `readxl` package via a yellow bar at the top.
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**

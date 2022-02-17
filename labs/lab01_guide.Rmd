@@ -1,0 +1,38 @@
+---
+title: "Workshop 1: `ggplot2` and `dplyr`"
+output: html_document
+---
+
+In this workshop we get to grips with the basics of using `ggplot2` to produce plots, and `dplyr` for manipulating data.
+
+For some of you, this workshop will be largely revision: Nonetheless we strongly recommend you run through it to refamiliarise yourself with the basics of the `tidyverse` set of packages.
+
+For others, this may be new - you may be familiar with R and RStudio (and even RMarkdown), but may not be familiar with the `tidyverse` set of packages: They take some getting used to, but contain a consistent, powerful set of functions for wrangling data and producing plots. Nonetheless, they're not compulsory - we don't mind if you prefer base R functions, or data.table, or anything else for that matter - as long as you understand what you're doing and can effectively produce graphics or manipulate data then all is good.
+
+## Before we start
+
+Make sure you have both R and RStudio installed. In addition, make sure you have the `tidyverse` package installed.
+
+Both of these are detailed here:
+
+https://r-resources.massey.ac.nz/help/usingrin161.324.html
+
+## Download the workshop sheet
+
+Start by downloading lab01.Rmd to somewhere on your computer. The easiest way to do this is to right click on the URL below and "Save file as..."
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab01.Rmd
+
+Then load it into RStudio. The fail-safe way to do that is to first load RStudio up, and then use the File->Open File... option (alternatively the folder button on the toolbar), browsing to where the file was saved, and loading it up.
+
+Alternatively, you may be able to right-click on the file in explorer or Finder, then Open with... and choose RStudio.
+
+When done, you'll see that RStudio loads the R Markdown (a text file interspersed with R code) into the `Editor` pane in the top left.
+
+## Making sure it all works
+
+Start by 'Knitting' the document by clicking on the `Knit` button on the toolbar. This should run all commands in the file and stitch everything together to give an HTML file.
+
+If there's any errors here, take a good look at what they are. e.g. you may not have installed the `tidyverse` package yet.
+
+**Once all is good, work your way through the R Markdown worksheet.**
