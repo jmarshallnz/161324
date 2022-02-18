@@ -4,7 +4,7 @@ subtitle: 'Reshaping, joining and visualisation data'
 output:
   xaringan::moon_reader:
     css: [default, default-fonts, "custom.css"]
-    mathjax: "https://cdn.bootcss.com/mathjax/2.7.3/MathJax.js?config=TeX-MML-AM_CHTML"
+    mathjax: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
     nature:
       highlightStyle: tomorrow
       highlightLines: true
@@ -22,7 +22,7 @@ editor_options:
 ```{r setup, include=FALSE}
 library(tidyverse)
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%")
+knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
 #theme_set(theme_minimal())
 library(palmerpenguins)
 hrc <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horizons_river_ecoli.csv")
