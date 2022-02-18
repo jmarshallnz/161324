@@ -1,0 +1,504 @@
+---
+title: 'Lecture 3'
+subtitle: 'Missing values'
+output:
+  xaringan::moon_reader:
+    css: [default, default-fonts, "custom.css"]
+    mathjax: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
+    nature:
+      highlightStyle: tomorrow
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+      slideNumberFormat: |
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
+          </div>
+        </div>
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
+theme_set(theme_minimal())
+library(palmerpenguins)
+hrc <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horizons_river_ecoli.csv")
+
+xaringanExtra:::use_freezeframe()
+```
+
+## Missing data
+
+- Just about all non-trivial datasets contain missingness.
+
+- Missingness can be due to a number of different reasons, such as:
+
+    - In socio-economic surveys, respondents can be unwilling to provide some personal information (e.g. gross income).
+    - In scientific experiments, a lab rat died, a bug didn't grow, samples went missing, a petri dish was dropped etc.
+
+- We need to think carefully about what to do about missing values, and ensure we include details in reporting of analyses.
+
+---
+
+## Encoding missing data
+
+- When data is in the form of text files or spreadsheets, it's common for a special value to be used
+to encode missingness.
+
+- That special value might be just an empty cell, or it might be a character string such as `NA` or `n/s` (not shown).
+
+- Sometimes missing values are encoded as a special number as well, such as 999, though this tends to not happen as much any longer.
+
+- This last case in particular is problematic, as if we don't notice, numerical summaries will be off.
+
+---
+
+## Recoding missing values
+
+The `husbands` dataset contains missing values encoded as the number `9999`:
+
+```{r, message=FALSE}
+husbands <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/husbands.csv")
+husbands
+```
+
+---
+
+## Recoding missing values
+
+If we didn't notice this, summaries such as means will be wrong:
+
+```{r}
+husbands %>% summarise(W.MeanAge = mean(W.Age))
+```
+
+Clearly the mean age of the wives here is not 1492 years old!
+
+---
+
+## Recoding missing values
+
+We can fix this with the `replace_with_na` function from the `naniar` package:
+
+```{r, message=FALSE, skimr_include_summary = FALSE}
+library(naniar)
+library(skimr)
+husbands_na <- husbands %>% replace_with_na(replace = list(W.Age = 9999, H.Age.Marriage = 9999))
+husbands_na %>% skim()
+```
+
+---
+
+## Implicit missing values
+
+The missing values in the `husbands` data are explicit - we can see them there in the data.
+
+Sometimes missing values are implicit - they're not in the data at all. An example is the school
+`roll` data, where there were no entries where `Students` is 0.
+
+```{r, message=FALSE}
+roll <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/roll.csv")
+roll %>% filter(Students == 0)
+```
+
+However, we know there are schools where there will be no students for a particular
+combination of `Gender`, `EthnicGroup` and `Level`.
+
+---
+
+## Implicit missing values
+
+As an example, consider `Freyberg Community School` new entrants:
+
+```{r}
+freyberg_new_entrants <- roll %>% filter(School == "Freyberg Community School",
+                                         Level == "Year 1")
+freyberg_new_entrants
+```
+
+---
+
+## Implicit missing values
+
+The `complete` function is useful for adding rows for the missing combinations of variables:
+
+```{r}
+freyberg_new_entrants %>% complete(School, Level, Gender, EthnicGroup)
+```
+
+---
+
+## Implicit missing values
+
+In this case, we know the `Students` entry should be 0, so we can add that in:
+
+```{r}
+freyberg_new_entrants %>% complete(School, Level, Gender, EthnicGroup,
+                                   fill = list(Students = 0))
+```
+
+---
+
+## Visualising missing values
+
+The impact of missing values depends on:
+
+- How many there are. If there's only a few, then it's probably OK. If there are many, then this may impact how well models can fit the data (we have lost a lot of information).
+
+- Are they random? If they're completely at random we might be OK.
+
+- Is there a pattern? If there is a pattern then any modelling might be biased.
+
+---
+
+.left-code[
+## Visualising missing values
+
+We can use the `visdat` package for visualising data, including missingness. e.g. using the husbands data:
+
+```{r visdat, eval=FALSE}
+library(visdat)
+vis_miss(husbands_na)
+```
+
+We see that `W.Age` is missing a bunch of values, while `H.Age.Marriage` is missing few.
+]
+
+.right-plot[
+```{r, ref.label="visdat", message=FALSE, echo=FALSE}
+```
+]
+
+---
+
+.left-code[
+## Visualising missing values
+
+We can visualise the data we have with missing
+values on top:
+
+```{r visdat2, eval=FALSE}
+ggplot(data = husbands_na) +
+  geom_miss_point( #<<
+    mapping = aes(
+      x = H.Age,
+      y = W.Age
+    ))
+```
+
+From here we see that whether `W.Age` is missing
+doesn't seem to depend on what `H.Age` is.
+
+i.e. we're unlikely to be missing the age because
+of the underlying value of the age.
+]
+
+.right-plot[
+```{r, ref.label="visdat2", echo=FALSE}
+```
+]
+
+---
+
+class: middle,inverse
+
+# Types of missingness
+
+---
+
+## Types of missingness
+
+There are three main types of missing values:
+
+1. Missing Completely at Random (MCAR). "The dog eats homework"
+
+2. Missing at Random (MAR). "The dog ate a particular student's homework"
+
+3. Missing not at Random (MNAR). "The dog only eats bad homework".
+
+---
+
+## Missing completely at random (MCAR)
+
+- Let's pretend that we have a class, and the students are handing in some homework.
+
+- The teacher finds they don't have all the homework - some is missing.
+
+- The dog might belong to the teacher, who got into the stack and just ate some of it.
+
+- Which ones were eaten are not dependent on the quality of the homework or which student it was.
+
+- So the probability of homework being missing doesn't depend on the homework or the student.
+
+- **It's missing completely at random.**
+
+- There is no bias from just throwing away missing data.
+
+---
+
+## Missing at random (MAR)
+
+- Let's pretend that we have a class, and the students are handing in some homework.
+
+- The teacher finds they don't have all the homework - some is missing.
+
+- Suppose now the dog belongs to a flat of students.
+
+- Which ones were eaten depend on properties of the student: are they in that flat?
+
+- But otherwise, it's random - if you're in the flat then the dog might have eaten the homework. If you're not in the flat then we know the dog didn't eat your homework.
+
+- This is **missing at random**, but the randomness happens conditional on some other, non-missing, variables.
+
+- There is no bias as long as we include the variables that give us information about missingness.
+
+---
+
+## Missing not at random (MNAR)
+
+- Let's pretend that we have a class, and the students are handing in some homework.
+
+- The teacher finds they don't have all the homework - some is missing.
+
+- Suppose now that the dog has been trained to only eat bad homework, but the teacher doesn't know that.
+
+- Which ones were eaten now depends on the properties of the homework, and for the eaten ones, the teacher doesn't know whether they were good or bad, and can't infer that from the rest of the data.
+
+- This is **missing not at random**. There's pretty much nothing we can do in this case.
+
+- Bias is unavoidable. e.g. the teacher won't be able to judge overall quality as only good homework examples are in the data.
+
+---
+
+## Working with missing data
+
+There are generally two approaches:
+
+1. Remove rows (and/or columns) so we have only complete data.
+
+2. Try and fill-in (impute) the missing values using the data we have.
+
+---
+
+## Working with complete cases
+
+- The `complete.cases` command is useful to use inside `filter` to just get the complete rows.
+
+- You might want to first use `select` to remove columns for which lots of data are missing.
+
+- Once done, all your data are complete, so you can compute summaries normally.
+
+---
+
+## Working with complete cases
+
+Suppose we want to find the correlation between the various columns in `husbands`:
+
+```{r}
+husbands_na %>% cor()
+```
+
+```{r}
+husbands_na %>% filter(complete.cases(.)) %>% cor()
+```
+
+---
+
+class: middle,inverse
+
+# Imputation
+
+---
+
+## Mean value imputation
+
+- Replace any missing values with the mean of the available data for numeric variables.
+
+- Replace missing values with modal (i.e. most common) category (level).
+
+- Very simple to implement.
+
+- Very crude – can distort structure of dataset.
+
+---
+
+## Mean value imputation
+
+- Suppose that we observed two variables, $x$ and $z$
+
+- The data on $x$ is complete, while the variable $z$ has missing values.
+
+- We could compute the correlation of $x$ and $z$ based on complete cases.
+
+- If we filled in the incomplete cases of $z$ using the mean of $z$, would you expect
+the correlation of $x$ and $z$ to increase, decrease, or stay the same? **Why?**
+
+---
+
+.left-code[
+## Mean value imputation
+
+The `impute_mean()` function in `naniar`
+can do mean imputation:
+
+```{r meanimpute, eval=FALSE}
+husbands_na %>%
+  mutate(
+    W.Age.Imp = impute_mean(W.Age) #<<
+    ) %>%
+  ggplot() +
+  geom_point(
+    mapping = aes(
+      x = H.Age,
+      y = W.Age.Imp,
+      col = is.na(W.Age)
+    )
+  ) +
+  scale_colour_manual(
+    values = c('black', 'red')
+  )
+```
+]
+
+.right-plot[
+```{r, ref.label="meanimpute", echo=FALSE}
+```
+]
+
+---
+
+## Nearest neighbour imputation
+
+- Mean imputation can distort the data structure.
+
+- Intuitively, mean imputation assigns an average value to records that may be anything but average.
+
+- We will look at $k$-nearest neighbour imputation, which bases imputed values on records similar to the one requiring imputation.
+
+    - For example, consider missing values for wife's age in husbands and wives data.
+    - Mean imputation gives 40.7 years.
+    - This is an unlikely value if husband is 25.
+    - Better approach is to look at complete cases with husbands that are around 25 years old,
+      and use mean of their wives' ages.
+
+---
+
+## Nearest neighbour imputation
+
+- We do imputation based on records that are similar to the one with missing data.
+
+- We need definition of 'similar' records.
+
+- Can measure similarity (or rather dissimilarity) by calculating a distance between records.
+
+    - Could use Euclidean (straight line) distance.
+    - Or some other criteria.
+
+---
+
+## $k$-Nearest neighbour imputation
+
+- We compute the distance from a row with missing data to all other rows where we have data, using
+the columns that are complete.
+
+- We then take the $k$ nearest complete row to our missing row.
+
+- We then summarise the variable of interest from those $k$ rows (e.g. use the mean or median) to impute the missing values.
+
+- The `kNN()` command from the `VIM` package does this using **Gower's distance**.
+
+---
+
+## Gower's distance
+
+Gower's distance is a way to compute distances that operates over both numeric and categorical data columns.
+
+- Each numeric column is compared using a scaled manhattan distance, where the distance between rows $i$ and $j$ is given by
+
+    $$d(i, j) = \sum_{k=1}^p \frac{|x_{ik} - x_{jk}|}{r_k}$$
+    where the numerator is the absolute distance between entries, and the denominator is the range $r_k$. i.e. the contribution from each column is at most 1 (maximum vs minimum).
+
+- Each categorical column is compared using simple matching, where the distance between rows is 1 if the entries are different, and 0 if they match:
+
+    $$d(i, j) = \sum_{k=1}^p \mathbf{1}[x_{ik} \neq x_{jk}]$$
+
+Gower's distance is then the sum of these two.
+
+---
+
+## Nearest neighbour imputation with kNN
+
+```{r, message=FALSE}
+library(VIM)
+husbands_na %>% kNN(k=5)
+```
+
+By default `kNN` gives additional columns `W.Age_imp` indiciating whether or not they were imputed.
+
+---
+
+.left-code[
+## Nearest neighbour imputation with kNN
+
+```{r knn, eval=FALSE}
+library(VIM)
+husbands_na %>%
+  kNN(k=5) %>% #<<
+  ggplot() +
+  geom_point(
+    mapping = aes(
+      x = H.Age,
+      y = W.Age,
+      col = W.Age_imp
+    )
+  ) +
+  scale_colour_manual(
+    values = c('black', 'red')
+  )
+```
+]
+
+.right-plot[
+```{r, ref.label="knn", echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+## What should $k$ be?
+
+- In practice we must choose a value for $k$.
+
+- If $k$ is small:
+
+    - Imputed value will be somewhat unstable, being the average of just a few values (BAD).
+    - Values that we will be averaging over will all be quite like the incomplete case under investigation, since we are dealing with only very near neighbours (GOOD).
+
+- If $k$ large:
+
+    - Imputed value will be more stable (GOOD).
+    - Values will incorporate information from some cases that are quite unlike the record in question, so may not be appropriate (BAD).
+
+- There are some sophisticated methods for choosing $k$, but for in many cases $k=5$ is a reasonable rule-of-thumb.
+
+- This is an example of the **Bias-Variance tradeoff**, something we'll be returning to over and over!
+
+---
+
+## Imputation by hand
+
+Consider the following data:
+
+```{r, echo=FALSE}
+tribble(~x, ~z,
+        2, 6,
+        3, NA,
+        5, 10,
+        8, 18,
+        12, 26) %>% knitr::kable()
+```
+
+Find k-nearest neighbour imputations for the `NA` value using $k=1,2,3,4$.
