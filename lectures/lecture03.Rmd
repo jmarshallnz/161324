@@ -502,3 +502,22 @@ tribble(~x, ~z,
 ```
 
 Find k-nearest neighbour imputations for the `NA` value using $k=1,2,3,4$.
+
+---
+
+## Other methods of imputation
+
+- The `simputation` package contains a number of other methods.
+
+    - imputation using a linear model
+    - cascading imputation (e.g impute one variable, and use that to impute further).
+
+- The `mice` package contains functions for **multiple** imputation.
+
+    - In multiple imputation we impute more than once. e.g. we might randomly pick one of the $k$ nearest neighbours when
+    imputing, rather than using the median.
+    - This results in muliple versions of the dataset, each with (potentially) different imputed values.
+    - We do whatever analyses we wish to perform on each of them independently.
+    - We then average, or pool the resulting information across all imputed datasets to get final answers.
+
+- We'll be sticking with single imputation, but you're free to explore!
