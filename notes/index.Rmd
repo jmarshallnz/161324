@@ -14,8 +14,10 @@ github-repo: jmarshallnz/161324
 ---
 
 ```{r setup}
+library(tidyverse)
 knitr::opts_chunk$set(comment = "#>")
-library(ggplot2); theme_set(theme_minimal())
+theme_set(theme_minimal())
+options(pillar.sigfig = 5)
 ```
 
 # Preface {-}
