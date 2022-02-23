@@ -1,0 +1,20 @@
+---
+title: "Workshop 4: Prediction"
+output: html_document
+---
+
+We'll be looking at using the linear model for predicting a numeric measure. We'll look at:
+
+- Visualising the relationship between a target variable and other numeric measures.
+- Splitting a dataset into training and test/validation.
+- Fitting linear models.
+- Evaluating the model fit using the test set using (root) mean square error.
+- Comparing model predictive performance.
+
+Start by downloading lab04.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab04.Rmd
+
+There are a bunch of packages you'll likely need to install - you'll probably get them listed in a yellow bar at the top of the editor pane.
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**

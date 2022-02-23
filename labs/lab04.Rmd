@@ -1,0 +1,214 @@
+---
+title: 'Workshop 4: Prediction'
+output: html_document
+---
+
+In this workshop we'll be looking at how to predict a measurement (numeric) variable using other data.
+
+We'll be utilising the linear model (i.e. standard, multivariate regression) for this. It's a model we should already
+understand, so is the ideal candidate model to start with.
+
+The data for for this workshop concern the performance of a Sun Sparcstation computer, running in a university department. A total of 22 measures of system activity (the attributes) were collected on 800 occasions (the observations). The attributes are listed below. All are based on activity per second.
+
+  Variable     Description
+  ------------ -----------------------------------------------------
+  `lread`      Reads between system and user memory
+  `lwrite`     Writes between system memory and user memory
+  `scall`      Number of system calls
+  `sread`      Number of read calls
+  `swrite`     Number of write calls
+  `fork`       Number of system fork calls
+  `exec`       Number of system exec calls
+  `rchar`      Characters transferred by read calls
+  `wchar`      Characters transferred by write calls
+  `pgout`      Number of page out requests
+  `ppgout`     Number of pages that were paged out
+  `pgfree`     Number of pages put on free list
+  `pgscan`     Number of pages checked if they can be freed
+  `atch`       Number of page attaches
+  `pgin`       Number of page-in requests
+  `ppgin`      Number of pages paged in per second
+  `pflt`       Number of page faults due to protection errors
+  `vflt`       Number of page faults due to address translation
+  `runqsz`     Process run queue size
+  `freemem`    Number of memory pages available for user processes
+  `freeswap`   Number of disk blocks free for swapping
+  `usr`        Percentage time CPUs run in user mode
+
+We shall be interested in predicting the target `usr` as a function of the other variables.
+
+We start by loading packages and the data. You may have to install the `rsample`, `broom` and `yardstick` packages first.
+
+```{r, include=FALSE}
+library(tidyverse)
+library(rsample)
+library(broom)
+library(yardstick)
+
+comp <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/comp.csv")
+```
+
+Note we've used `include=FALSE` here in the chunk header. This is to stop `knitr` outputting any messages, warnings or output. In this case we're suppressing the startup messages from the libraries and the output of column types from `read_csv`.
+
+## Exploratory data analysis
+
+We'll start by taking a look at the data:
+
+```{r}
+skimr::skim(comp)
+```
+
+From this you should see that the data are complete, that all variables are numeric, and that many of the distributions are highly skew. Transforming some fo the variables might be a useful thing to try later.
+
+Next, to get a feel for how the target variable `usr` varies with each of the predictor variables. As they're all numeric, scatterplots will be sensible. We could do them one by one:
+
+```{r}
+ggplot(comp) + geom_point(mapping=aes(x=lread, y=usr))
+```
+
+But that will take a while! Instead, recall that we can plot things using small multiple plots (facetting) in ggplot
+if the data are in long format. Note that the data we have is already tidy - we already have one row per observation
+and one column per variable (and one entry per value). So we will be making it **untidy** so that we can plot it tidily!
+
+What we want is to keep the `usr` column but to pivot the rest of the columns into `name` and `value` columns. That way we can plot `value` against `usr`, facetting by `name`. It is useful to first add a row identifier to the dataset - this will help if we want to go back to the original format (as otherwise we don't know which rows should be combined when pivoting wider - unless the `usr` column is unique!). We can do this with `rowid_to_column` from the `tibble` package:
+
+```{r}
+comp_long <- comp %>% rowid_to_column(var = "id") %>%
+  pivot_longer(cols = -c(usr, id), names_to = 'name', values_to='value')
+comp_long
+```
+## Try yourself
+
+1. Try pivotting back to wide to create a `comp_wide` data frame. This should be the same as `comp`, except for the addition of the `id` column. Note that the order of the data frame is not guaranteed to be the same (rows or columns) but the content should be!
+
+2. One way to tell that `comp_wide` is the same as `comp` is to use the filtering join `anti_join`. If you anti_join `comp_wide` to `comp` you should get no rows returned. Check this!
+
+3. Now that we have `comp_long`, use `ggplot` to produce scatterplots of `usr` against each variable by utilising `facet_wrap`. Note that will likely need to allow the x scale to vary.
+
+4. What is your conclusion regarding how some of these variables will be useful for predicting `usr`?
+
+### Splitting the data
+
+Before we fit models for the purposes of prediction, we'll need a way to measure the predictive performance! We can't just measure that on the training set, as otherwise we'll have *homeground advantage*: The model will be trained on the data it's predicting, so a model that overfits to the training data will measure really well! Instead, we want an independent set of data to test our performance.
+
+The goal then is to split our 800 observations into two sets. We'll use 3/4 as a training set (600 rows) and 1/4 as the test set (200 rows).
+
+We could just take the first 600 rows as the training set, but this would be a bad idea. **Why?**
+
+Instead, we'll use the `initial_split()` function in the `rsample` package to split the data. We'll use `set.seed()` here to ensure things are reproducible.
+
+```{r}
+set.seed(1234)
+split <- initial_split(comp, prop=3/4)
+split
+```
+
+All this does is define the split. You can look at it using the `tidy()` function, which returns a data frame with a `Row` and `Data` columns. When we specify `unique_ind=FALSE` it returns the row identifier from the original dataset[^unique_id].
+
+```{r}
+tidy(split, unique_ind=FALSE)
+```
+
+### Try yourself
+
+1. Find the first row allocated to the `Assessment` set (test set).
+2. Check you have 600 `Analysis` and 200 `Assessment` rows.
+
+We can now pull out the training and test sets with the `training()` and `testing()` functions:
+
+```{r}
+comp_train <- training(split)
+comp_test  <- testing(split)
+```
+
+## Model fitting
+
+Let's start by fitting a linear model to the `comp_train` data using all predictors. We can then use the `summary()` command to assess the model:
+
+```{r}
+model1 <- lm(usr ~ ., data = comp_train)
+summary(model1)
+```
+
+From this we see the $R^2$ value is 0.93 - we're explaining 93% of the variation in `usr` with this model. That seems pretty good. We could also find this out, without dumping additional information with the `glance()` function from `broom`:
+
+```{r}
+glance(model1)
+```
+
+### Try yourself
+
+1. How many predictors are included in `model1`?
+2. Which predictors don't seem to be providing much information?
+3. Try using `tidy()` from the `broom()` package to get a tidy summary of the model parameters.
+
+## Predictive performance
+
+Now that we have a model, we need to evaluate how well it performs on the test set. We'll typically use the mean squared error (MSE) for this. We'll first use our model to predict the `usr` variable in the test set, and then compute how close our predicted `usr` values are to the true `usr` values, summmarised using the mean square error. The `augment()` function in broom gives us a tidy way to do prediction. This returns the data.frame we supply in `newdata` augmented with additional columns - in this case `.fitted` for the fitted value:
+
+```{r}
+model1_pred <- augment(model1, newdata = comp_test) %>% select(usr, .fitted, everything())
+model1_pred
+```
+
+From here we can compute the MSE manually:
+
+```{r}
+model1_pred %>% summarise(MSE = mean((usr - .fitted)^2))
+```
+
+Alternatively, we could compute this using the `yardstick` package to compute the root mean squared error (square root of MSE).
+
+```{r}
+model1_pred %>% rmse(truth = usr, estimate = .fitted)
+```
+### Try yourself
+
+Refit the following models to the training data and evaluate their RMSE on the test data:
+
+- A model with all predictors except `lwrite`, `atch`, `swrite` and `pgout`.
+- A model with just the `runqsz`, `freeswap`, `freemem`, `pflt` and `lread` predictors.
+- The model that results from using `step()` to perform stepwise elimination, starting from the full model (`model1`).
+
+Which of the models do you think perform the best?
+
+## Looking a little closer at our predictions
+
+You should have found that your root mean square error was around 2.4 or so. This is not particularly impressive, given that the standard deviation of the `usr` variable within the training data is about 7:
+
+```{r}
+comp_train %>% summarise(sd = sd(usr))
+```
+
+It seems strange that we would get an RMSE that is around 1/3 of the standard deviation of the data, given that the models claim to explain over 90% of the variance in `usr`! What's going on?
+
+To assess, let's take a look at our predictions from `model1` again by plotting them:
+
+```{r}
+model1_pred %>%
+  ggplot() +
+  geom_point(mapping = aes(x=usr, y=.fitted))
+```
+
+You should immediately see the problem! This entry has a large error, probably due to having extreme entries in one or more of the predictors (we know the `usr` value isn't extreme - it's in the middle of the data).
+
+The RMSE measure exacerbates this by squaring the error (which makes large errors larger!) and then summing - it's not a particularly good measure to compare models with when there might be very extreme observations.
+
+An alternate is the mean absolute error (MAE), the mean of the absolute value of the errors. We can compute this manually, or using `yardstick` as follows:
+
+```{r}
+model1_pred %>% summarise(mae = mean(abs(usr - .fitted)))
+model1_pred %>% mae(usr, .fitted)
+```
+
+### Try yourself
+
+Compute the mean absolute error for each of the models. What is your conclusion regarding which model(s) are best now?
+
+### Bonus
+
+To finish, you might like to try tuning the model above a bit further and see if you can improve it.
+
+You might also want to try and find the problematic row in the test set, and see why it is extreme. *One way to do this is to find the problem row and add it into the training data with a new column labelling the rows as `training` or `problem`. See `bind_rows` for this. Once done, do a plot of all variables against `usr` like we did at the start, but colour the points by the labelling column.*
+
+[^unique_id]: By default `unique_ind=TRUE`, which means the row index returned is not from the original data but is instead a generated one. This is useful in the case that we are oversampling or repeat sampling the data. The unique identifier then would map back to the original rows in a 1:many fashion.
