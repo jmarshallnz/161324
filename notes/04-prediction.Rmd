@@ -185,15 +185,14 @@ The training set comprises data on 400 employees, which can be
 downloaded into R by
 
 ```{r, message=FALSE, warning=FALSE}
-library(tidyverse)
-wage.train <- read_csv(file="data/wage-train.csv")
+wage.train <- read_csv("../data/wage-train.csv")
 ```
 
 A test dataset of 134 observations is also available, which can be
 downloaded into R by
 
 ```{r, message=FALSE}
-wage.test <- read_csv(file="data/wage-test.csv")
+wage.test <- read_csv("../data/wage-test.csv")
 ```
 
 Notice that in this case the we actually have the values for the target
@@ -820,13 +819,6 @@ worse in terms of prediction MSE than both of those we looked at
 earlier.
 
 ## Regression Trees{#sec:regtree}
-
-```{r include=FALSE}
-library(tidyverse)
-library(rpart)
-wage.train <- read_csv("data/wage-train.csv")
-wage.test  <- read_csv("data/wage-test.csv")
-```
 
 ### Introduction to Regression Trees{#sec:introtree}
 
@@ -1656,8 +1648,8 @@ make predictions on the test data.
 We start by just looking at a print out of some of the data.
 
 ```{r, message=FALSE}
-clock.train <- read_csv("data/clock-train.csv")
-clock.test <- read_csv("data/clock-test.csv")
+clock.train <- read_csv("../data/clock-train.csv")
+clock.test <- read_csv("../data/clock-test.csv")
 head(clock.train)
 head(clock.test)
 ```
