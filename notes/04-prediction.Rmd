@@ -1,5 +1,9 @@
 # Prediction
 
+```{r, include=FALSE}
+library(tidyverse)
+```
+
 ## Prediction, Classification and Clustering
 
 The remainder of the paper is largely concerned with prediction,
@@ -384,6 +388,40 @@ Some comments on this R snippet.
     the other predictors).
 :::
 
+::: {.example}
+**Tidying the Linear Model for the Wage Data**
+
+In the previous example we used the `summary()` command to gain information from
+the linear model. This combines information on the model equation (e.g. coefficients
+and their standard errors) with information on the overall model fit (the
+multiple $R^2$, overall $F$ statistic, residual degrees of freedom etc)
+
+The `broom` package contains some tools to tidy the output from linear models
+(and other models) in a consistent way. The two functions for summarising model
+fit are `tidy()`, which produces a tidy data frame for the coefficients of the
+model:
+
+```{r, message=FALSE}
+library(broom)
+tidy(wage.lm)
+```
+
+And `glance()` which provides a single row data frame with summary statistics
+of model fit:
+
+```{r}
+glance(wage.lm)
+```
+
+The nice thing about the `glance` output is you can use it directly as if it is
+a list object, and use the `$` operator (complete with tab auto-completion!)
+
+```{r}
+wage.modfit <- glance(wage.lm)
+wage.modfit$r.squared
+```
+:::
+
 ### Prediction
 
 Regression models can be used for a variety of purposes. For example,
@@ -437,17 +475,33 @@ for the target variable (hourly wage) in the test data set.
 
 ```{r}
 wage.pred <- predict(wage.lm, newdata=wage.test, interval="prediction")
-wage.pred.fit <- wage.pred[,1]
-wage.pred.lwr <- wage.pred[,2]
-wage.pred.upr <- wage.pred[,3]
 head(wage.pred)
 ```
 
-We can then plot the true target values (i.e. wages) against predictions based
+Unfortunately, this isn't **tidy** - the output is not a data.frame, so we
+can't just pass this across to `ggplot2` for plotting.
+
+A better solution is to use `augment()` from the `broom` package. The nice thing
+about `broom` is it provides a consistent interface across multiple model types,
+it works not just for the `lm()` function but for many others. As the name
+suggests, instead of just returning the prediction information, it **augments**
+the data we supply with the predictions. The augmented columns all start with a
+period (`.`).
+
+```{r}
+wage.tidypred <- augment(wage.lm, newdata=wage.test, interval="prediction")
+wage.tidypred %>% select(starts_with("."), everything())
+```
+
+As this is tidy, we can quite happily use `ggplot2` to do plots, e.g. a plot
+of the true target values (i.e. `WAGE`) against predictions (i.e. `.fitted`) based
 on the linear model `wage.lm`:
 
 ```{r wagepred1, fig.cap="Scatterplot of true wages against predicted wages."}
-plot(wage.pred.fit, wage.test$WAGE, xlab="Predicted wage", ylab="True wage")
+ggplot(wage.tidypred) +
+  geom_point(mapping = aes(x=.fitted, y=WAGE)) +
+  labs(x="Predicted wage",
+       y="True wage")
 ```
 
 A second plot embellishes this by adding the range of
@@ -455,33 +509,32 @@ A second plot embellishes this by adding the range of
 observation in the test set.
 
 ```{r wagepred2, fig.cap="Scatterplot of true wages against predicted wages, with 95% prediction intervals depicted by vertical lines."}
-plot(wage.pred.fit, wage.test$WAGE, xlab="Predicted wage", ylab="True wage",
-     ylim=c(-10,30), col=2, pch=19)
-segments(wage.pred.fit, wage.pred.lwr, wage.pred.fit, wage.pred.upr, col=grey(0.4))
-points(wage.pred.fit, wage.test$WAGE, col=2, pch=19)
+ggplot(wage.tidypred) +
+  geom_linerange(mapping = aes(x=.fitted, ymin=.lower, ymax=.upper)) +
+  geom_point(mapping = aes(x=.fitted, y=WAGE), col='red') +
+  labs(x="Predicted wage",
+       y="True wage")
 ```
 
 Some noteworthy points are as follows.
 
--   The first command saves the predictions in the object `wage.pred`.
+-   The `predict` command saves the predictions in the object `wage.pred`.
     Because we specified the `interval` argument in `predict`, the
     object `wage.pred` is a three column matrix. The first column
     contains the predictions themselves; the second and third columns
     are lower and upper bounds respectively for 95% prediction
-    intervals. We save these columns as vectors `wage.pred.fit`,
-    `wage.pred.lwr` and `wage.pred.upr` for later use.
+    intervals. This is not tidy for plotting.
 
+-   The `augment` command gives us the same information by augmenting
+    the `wage.test` data with additional columns `.fitted`, `.lower`,
+    `.upper` and `.resid`. These should be self-explanatory.
+  
 -   The plotting command for the first Figure \@ref(fig:wagepred1)
     requires no special comment, but the
-    code to produce Figure \@ref(fig:wagepred2) is a little more involved. We first
-    produce the plot of true values against predicted values (using red
-    filled circles as plotting symbol). We then use the `segments`
-    command to draw line segments from the lower end of each prediction
-    interval to the upper. (Look at the help file for `segments` if you
-    want to learn more about this function.) The final `points` function
-    replots the (red) points in the graph which otherwise get partially
-    obscured by the lines. (This is by no means essential, but it does
-    make the plot look at little more aesthetically pleasing.)
+    code to produce Figure \@ref(fig:wagepred2) utilises the
+    `geom_linerange()` layer which you may not have seen before. This uses
+    `ymin` and `ymax` to draw line segments. There is also `geom_pointrange`
+    available that combines the line range and point geometries into one.
 
 -   Two things are strikingly clear from the Figures. First, the (point)
     predictions are not terribly impressive. If the regression model
@@ -606,18 +659,17 @@ Here we consider removing `RACE` from the model.
 
 ```{r}
 wage.lm.2 <- lm(WAGE ~ . -RACE, data=wage.train)
-wage.pred.test <- predict(wage.lm, newdata=wage.test)
-wage.pred.test.2 <- predict(wage.lm.2, newdata=wage.test)
-MSE.test <- mean((wage.pred.test - wage.test$WAGE)^2)
-MSE.test.2 <- mean((wage.pred.test.2 - wage.test$WAGE)^2)
-MSE.test
-MSE.test.2
-wage.pred.train <- predict(wage.lm,wage.train)
-wage.pred.train.2 <- predict(wage.lm.2,wage.train)
-MSE.train <- mean((wage.pred.train - wage.train$WAGE)^2)
-MSE.train.2 <- mean((wage.pred.train.2 - wage.train$WAGE)^2)
-MSE.train
-MSE.train.2
+wage.pred.test <- augment(wage.lm, newdata=wage.test)
+wage.pred.test.2 <- augment(wage.lm.2, newdata=wage.test)
+wage.pred.train <- augment(wage.lm, newdata=wage.train)
+wage.pred.train.2 <- augment(wage.lm.2, newdata=wage.train)
+wage.pred.all <- bind_rows(list(test1 = wage.pred.test,
+                                test2 = wage.pred.test.2,
+                                train1 = wage.pred.train,
+                                train2 = wage.pred.train.2), .id="Prediction")
+wage.pred.all %>%
+  group_by(Prediction) %>%
+  summarise(MSE = mean((.fitted - WAGE)^2))
 ```
 
 There is quite a lot going on in that R snippet! The most important
@@ -630,28 +682,33 @@ points are as follows.
     we do wish to include.)
 
 -   The objects `wage.pred.test` and `wage.pred.test.2` respectively
-    contain point predictions for the observations in the test dataset.
+    contain predictions for the observations in the test dataset.
 
--   The observed mean squared error (MSE) of prediction is given by
+-   Recall that the observed mean squared error (MSE) of prediction is given by
     $$\textsf{MSE}_{test} = \frac{1}{n_{test}} \sum_{i=1}^{n_{test}} \left ( y_{test,i} - \hat y_{test,i} \right )^2$$
     where $n_{test}$ denotes the number of observations in the test
     dataset; $y_{test,i}$ is the value of the target for the $i$th test
     observation; and $\hat y_{test,i}$ is the corresponding prediction
-    based on a regression model.
-
-    The observed MSE values on the test data using our two models are
-    stored as `MSE.test` and `MSE.test.2` respectively. Note that the
-    MSE value is a little smaller for the second model, indicating that
-    we get slightly better predictions overall using that model. Removal
-    of the `RACE` has been beneficial.
-
--   We can also compute a mean squared error on the training dataset:
+    based on a regression model. We can also compute a mean squared error on the training dataset:
     $$\textsf{MSE}_{train} = \frac{1}{n_{train}} \sum_{i=1}^{n_{train}} \left ( y_{train,i} - \hat y_{train,i} \right )^2$$
-    using the obvious notation.
+    using the obvious notation. To do this we generate `wage.pred.train`
+    and `wage.pred.train.2` respectively.
 
-    We get $\textsf{MSE}_{train} = `r round(MSE.train, 2)`$ for the first model and
-    $\textsf{MSE}_{train} = `r round(MSE.train.2, 2)`$ for the second. Two aspects of these
-    results are striking. First, the mean squared errors based on the
+-   To compute the mean squared error (MSE) of prediction across all
+    models and data at once, we utilise `bind_rows` from `dplyr` to
+    combine them. This takes a named list, and when supplied with the
+    `.id` argument creates an additional column with the name, in this
+    case `Prediction`.
+
+-   Finally we compute the mean squared error by grouping by `Prediction`
+    and then `summarise()`.
+
+-   The observed MSE values on the test data are slightly lower for
+    the second model, indicating we get slightly better predictions overall
+    using that model. Removal of the `RACE` has been beneficial.
+    
+    However, when we look at the MSE values on the training data, we notice
+    two quite striking details. First, the mean squared errors based on the
     training data are considerably smaller than those based on the test
     data. Second, the first model is preferable on this measure.
 
@@ -752,17 +809,15 @@ Finally, we note that while model selection using AIC is generally well
 regarded, it will not guarantee improved prediction accuracy.
 
 ```{r}
-wage.pred.test.step <- predict(wage.lm.step,wage.test)
-MSE.test.step <- mean((wage.pred.test.step - wage.test$WAGE)^2)
-MSE.test.step
+wage.lm.step %>%
+  augment(newdata = wage.test) %>%
+  summarise(MSE = mean((.fitted - WAGE)^2))
 ```
 
 Comparing this result with that from the previous Example, we see that
 the model produced by the backwards selection algorithm is slightly
 worse in terms of prediction MSE than both of those we looked at
 earlier.
-
-**You should now do computer lab 5**
 
 ## Regression Trees{#sec:regtree}
 
