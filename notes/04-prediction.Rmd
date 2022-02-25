@@ -864,7 +864,8 @@ to the left, and those with $x \ge 6.213$ branch to the right. The next
 step is to further divide those group with $x < 6.213$ into sub-groups
 with $x < 2.163$ and $x \ge 2.163$.
 
-```{r toytree2, echo=FALSE, fig.cap="Regression tree for the toy dataset."}
+```{r toytree2, echo=FALSE, message=FALSE, fig.cap="Regression tree for the toy dataset."}
+library(rpart)
 toy.rp <- rpart(y ~ x, cp=0.1)
 plot(toy.rp,compress=T,margin=0.1)
 text(toy.rp,cex=1)
