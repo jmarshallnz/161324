@@ -1,0 +1,192 @@
+---
+title: 'Workshop 5: Trees and Forests'
+output: html_document
+---
+
+In this workshop we'll be looking at how to predict a measurement (numeric) variable using other data with regression trees and forests.
+
+We'll be using the same data as Workshop 4 on computer perforamnce. Recall that we are interested in predicting the target `usr` as a function of the other variables.
+
+We start by loading packages and the data, splitting the data as we did in Workshop 4. You may have to install the `rpart`, `randomForest` and `parsnip` packages first.
+
+```{r, include=FALSE}
+library(tidyverse)
+library(rsample)
+library(broom)
+library(yardstick)
+library(rpart)
+library(randomForest)
+library(parsnip)
+
+comp <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/comp.csv")
+
+set.seed(1234)
+split <- initial_split(comp, prop=3/4)
+comp_train <- training(split)
+comp_test  <- testing(split)
+```
+
+## Model fitting
+
+Let's start by fitting a regression tree model to the `comp_train` data using all predictors. We then plot the tree with `plot`.
+
+```{r}
+model1.rp <- rpart(usr ~ ., data = comp_train)
+plot(model1.rp, margin=0.1)
+text(model1.rp)
+```
+
+The above tree is fit with the default value of the complexity parameter `cp`. We could try fitting a more complex tree by altering this:
+
+```{r}
+model2.rp <- rpart(usr ~ ., data=comp_train, cp=0.001)
+```
+
+### Try yourself
+
+Plot and label this second tree. You should see you get a much more complex tree!
+
+We can get a handle on an appropriate level for `cp` by utilising the built-in cross validation that is performed by `rpart` via the `printcp` function:
+
+```{r}
+cp_table <- printcp(model2.rp)
+```
+
+What we want to do is pick the largest value of `cp` (to give the smallest tree) such that the error in the tree is about the same as the 'optimal' tree. We typically choose the value of `cp` so that it's within one standard error from the minimum value:
+
+```{r}
+cp_table %>% as_tibble() %>%
+  mutate(limit = min(xerror + xstd)) %>%
+  filter(xerror <= limit)
+```
+
+So we should choose `cp = 0.003` or thereabouts. NOTE: Depending on random number seeds, you may end up with a different table - that's OK, we'll just rock on with `cp = 0.003`.
+
+We can also produce a visual indication of this which is much easier to use:
+
+```{r}
+plotcp(model2.rp)
+```
+
+Again, about 0.003 seems to be where we no longer improve.
+
+### Try yourself
+
+Refit the tree model using `cp=0.003` and take a look at the corresponding tree.
+
+## Predictive performance
+
+To measure our predictive performance we do the same thing as before. Unfortunately, `rpart` is not included in `broom`, so there isn't a nice tidy way of doing this using the same framework. We could use the `predict` command. e.g. for `model1.rp` we'd have:
+
+```{r}
+predict(model1.rp, newdata=comp_test)
+```
+
+This returns a vector. We can add it to the original data via `bind_cols`, but this is a little fragile, as we're assuming that `predict` will return a row for everything we provide, and this may not be the case (e.g. if the test set had missing values perhaps).
+
+```{r}
+comp_pred1 <- comp_test %>%
+  bind_cols(.fitted = predict(model1.rp, newdata=comp_test)) %>%
+  select(usr, .fitted, everything())
+comp_pred1
+```
+
+Now we can compute MSE in the same way we did in workshop 4:
+
+```{r}
+comp_pred1 %>% summarise(MSE = mean((.fitted - usr)^2))
+```
+
+### Try yourself
+
+1. Compute the MSE for `model2.rp` and `model3.rp` in the same way. Which model performs best?
+
+2. Try using `yardstick` to compute the `rmse` and `mae` for these models.
+
+## Dealing with missingness
+
+One thing that regression trees are particularly useful for are where we have some data missing.
+
+Let's take our training set and change it so we have some missing data in `vflt` (recall this was the variable used in the first split) [^na_real].
+
+```{r}
+comp_train.miss <- comp_train %>%
+  mutate(vflt = if_else(row_number() <= 5, NA_real_, vflt))
+comp_train.miss %>% select(vflt, everything())
+```
+
+### Try yourself
+
+1. Fit a regression tree to the `comp_train.miss` data using `cp=0.003` as above.
+2. Plot the tree. You should find that `vflt` is still the first split.
+3. Take a look at the output for `summary()` on this tree. You should see it is using a *surrogate split*. Which variable is being used for the split if `vflt` is missing?
+
+## Moving from trees to forests
+
+Instead of fitting a single tree to the data, we could instead try lots of trees: a forest. A random forest is where we re-sample the training data repeatedly (using the bootstrap) and for each resample we fit a tree (using a random subset of the predictors rather than all of them). We then average our predictions across all the trees. It's an example of an **ensemble** method, as we're essentially averaging over many models.
+
+These two things allow us to explore a range of potentially different trees, allowing some variables to be used that might not otherwise be in a single tree, and potentially giving a better overall prediction.
+
+The `randomForest` package can do this. The `importance` function then gives us an idea of which variables are important. We can plot this with `varImpPlot()`[^vip].
+
+```{r}
+model.rf <- randomForest(usr ~ ., data=comp_train)
+importance(model.rf)
+varImpPlot(model.rf)
+```
+
+As expected, the `vflt` and `pflt` variables are most important.
+
+### Try yourself
+
+1. The `predict()` function works in the same way as it does for `rpart`. Produce predictions from the random forest model.
+
+2. Compute MSE for the random forest model compare with the decision trees?
+
+3. There are two parameters that might affect how well the forest fits: `mtry` which is the number of predictors to use for building each tree (by default it is set to number of predictors divided by 3) and `nodesize` which defines the minimum size of terminal nodes, which defaults to 5. Try changing each of these and seeing how they change model performance.
+
+## Making things a bit tidier with parsnip
+
+The commands required to fit a model with `rpart` or `randomForest`, in particular to do prediction are a little messy, and unfortunately `broom` doesn't sweep things tidy for tree based models[^broomstick].
+
+The `tidymodels` framework is a way to address this for `rpart`, `randomForest` and a bunch more models. The `broom` and `yardstick` packages are part of this. The goal is to provide a uniform interface for both fitting models ( with `lm`, `rpart` and `randomForest`, these have so far been similar) and for obtaining predictions or model performance. The `parsnip` package is what provides a common model-fitting interface[^parsnip].
+
+```{r}
+tree_spec <- decision_tree(mode = "regression",
+                            cost_complexity = 0.01)
+
+tree_fit <- tree_spec %>%
+  fit(usr ~ ., data = comp_train)
+
+tree_pred <- comp_test %>%
+  bind_cols(predict(tree_fit, new_data = comp_test)) %>%
+  select(usr, .pred, everything())
+
+tree_pred %>% metrics(usr, .pred)
+```
+
+Note the process here:
+
+1. We first specify the model type (a decision tree model in regression mode).
+2. We then fit the model via `fit()`, specifying the formula and training data.
+3. We then predict the model via `predict()`, specifying the test data.
+4. We then summarise the fit using `metrics()` (or `rmse`, `mae` etc).
+
+### Try yourself
+
+1. Modify the above to provide fits with different cost complexity (`cp`).
+
+2. If you want to get the actual `rpart` model object out of the `tree_fit` object you can use `extract_fit_engine(tree_fit)`. Try this to do the `plotcp` plot.
+
+3. Change the above so it uses a linear regression model instead: You need only change the `decision_tree` command to `linear_reg`.
+
+4. Change the above so it uses a random forest instead by using `rand_forest(mode = "regression", engine = "randomForest")`. The `engine` argument is because the default engine is `ranger`. You can use that if you like too! You might want to try exploring the `mtry` and `min_n` arguments.
+
+
+[^na_real]: Note the use of `NA_real_` here. This is because the `if_else` function (from `dplyr`) is opinionated! It hates it when you provide two different types of variable to the true or false parameters. The default `NA` is of type logical, so we'd be mixing a logical type and a numeric type if we tried using that. Alternatively, you could use `ifelse()` which doesn't have such strong opinions!
+
+[^broomstick]: There is a package `broomstick` (neat name for a tree cleaning broom...) but this is not yet on CRAN, and still seems to be a work in progress.
+
+[^parsnip]: The package name here is a homage to the `caret` (short for classification and regression training) package which provides the same idea, albeit with a very different implementation.
+
+[^vip]: The `vip` package contains a the `vi` function for a tidy version of `importance` and `vip` for a `ggplot` version of `varImpPlot`.

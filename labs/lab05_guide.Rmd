@@ -1,0 +1,21 @@
+---
+title: "Workshop 5: Trees and Forests"
+output: html_document
+---
+
+We'll be looking at using the regression trees and forests for predicting a numeric measure. We'll look at:
+
+- Fitting a regression tree model.
+- Looking at the resulting tree.
+- Assessing how complexity of the tree changes with the `cp` parameter.
+- Looking at how trees deal with missing data.
+- Fitting a random forest model.
+- Looking at the `parsnip` package for providing a common interface for model fitting.
+
+Start by downloading lab05.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab05.Rmd
+
+There are a bunch of packages you'll likely need to install - you'll probably get them listed in a yellow bar at the top of the editor pane.
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**
