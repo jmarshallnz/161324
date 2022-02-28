@@ -1353,7 +1353,53 @@ cross-validation results are subject to error, and so are by no means
 certain to identify the best model.
 :::
 
-## Prediction using Neural Networks
+### Tree instability
+
+Unfortunately, decision tree models are known to be **unstable**. When many variables are available, there are often many potential competing splits that serve to improve the model fit by around the same amount. However, the choice of which split to use can then result in very different subtrees.
+
+One way to see this is to produce a tree for a data set and then take a bootstrap resample by randomly re-selecting the same number of observations from the data frame with replacement and producing another tree. Ideally the trees should not differ much as the data come from the same underlying population (we have simply resampled the original data).
+
+However, as we will see, often the trees can be markedly different.
+
+::: {.example}
+**Unstable trees for the WAGE data**
+
+Consider the following code snippet that produces a bootstrap resample of the `wage-train` data:
+
+```{r}
+set.seed(5)
+wage.train.bs <- slice_sample(wage.train, n=400, replace=TRUE)
+```
+
+This dataset has the same (or very similar) relationships between `WAGE` and the other numeric variables, as we can see in Figure \@ref(fig:wageresample).
+
+```{r wageresample, echo=FALSE, fig.cap="Relationships between `WAGE` and the numeric variables from the  `wage.train` and `wage.train.bs` datasets."}
+wage.all <- bind_rows(list(wage.train = wage.train,
+               wage.train.bs = wage.train.bs), .id="data")
+wage.all %>% select(data, WAGE, AGE, EDU, EXP) %>%
+  pivot_longer(-c(data, WAGE), names_to="name", values_to="value") %>%
+  ggplot() +
+  geom_point(aes(x=value, y=WAGE), alpha=0.5) +
+  facet_grid(vars(data), vars(name), scales='free_x') +
+  labs(x=NULL)
+```
+
+The same holds for the categorical predictors. Thus, we might expect that trees produced using the `wage.train` or `wage.train.bs` data sets should be similar. The tree from `wage.train.bs` is shown in Figure \@ref(fig:wageunstable).
+
+```{r wageunstable, echo=FALSE, fig.cap="Tree produced from the `wage.train.bs` bootstrap resampled dataset."}
+m2 <- rpart(WAGE ~ ., data=wage.train.bs)
+plot(m2, margin=0.1); text(m2)
+```
+
+Comparing this to the tree in Figure \@ref(fig:wagetree) we see that it is quite different, with even the first split differing. The variables `SEX` and `MARRIED` are used in the tree for `wage.train`, yet both these variables are unused in the `wage.train.bs` tree. Similarly, the variable `UNION` is used in the `wage.train.bs` tree but not in the `wage.train` tree.
+:::
+
+## Random forests
+
+TODO: Finish him...
+
+
+## Neural Networks
 
 ### An Introduction to Neural Networks
 
