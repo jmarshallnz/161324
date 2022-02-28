@@ -3,7 +3,7 @@ title: "Workshop 5: Trees and Forests"
 output: html_document
 ---
 
-We'll be looking at using the regression trees and forests for predicting a numeric measure. We'll look at:
+We'll be looking at using regression trees and forests for predicting a numeric measure. We'll look at:
 
 - Fitting a regression tree model.
 - Looking at the resulting tree.

@@ -5,8 +5,7 @@ output: html_document
 
 In this workshop we'll be looking at how to predict a measurement (numeric) variable using other data.
 
-We'll be utilising the linear model (i.e. standard, multivariate regression) for this. It's a model we should already
-understand, so is the ideal candidate model to start with.
+We'll be utilising the linear model (i.e. standard, multivariate regression) for this. It's a model we should already understand, so is the ideal candidate model to start with.
 
 The data for for this workshop concern the performance of a Sun Sparcstation computer, running in a university department. A total of 22 measures of system activity (the attributes) were collected on 800 occasions (the observations). The attributes are listed below. All are based on activity per second.
 

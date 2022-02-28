@@ -5,7 +5,7 @@ output: html_document
 
 In this workshop we'll be looking at how to predict a measurement (numeric) variable using other data with regression trees and forests.
 
-We'll be using the same data as Workshop 4 on computer perforamnce. Recall that we are interested in predicting the target `usr` as a function of the other variables.
+We'll be using the same data as Workshop 4 on computer performance. Recall that we are interested in predicting the target `usr` as a function of the other variables.
 
 We start by loading packages and the data, splitting the data as we did in Workshop 4. You may have to install the `rpart`, `randomForest` and `parsnip` packages first.
 
