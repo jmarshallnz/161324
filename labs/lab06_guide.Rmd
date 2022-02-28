@@ -1,0 +1,20 @@
+---
+title: "Workshop 6: Neural networks"
+output: html_document
+---
+
+We'll be looking at using neural networks for predicting a numeric measure. We'll look at:
+
+- Fitting a neural network model.
+- Some methods for scaling data prior to model fitting.
+- The `recipes` package for data processing.
+
+After that, we'll finish with a prediction competition!
+
+Start by downloading lab06.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab06.Rmd
+
+There are a bunch of packages you'll likely need to install - you'll probably get them listed in a yellow bar at the top of the editor pane.
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**
