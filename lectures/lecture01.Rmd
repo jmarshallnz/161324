@@ -103,7 +103,7 @@ In general we'll be using the tidyverse series of packages where we can.
 
 - `ggplot2` and `patchwork` for data visualisation. 
 
-- `broom` for tidying model output.
+- `broom` and `tidymodels` for training of models and prediction.
 
 The tidyverse website is a useful resource: https://tidyverse.org
 
@@ -437,85 +437,11 @@ will return rows where the value is very small or very large from Site 00081.
 
 ## Logical expressions in R
 
-Notice that for 'is equal to' we've been using `==`. The single `=` is for assignment of parameters instead. `dplyr` will warn you about this:
-
-```{r, error=TRUE}
-hrc %>% filter(Value = 4)
-```
-
-**This is rare** - usually error messages are rather more opaque!
-
-Reading carefully, and searching the error on google can sometimes help.
-
----
-
-## Logical expressions in R
-
 Other operations are `!=` (not equal to) and `%in%` (in). e.g.
 
 ```{r}
 hrc %>% filter(Value %in% c(3,5))
 ```
-
----
-
-## Dealing with missing values
-
-Notice the `Symbol` column is full of `NA` which means "missing". Maybe there are some that aren't missing? We might try:
-
-```{r}
-hrc %>% filter(Symbol != NA)
-```
-
-This seems like it might have worked?? It says there are no rows returned...
-
---
-
-```{r}
-hrc %>% filter(Symbol == NA)
-```
-
-Hmm, that doesn't seem right??
-
----
-
-## Dealing with missing values
-
-.left-code[
-The key thing to remember is if a value is missing, then comparing it is senseless:
-
-```{r}
-2 == NA
-NA == NA
-```
-
-Is 2 equal to something missing?
-
-Maybe! We don't know! So the answer is missing.
-]
-
---
-.right-plot[
-We use `is.na()` instead for this.
-
-```{r}
-is.na(2)
-is.na(NA)
-```
-]
-
-RStudio will remind you about this with a yellow warning in the margin, as it's a common problem.
----
-
-## Dealing with missing values
-
-Notice the `Symbol` column is full of `NA` which means "missing". Maybe there are some that aren't missing?
-
-```{r}
-hrc %>% filter(!is.na(Symbol))
-```
-
-Ok, it seems like we have a few (`r hrc %>% filter(!is.na(Symbol)) %>% nrow()`) numbers where the count actually means less than or greater than the value given, rather than equal to the value given.
 
 ---
 
@@ -598,18 +524,6 @@ hrc %>% select(Council, Site:RawValue)
 
 ## Selecting columns
 
-We can select by column number instead of column name if you like:
-
-```{r}
-hrc %>% select(Council, 3:6)
-```
-
-Generally it's better to use names though, as the order of columns might be different to what you expect. But sometimes the names are junk, so numbers work best!
-
----
-
-## Selecting columns
-
 The `everything()` helper function is useful if you want one column first, then everything else:
 
 ```{r}
@@ -628,16 +542,6 @@ hrc %>% select(Date, Value, starts_with("Site"))
 
 ---
 
-## Selecting columns
-
-You can rename a column just by changing it's name in the `select`:
-
-```{r}
-hrc %>% select(Site, Date, EColi = Value)
-```
-
----
-
 ## Dropping columns
 
 To drop a column use `-` in front of the name:
@@ -650,7 +554,7 @@ hrc %>% select(-Indicator, -RawValue, -Symbol)
 
 ## Renaming columns
 
-If you want to rename a column but don't want to specify all the other columns, then `rename()` does this:
+If you want to rename a column while keeping the other columns, then `rename()` does this:
 
 ```{r}
 hrc %>% rename(Name = Site)
@@ -755,37 +659,6 @@ hrc %>% summarise(Mean = mean(Value),
 Notice in the `Mean2` computation, we're using columns that we computed earlier in the same `summarise()` command.
 
 The `n()` function is useful for number of rows. Also `n_distinct()` for the number of distinct values.
-
----
-
-## Summarising rows
-
-You can use summaries that produce more than one result, and they'll be placed in multiple rows:
-
-.pull-left[
-```{r}
-hrc %>%
-  summarise(
-    Quantile = quantile(Value)
-    )
-```
-
-But, you need to make sure you know which is which!
-]
-
---
-
-.pull-right[
-```{r}
-hrc %>%
-  summarise(
-    Prob = c(0,0.25,0.5,0.75,1),
-    Quantile = quantile(Value, probs=Prob)
-    )
-```
-
-**Sticking to summaries that return a single value is safest.**
-]
 
 ---
 
