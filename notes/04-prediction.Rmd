@@ -850,8 +850,11 @@ linear regression.
 ```{r toytree1, echo=FALSE, fig.cap="Scatterplot of toy dataset."}
 set.seed(2012)
 x <- runif(400,0,10)
+x <- sort(x)
 y <- 1+ sin(1.5*x/(1+x^2/100)) + rnorm(400,sd=0.25)
-plot(x,y)
+data.frame(x = x, y = y) %>%
+  ggplot() +
+  geom_point(mapping = aes(x=x, y=y))
 ```
 
 A tree based method works by systematically splitting the data into
@@ -879,15 +882,22 @@ predictions are constant across the range of x-values defining each
 leaf. This is illustrated in Figure \@ref(fig:toytree3).
 
 ```{r toytree3, echo=FALSE, fig.cap="Scatterplot of the toy dataset, with the partitioning of the data indicated by the background shading and the predictions within each group plotted as the horizontal line segments."}
-plot(x,y,col=2,pch=19)
-polygon(c(-1,-1,2.163,2.163),c(-0.7,2.9,2.9,-0.7),col=grey(0.95),border=NA)
-polygon(c(2.163,2.163,6.213,6.213),c(-0.7,2.9,2.9,-0.7),col=grey(0.85),border=NA)
-polygon(c(6.213,6.213,11,11),c(-0.7,2.9,2.9,-0.7),col=grey(0.95),border=NA)
-points(x,y,col=2,pch=19)
-segments(6.213,1.794,11,1.794,lwd=2)
-segments(2.163,0.5704,6.213,0.5704,lwd=2)
-segments(-1,1.645,2.163,1.645,lwd=2)
-box()
+rect1 <- data.frame(x=c(-1,-1,2.113,2.113), y=c(-0.7,2.9,2.9,-0.7), col=grey(0.95))
+rect2 <- data.frame(x=c(2.113,2.113,6.013,6.013), y=c(-0.7,2.9,2.9,-0.7), col=grey(0.85))
+rect3 <- data.frame(x=c(6.013,6.013,11,11),y=c(-0.7,2.9,2.9,-0.7), col=grey(0.95))
+rects <- bind_rows(lst(rect1, rect2, rect3), .id="rect")
+segs <- bind_rows(lst(seg1 = data.frame(x = c(6.013,11), y = 1.794),
+                      seg2 = data.frame(x = c(2.113, 6.013), y = 0.5704),
+                      seg3 = data.frame(x = c(-1, 2.113), y = 1.645)), .id="seg")
+
+data.frame(x=x, y=y) %>%
+  ggplot() +
+  geom_polygon(data = rects, mapping = aes(x=x, y=y, fill=col)) +
+  scale_fill_identity() +
+  geom_point(mapping = aes(x=x, y=y), col="#DF536B") +
+  geom_line(data=segs, mapping = aes(x=x, y=y, group=seg), size=1) +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0))
 ```
 :::
 
@@ -1105,10 +1115,17 @@ We can obtain predictions from the fitted regression tree by applying
 the `predict` command[^25].
 
 ```{r}
-wage.rp.pred <- predict(wage.rp, newdata=wage.test)
-head(wage.rp.pred)
-mse.rp <- mean((wage.rp.pred - wage.test$WAGE)^2)
-mse.rp
+wage.rp.pred <- wage.test %>%
+  bind_cols(.pred = predict(wage.rp, newdata=wage.test))
+wage.rp.pred %>% select(.pred, WAGE, everything())
+
+wage.rp.pred %>%
+  summarise(MSE = mean((.pred - WAGE)^2))
+```
+
+```{r, echo=FALSE}
+mse.rp <- wage.rp.pred %>%
+  summarise(MSE = mean((.pred - WAGE)^2)) %>% pull(MSE)
 ```
 
 Here we have computed the mean squared error of prediction on the
@@ -1214,9 +1231,12 @@ $cp = 0.01$. We here build trees using $cp=0.1$ and $cp=0.001$, and use
 them for prediction on the wage test data. The resulting trees are
 plotted in Figure \@ref(fig:wagetree2).
 
-```{r wagetree2, fig.cap="Regression trees for the US wage data with complexity parameters $cp=0.1$ (left-hand panel) and $cp=0.001$ right-hand panel) respectively."}
+```{r}
 wage.rp.1 <- rpart(WAGE ~ ., data=wage.train, cp=0.1)
 wage.rp.2 <- rpart(WAGE ~ ., data=wage.train, cp=0.001)
+```
+
+```{r wagetree2, echo=FALSE, fig.cap="Regression trees for the US wage data with complexity parameters $cp=0.1$ (left-hand panel) and $cp=0.001$ right-hand panel) respectively."}
 par(mar=c(1,1,3,1))
 par(mfrow=c(1,2))
 plot(wage.rp.1,compress=T,margin=0.1)
@@ -1227,24 +1247,26 @@ text(wage.rp.2,cex=0.7)
 title("cp=0.001")
 ```
 
-You should by now understand the general purpose of most of the R
-commands. We adjusted the margins of the plotting regions to reduce
-unnecessary white-space and adjusted the size of plotting characters, so
-as to improve the appearance of the plots in Figure \@ref(fig:wagetree2), but
-such embellishments are hardly critical. The main points to take away
-are first, that the choice of $cp=0.1$ leads to a hugely simple tree
+The main points to take away are first, that the choice of $cp=0.1$ leads
+to a hugely simple tree
 (with just a single split) while $cp=0.001$ generates a much more
 complex tree.
 
 We can also compute mean square error on the test data.
 
 ```{r}
-wage.rp.pred.1 <- predict(wage.rp.1, newdata=wage.test)
-wage.rp.pred.2 <- predict(wage.rp.2, newdata=wage.test)
-mse.rp.1 <- mean((wage.rp.pred.1 - wage.test$WAGE)^2)
-mse.rp.2 <- mean((wage.rp.pred.2 - wage.test$WAGE)^2)
-mse.rp.1
-mse.rp.2
+wage.rp.pred.2 <- wage.test %>%
+  bind_cols(
+    .pred1 = predict(wage.rp.1, newdata=wage.test),
+    .pred2 = predict(wage.rp.2, newdata=wage.test)
+  )
+wage.rp.pred.2 %>%
+  summarise(MSE.1 = mean((.pred1 - WAGE)^2),
+            MSE.2 = mean((.pred2 - WAGE)^2))
+```
+```{r, echo=FALSE}
+mse.rp.2 <- wage.rp.pred.2 %>%
+  summarise(MSE.2 = mean((.pred2 - WAGE)^2)) %>% pull(MSE.2)
 ```
 
 The second point of interest is that the mean squared
@@ -1341,9 +1363,12 @@ $cp=0.023$.
 
 ```{r}
 wage.rp.3 <- rpart(WAGE ~ ., data=wage.train, cp=0.023)
-wage.rp.pred.3 <- predict(wage.rp.3, newdata=wage.test)
-mse.rp.3 <- mean((wage.rp.pred.3 - wage.test$WAGE)^2)
-mse.rp.3
+wage.rp.pred.3 <- wage.test %>% bind_cols(.pred = predict(wage.rp.3, newdata=wage.test))
+wage.rp.pred.3 %>% summarise(MSE = mean((.pred - WAGE)^2))
+```
+
+```{r, echo=FALSE}
+mse.rp.3 <- wage.rp.pred.3 %>% summarise(MSE = mean((.pred - WAGE)^2)) %>% pull(MSE)
 ```
 
 The prediction error of $\textsf{MSE}=`r round(mse.rp.3, 1)`$ is a bit better than that
@@ -1396,8 +1421,91 @@ Comparing this to the tree in Figure \@ref(fig:wagetree) we see that it is quite
 
 ## Random forests
 
-TODO: Finish him...
+A forest is a collection of trees. A random forest is a collection of decision trees (e.g. regression trees) generated by applying two separate randomisation processes:
 
+1. The data (rows) are randomised through a bootstrap resample.
+2. A random selection of predictors (columns) are utilised for each split, rather than using all variables.
+
+Once done, a tree is fit to the data. The process is then repeated, and many trees are generated. Predictions are then averaged across all the trees in the forest.
+
+The forest then benefits from the instability of the trees: Each bootstrap resample is likely to generate a different tree as tree building is a brittle process. This is further enhanced by considering only a subset of the available predictor variables for each split in the tree. Essentially the forest is ensuring that all parts of the data available to us are explored by fitting many purposefully different trees. By averaging across many different trees the forest is generally able to do better than any particular tree - particularly when forward predicting on new data.
+
+Random forests are examples of **ensemble methods** which combine prediction across multiple different models to give a better prediction than just one of the models could provide.
+
+There are two key parameters when fitting a random forest that can potentially be tuned:
+
+1. The number of predictor variables to consider for each split. This can be important for tuning model fit. Often using fewer predictor variables for each split can work well to ensure the trees differ.
+1. The tree depth. Typically the trees are not pruned, as we don't mind if the individual trees over-fit as we'll be averaging out any over-fitting. The depth of the tree is generally controlled by restricting splits to nodes with some minimum number of observations.
+
+### Implementation in R
+
+There are a number of different packages in R that can fit random forests. For example:
+
+- `randomForest()` from the `randomForest` package
+- `ranger()` from the `ranger` package
+- `ml_random_forest()` from the `sparklyr` package
+
+We'll be sticking to the first of these in this course as demonstrated in the following example.
+
+::: {.example}
+**Random forest for the WAGE data**
+
+A random forest model is fit to the WAGE data with default arguments as follows, and prediction
+on the test set is performed:
+
+```{r, message=FALSE, warning=FALSE}
+library(randomForest)
+set.seed(1945)
+wage.rf.1 <- randomForest(WAGE ~ ., data = wage.train)
+wage.rf.1.pred <- wage.test %>%
+  bind_cols(.pred = predict(wage.rf.1, newdata = wage.test))
+wage.rf.1.pred %>%
+  summarise(MSE = mean((.pred - WAGE)^2))
+```
+
+Some notes:
+
+ -  As the forest utilises randomisation, we set the random seed so we can reproduce these results.
+
+ -  The forest performs reasonably well without additional tuning.
+ 
+ -  The first two trees from the forest are shown in \@ref(fig:wageforest). We can see that these trees have been grown very deeply and are quite different.
+ 
+```{r wageforest, echo=FALSE, message=FALSE, fig.cap="The first two trees from the random forest `wage.rf.1`"}
+library(reprtree)
+tree1 <- reprtree:::as.tree(getTree(wage.rf.1, k=1, labelVar = TRUE),
+                            wage.rf.1)
+tree2 <- reprtree:::as.tree(getTree(wage.rf.1, k=2, labelVar = TRUE),
+                            wage.rf.1)
+par(mfrow=c(2,1), mar=c(0,0,1,0))
+plot(tree1, type="uniform", main="Tree 1")
+text(tree1, cex=0.4, label=NULL)
+plot(tree2, type="uniform", main="Tree 2")
+text(tree2, cex=0.4, label=NULL)
+```
+We can tune the model by altering the `mtry` parameter, which selects the number of predictors to consider for each split in the tree. By default it is set to $p/3$ where $p$ is the number of predictors, so in this example will be 3. Another possible tuning parameter governs the depth of the tree, given by the `nodesize` parameter. By default this is set to 5, meaning that at least 5 observations must be present at a node before a split is considered. Setting it to a large value will produce smaller trees.
+
+```{r}
+wage.rf.2 <- randomForest(WAGE ~ ., data=wage.train, mtry = 2)
+wage.rf.3 <- randomForest(WAGE ~ ., data=wage.train, mtry = 2, nodesize = 1)
+wage.rf.pred <- wage.test %>%
+                  bind_cols(
+                    .pred2 = predict(wage.rf.2, newdata=wage.test),
+                    .pred3 = predict(wage.rf.3, newdata=wage.test)
+                  )
+wage.rf.pred %>%
+  summarise(MSE.2 = mean((.pred2 - WAGE)^2),
+            MSE.3 = mean((.pred3 - WAGE)^2))
+```
+
+ -  The `wage.rf.2` forest is fit with `mtry=2`, so that just 2 predictors (chosen at random) will be considered for each split.
+ 
+ -  The `wage.rf.3` forest additionally sets `nodesize=1` so that the trees will be grown to their maximum possible depth - any node at which at least 2 observations is available is eligible to be split further.
+
+ -  We bind the predictions from both forests as separate columns `.pred2` and `.pred3` to the `wage.test` data, so that we can then use `summarise()` to compute the mean square error of each.
+ 
+ -  In this example, the original forest performs better.
+:::
 
 ## Neural Networks
 
@@ -1485,7 +1593,10 @@ $\phi$ is the sigmoid function $$\phi(v) = \frac{1}{1 + e^{-v}}$$ which
 is plotted in Figure \@ref(fig:activation).
 
 ```{r activation, echo=FALSE, fig.cap="A sigmoid activation function."}
-curve(1/(1+exp(-x)),from=-5,to=5,xlab="v",ylab=expression(phi(v)))
+ggplot() +
+  geom_function(fun = ~1/(1+exp(-.x)), xlim=c(-5, 5)) +
+  labs(x = 'v',
+       y = expression(phi(v)))
 ```
 
 The predicted target $\hat y$ is then derived as a linear combination of
@@ -1568,24 +1679,28 @@ trying $p/2 = 8$ nodes in the hidden layer.
 library(nnet)
 set.seed(1069)
 wage.nn.1 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE)
-wage.nn.pred.1 <- predict(wage.nn.1,wage.test)
-mse.nn.1 <- mean((wage.nn.pred.1 - wage.test$WAGE)^2)
-mse.nn.1
 set.seed(1069)
 wage.nn.2 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE)
-wage.nn.pred.2 <- predict(wage.nn.2,wage.test)
-mse.nn.2 <- mean((wage.nn.pred.2 - wage.test$WAGE)^2)
-mse.nn.2
 set.seed(1069)
 wage.nn.3 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE, decay=0.01)
-wage.nn.pred.3 <- predict(wage.nn.3,wage.test)
-mse.nn.3 <- mean((wage.nn.pred.3 - wage.test$WAGE)^2)
-mse.nn.3
 set.seed(1069)
 wage.nn.4 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE, decay=0.01)
-wage.nn.pred.4 <- predict(wage.nn.4,wage.test)
-mse.nn.4 <- mean((wage.nn.pred.4 - wage.test$WAGE)^2)
-mse.nn.4
+wage.nn.pred <- wage.test %>% bind_cols(
+  nn.1 = predict(wage.nn.1, newdata=wage.test),
+  nn.2 = predict(wage.nn.2, newdata=wage.test),
+  nn.3 = predict(wage.nn.3, newdata=wage.test),
+  nn.4 = predict(wage.nn.4, newdata=wage.test)
+)
+wage.nn.pred %>%
+  pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") %>%
+  group_by(model) %>%
+  summarise(MSE = mean((.pred - WAGE)^2))
+```
+```{r, echo=FALSE}
+mse.nn <- wage.nn.pred %>%
+  pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") %>%
+  group_by(model) %>%
+  summarise(MSE = mean((.pred - WAGE)^2)) %>% deframe() %>% as.list()
 ```
 
 Some points to note:
@@ -1594,6 +1709,11 @@ Some points to note:
     model so as to improve comparability between models of the same
     size.
 
+-   We combine the predictions by creating multiple columns named `nn.1` through `nn.4`.
+
+-   We compute the MSE for all four models at once by pivoting the four prediction columns
+    longer, so we can group by and summarise to compute the MSE at once.
+
 -   The first model has 8 hidden nodes. Given that there are $p+1$
     weights to estimate per hidden node (the number of $\alpha$
     parameters in Equation \@ref(eq:hiddenfeature), and 8+1 parameters to estimate for
@@ -1601,18 +1721,18 @@ Some points to note:
      the model hence has
     $17\times 8 + 9 = 145$ weights to be determined. The mean prediction
     error for this model on the artificial test set is
-    $\textsf{MSE}= `r round(mse.nn.1, 1)`$.
+    $\textsf{MSE}= `r round(mse.nn$nn.1, 1)`$.
 
 -   In the second neural network we try 5 hidden nodes, giving a total
     of 91 weights to be determined. (Check that you can work out why
     this is the number of weights in the model.) We get
-    $\textsf{MSE}= `r round(mse.nn.2, 1)`$.
+    $\textsf{MSE}= `r round(mse.nn$nn.2, 1)`$.
 
 -   The third and fourth models differ from the first and second only in
     that we specify a value of $0.01$ for the `decay` argument. As a
     result, the prediction error for the neural net with 8 hidden nodes
-    gets a little worse ($`r round(mse.nn.3, 1)`$) but the error for the
-    network of size 5 improves, to $`r round(mse.nn.4, 1)`$.
+    gets a little worse ($`r round(mse.nn$nn.3, 1)`$) but the error for the
+    network of size 5 improves, to $`r round(mse.nn$nn.4, 1)`$.
 :::
 
 ## Summary of Prediction Methods
@@ -1697,59 +1817,58 @@ We start by just looking at a print out of some of the data.
 ```{r, message=FALSE}
 clock.train <- read_csv("../data/clock-train.csv")
 clock.test <- read_csv("../data/clock-test.csv")
-head(clock.train)
-head(clock.test)
+clock.train %>% slice_head(n=4)
+clock.test %>% slice_head(n=4)
 ```
 
 Notice (of course) that the training data includes the sale price,
 whereas the (real) test data does not (which is why we're trying to
-predict it!).
+predict it!)
 
 Next, we divide the training data into a new training set and a
-validation (i.e. artificial test) set.
+validation (i.e. artificial test) set. The `rsample` package has the
+useful function `initial_split` for this:
 
-```{r}
+```{r, message=FALSE}
+library(rsample)
 set.seed(442)
-validation.index <- sample(1:50,size=10)
-validation.index
-clock.train.new <- clock.train[-validation.index,]
-clock.validation <- clock.train[validation.index,]
+split = initial_split(clock.train, prop = 0.8)
+clock.train.new <- training(split)
+clock.validation <- testing(split)
 ```
 
-The object `validation.index` contains the numbers of the 10 training
-cases that we randomly select to form the validation set,
-`clock.validation`. (We have chosen 10 as a 20% fraction of the original
-training data, but there would have been nothing wrong with choosing 20,
-say.) The object `clock.train.new` is the new training data, excluding
-the validation cases. Note the use of the `set.seed` command to
+The object `split` contains information on how the split has been performed.
+We have specified `prop=0.8` to retain 80% of the data for training, and
+20% of the data for the validation set. This is somewhat arbitrary, though
+this sort of 80/20 or 75/25 split is common. We extract the new training
+data and validation data using the `training`
+and `testing` functions. Note the use of the `set.seed` command to
 initialize the random number generator, so that we can later recreate
 this precise example if we wish.
 
-We now use the new training data to build a linear regression and
+We now use the new training data to build linear regression and
 regression tree prediction models. We then assess their predictive
 accuracy on the validation set.
 
 ```{r}
-clock.lm <- lm(Price ~ Age + Condition, data=clock.train.new)
-clock.pred.lm.valid <- predict(clock.lm, newdata=clock.validation)
-clock.pred.lm.valid
-clock.pred.lm.valid.MSE <- mean((clock.pred.lm.valid - clock.validation$Price)^2)
-
 library(rpart)
+clock.lm <- lm(Price ~ Age + Condition, data=clock.train.new)
 clock.rp <- rpart(Price ~ Age + Condition, data=clock.train.new, cp=0.001)
-clock.pred.rp.valid <- predict(clock.rp, newdata=clock.validation)
-clock.pred.rp.valid
-clock.pred.rp.valid.MSE <- mean((clock.pred.rp.valid - clock.validation$Price)^2)
-cbind(clock.validation$Price, clock.pred.lm.valid, clock.pred.rp.valid)
-clock.pred.lm.valid.MSE
-clock.pred.rp.valid.MSE
+clock.pred <- clock.validation %>%
+  bind_cols(
+    pred.lm = predict(clock.lm, newdata=clock.validation),
+    pred.rp = predict(clock.rp, newdata=clock.validation)
+  )
+clock.pred
+clock.pred %>% summarise(MSE.lm = mean((pred.lm - Price)^2),
+                         MSE.rp = mean((pred.rp - Price)^2))
 ```
 
-The third command from the end combines the true sale prices from the
-validation set with the predictions using the linear model and
+The `clock.pred` dataset combines the true sales prices from the validation
+set with the predictions using the linear model and
 regression tree, just for the purposes of illustrating the performance
 of the two methods in this example. As is confirmed by the final mean
-squared error values, the linear model appears much the better for
+squared error values, the linear model appears the much better model for
 prediction in this case.
 
 It is natural to use a linear model to predict the sale prices on the
@@ -1764,8 +1883,9 @@ that were retained in the reduced training set.
 
 ```{r}
 clock.lm.final <- lm(Price ~ Age + Condition, data=clock.train)
-clock.pred.test <- predict(clock.lm.final, newdata=clock.test)
-data.frame(clock.test$Age, clock.test$Condition, clock.pred.test)
+clock.pred.test <- clock.test %>%
+  bind_cols(PredPrice = predict(clock.lm.final, newdata=clock.test))
+clock.pred.test
 ```
 
 The final command displays the predictions on the test cases alongside
@@ -1780,13 +1900,12 @@ networks.
 :::
 
 The previous example has illustrated how one would perform prediction in
-a real problem (and provides a guide for attempting the assignments). For
-Computer Labs 5 and 6 we look at an artificial setting in which we know
-the values of the target variable for the test cases, since one of the
-purposes of those Labs is to learn more about the comparative
+a real problem (and provides a guide for attempting a real world prediction
+problem like you might do in an assignment). The rest of the examples in
+this chapter dealt with the artificial setting in which we knew the
+values of the target variable for the test cases, since one of the
+purposes of those examples is to learn more about the comparative
 performance of various prediction method methods.
-
-**You should now do Computer Lab 6.**
 
 [^1]: The *predictand* is the variable whose value one is trying to
     predict. The predictors are those variables that are used to
@@ -1881,7 +2000,7 @@ performance of various prediction method methods.
     assess that component of prediction error that arises from
     uncertainty in model selection.
 
-[^28]: Neural networks can also be used to predictor multidimensional
+[^28]: Neural networks can also be used to predict multidimensional
     targets, when the output layer will comprise multiple nodes.
 
 [^29]: Recall that if we have a factor with $K$ levels, then it can be
