@@ -400,7 +400,7 @@ The `broom` package contains some tools to tidy the output from linear models
 fit are `tidy()`, which produces a tidy data frame for the coefficients of the
 model:
 
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 library(broom)
 tidy(wage.lm)
 ```
@@ -773,9 +773,9 @@ Note the following.
 -   Backwards variable selection in R can be conducted using the `step`
     command. The required syntax is
 
-```{r, eval=FALSE}
-step(my.full.model)
-```
+    ```{r, eval=FALSE}
+    step(my.full.model)
+    ```
 
     where `my.full.model` is a fitted linear model containing all the
     predictors[^16].
