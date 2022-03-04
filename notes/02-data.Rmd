@@ -1,5 +1,12 @@
 # Data Acquisition and Processing
 
+```{r, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(comment = "#>")
+theme_set(theme_minimal())
+options(pillar.sigfig = 5)
+```
+
 ## Obtaining Data
 
 Several datasets are provided for your study of data mining. They come from

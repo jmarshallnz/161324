@@ -2,6 +2,9 @@
 
 ```{r, include=FALSE}
 library(tidyverse)
+knitr::opts_chunk$set(comment = "#>")
+theme_set(theme_minimal())
+options(pillar.sigfig = 5)
 ```
 
 ## What is Data Mining?{#sec:intro1}

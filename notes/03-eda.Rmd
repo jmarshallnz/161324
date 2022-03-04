@@ -1,5 +1,12 @@
 # Missing values
 
+```{r, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(comment = "#>")
+theme_set(theme_minimal())
+options(pillar.sigfig = 5)
+```
+
 Dealing with missing values is a critical part of the data mining process. It is
 typical that variables in our data will be incomplete, where one (or often thousands)
 of observations may be missing that measure.

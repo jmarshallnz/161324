@@ -1,5 +1,12 @@
 # Cluster Analysis
 
+```{r, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(comment = "#>")
+theme_set(theme_minimal())
+options(pillar.sigfig = 5)
+```
+
 While classification looks to assign observations to pre-specified
 categories using predictive modelling from *apriori* training data,
 cluster analysis looks to assign observations to categories without any

@@ -3,6 +3,9 @@
 ```{r, include=FALSE}
 library(MASS)
 library(tidyverse)
+knitr::opts_chunk$set(comment = "#>")
+theme_set(theme_minimal())
+options(pillar.sigfig = 5)
 wine <- read_csv("data/wine.csv")
 ```
 

@@ -3,6 +3,9 @@
 ```{r, include=FALSE}
 library(tidyverse)
 library(janitor)
+knitr::opts_chunk$set(comment = "#>")
+theme_set(theme_minimal())
+options(pillar.sigfig = 5)
 ```
 
 While $K$-means clustering is used primarily for numerical measures, we
