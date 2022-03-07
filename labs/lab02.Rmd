@@ -53,41 +53,6 @@ Notice we have the exact same information, it's just in a more human-readable fo
 3. Try adding a "Total" column to the ethnic group by gender table. You could do this before the `pivot_wider` by using a `mutate` with `sum(Students)`.
 4. Try creating a table with the percentage of female and male students within each ethnic group. You can add a new column with `mutate()` and get the percentage by using `Students/sum(Students)` within each ethnic group.
 
-## Looking at the `schools` data
-
-Start by taking a look at the `schools` data:
-
-```{r}
-schools
-```
-
-### Try yourself
-
-1. How many schools are there in the Palmerston North Territorial Authority?
-2. Of the schools in Palmerston North, how many are co-ed, single-sex girls or single-sex boys? *You can use `count(SchoolGender)` for this.*
-3. Produce a chart of the decile distribution of schools in Palmerston North in the Primary sector.
-
-## Joining datasets with `left_join`
-
-If we want to summarise the student information across schools, we'll need to join the two datasets together. Generally this is done by matching one or more "key" columns in both datasets. The most common way to do this is via a **left** join, where every row in the dataset we supply on the left is kept, and we match it to rows in the dataset on the right that share the same information across the key columns.
-
-The following will do this:
-
-```{r}
-all_data <- clean %>% left_join(schools)
-all_data
-```
-
-Notice that the `left_join` function automatically found which column to match on (based on matching column names) and that we end up with the same number of rows in this case, as each row in the clean roll dataset only matches a single school. We do, ofcourse, get the additional variables from the `schools` dataset.
-
-We can now use the `all_data` dataset to answer questions using the variables from both datasets:
-
-### Try yourself
-
-1. How many students are there in each Regional Council?
-2. How many girls and boys are in schools with a religious affiliation?
-3. Produce a chart to compare the ethnic makeup of secondary schools in Decile 10 versus those in Decile 1, excluding international fee paying students.
-
 ## Small multiple plots
 
 In workshop 1 you produced a graph of the total number of students by year level and gender. You should have got something like this:
@@ -129,6 +94,41 @@ The `vars` helper function here is there so that `facet_wrap` knows to look for 
 1. Try altering the above plot so that it uses a different y-axis for each plot. This can be useful when there's differing numbers of students in each group. Hint: see the help for `facet_wrap`.
 2. Instead of colouring by gender, produce separate plots by both `Gender` and `Ethnicity` by supplying both to `facet_wrap`.
 3. Try out `facet_grid` instead for the second one.
+
+## Looking at the `schools` data
+
+Start by taking a look at the `schools` data:
+
+```{r}
+schools
+```
+
+### Try yourself
+
+1. How many schools are there in the Palmerston North Territorial Authority?
+2. Of the schools in Palmerston North, how many are co-ed, single-sex girls or single-sex boys? *You can use `count(SchoolGender)` for this.*
+3. Produce a chart of the decile distribution of schools in Palmerston North in the Primary sector.
+
+## Joining datasets with `left_join`
+
+If we want to summarise the student information across schools, we'll need to join the two datasets together. Generally this is done by matching one or more "key" columns in both datasets. The most common way to do this is via a **left** join, where every row in the dataset we supply on the left is kept, and we match it to rows in the dataset on the right that share the same information across the key columns.
+
+The following will do this:
+
+```{r}
+all_data <- clean %>% left_join(schools)
+all_data
+```
+
+Notice that the `left_join` function automatically found which column to match on (based on matching column names) and that we end up with the same number of rows in this case, as each row in the clean roll dataset only matches a single school. We do, ofcourse, get the additional variables from the `schools` dataset.
+
+We can now use the `all_data` dataset to answer questions using the variables from both datasets:
+
+### Try yourself
+
+1. How many students are there in each Regional Council?
+2. How many girls and boys are in schools with a religious affiliation?
+3. Produce a chart to compare the ethnic makeup of secondary schools in Decile 10 versus those in Decile 1, excluding international fee paying students.
 
 ## Tidying data
 
