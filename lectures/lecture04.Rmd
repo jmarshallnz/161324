@@ -1,0 +1,453 @@
+---
+title: 'Lecture 4'
+subtitle: 'Prediction with the linear model'
+output:
+  xaringan::moon_reader:
+    css: [default, default-fonts, "custom.css"]
+    mathjax: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
+    nature:
+      highlightStyle: tomorrow
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+      slideNumberFormat: |
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
+          </div>
+        </div>
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
+theme_set(theme_minimal())
+library(palmerpenguins)
+hrc <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horizons_river_ecoli.csv")
+
+xaringanExtra:::use_freezeframe()
+```
+
+## Prediction
+
+- The aim of prediction is to estimate a numeric variable.
+
+- The variable we're estimating is the **target**, outcome, or response variable.
+
+- The variables we use to do the estimation are the **predictors**, covariates or features.
+
+- We typically have a **training** data set which contains both the target and predictors so that we can build a model for prediction.
+
+- We then have a **testing** data set which contains only the predictors. The goal is to estimate the resulting target on this data set.
+
+- For testing purposes we often create an **artificial test** set or **validation** data set so that we can check how well our model is performing by comparing the predicted target against the actual target.
+
+---
+
+## Example: US Wage data
+
+We have data on workers in the U.S. from the late 1980s. The target variable is `WAGE` and there are $p=10$ other predictors, some numeric and some factors.
+
+```{r, message=FALSE}
+wage.train <- read_csv("../data/wage-train.csv")
+wage.train
+```
+
+---
+
+## Example: US Wage data
+
+We also have an **artificial** test set with a further 134 observations. This is for illustrative purposes. It means we can test the performance of the prediction models.
+
+```{r, message=FALSE}
+wage.test <- read_csv("../data/wage-test.csv")
+wage.test
+```
+
+---
+
+## Methods of prediction
+
+There are a large range of models for prediction. We will be focusing on just a few:
+
+- Linear regression models
+- Regression trees
+- Random Forests
+- (Simple!) Neural networks
+
+Today we'll look at linear regression, which should already be familiar to you.
+
+---
+
+## General approach
+
+- We will use training data to build models.
+
+- Each model will seek to represent the relationship between target
+variable and the predictors.
+
+- We will usually construct several models, and then try to choose the one that provides the best predictions.
+
+---
+
+## The Linear Regression model
+
+- The linear regression model expresses the target variable as a linear combination of the predictors.
+
+$$\begin{aligned}
+y_i &= \beta_0 + \beta_1 x_{i1} + \beta_{2} x_{i2} + \cdots + \beta_p x_{ip} + \varepsilon_i \nonumber \\
+    &= \beta_0 + \sum_{j=1}^p \beta_j x_{ij} + \varepsilon_i~~~~~~~~~(i=1,2,\ldots,n)\end{aligned}$$
+
+- $y_i$ is value of target variable $i$th observation.
+
+- $x_{ij}$ is value of $j$th predictor for $i$th observation.
+
+- $\varepsilon_1, \ldots \varepsilon_n$ are random error terms.
+
+    -   Usually assumed to be independent $N(0,\sigma^2)$ random
+        variables
+
+- Coefficients $\beta_0, \beta_1, \ldots, \beta_p$ are unknown regression parameters.
+
+    -   Must be estimated from training data.
+
+---
+
+## Handling categorical predictors
+
+- The linear model assumes that $x_{ij}$ are numerical values.
+
+- To handle factors, we introduce binary indicator variables (taking the value zero or one), and use these to code each level of a factor.
+
+- e.g. the `RACE` from wage data has levels `Hispanic`, `White`,
+    `Other`.
+
+    -   Create indicator variables `White` and `Hispanic`.
+
+    -   Zero for both indicates record is `Other` ethnicity.
+
+- This is automatically handled by the `lm` function in R (actually, `model.matrix`).
+
+---
+
+## Assumptions of the Linear Regression Model
+
+- The linear regression model makes quite strong assumptions.
+
+- Have already noted assumptions about the error terms. (Independent, Normal, Constant Variance).
+
+- Even more important is implicit assumption that the relationship between the target variable and the predictors is linear.
+
+- This doesn't mean that it has to be a straight line - we can use transformations of covariates if we like. The key is that the model is linear in the (unknown) parameters $\beta_j$.
+
+- Other methods (e.g. trees, forests, neural nets) are much more flexible.
+
+---
+
+## Fitting a linear regression model to data
+
+-   To use a regression model in practice we must estimate the
+    parameters $\beta_0, \beta_1, \ldots, \beta_p$.
+
+-   This is referred to as *fitting the model*.
+
+-   Linear regression models can be fitted using the **method of least
+    squares**.
+
+-   We select the values $\hat \beta_0, \hat \beta_1, \ldots, \hat \beta_p$ that minimize the sum of squares
+    $$SS(\beta_0, \beta_1, \ldots, \beta_p) = \sum_{i=1}^n \left ( y_i - \beta_0 - \beta_1 x_{i1} - \beta_{2} x_{i2} - \cdots - \beta_p x_{ip} \right )^2.$$
+
+-   Notice that this is minimising the squared distance between $\hat{y_i}$ predicted from the model and the true value $y_i$.
+
+---
+
+## Fitting a linear regression model in R
+
+-   Regression models can be fitted in R using `lm` whose syntax is
+
+        lm(formula, data)
+
+    where `formula` is the model formula, and `data` is the data frame for training.
+
+-   If target variable is stored as (e.g.) `y` in a data frame, and there are two
+    predictor variables `x1`, `x2`, then model formula will be
+
+        y ~ 1 + x1 + x2
+
+-   The number `1` on RHS indicates inclusion of intercept (i.e. a
+    $\hat \beta_0$) term. R includes an intercept by default, so this
+    is equivalent to `y ~ x1 + x2`.
+
+-   If `x1` and `x2` are the only other predictors in the data frame then can use `.` which is short for "all other variables":
+
+        y ~ .
+
+---
+
+.left-code[
+## Example: Linear regression of Wage data
+
+```{r wagelm, eval=FALSE}
+wage.lm <- lm(WAGE ~ .,
+              data=wage.train)
+summary(wage.lm)
+```
+
+]
+.right-plot[
+```{r, ref.label="wagelm", echo=TRUE}
+```
+]
+
+---
+
+## Summary output from linear regression model
+
+We get a table of:
+
+- Estimated coefficients, i.e. $\hat\beta_0, \ldots, \hat\beta_p$.
+
+- Their standard errors.
+
+- Corresponding t-statistics and p-values (for testing if they are zero).
+
+- A small p-value indicates statistically significant evidence.
+
+    -   e.g. `Union` is a significant predictor of `WAGE`.
+
+---
+
+## Prediction from Linear Regression Models
+
+-   Regression models can be used for a variety of purposes.
+
+-   For example, their straightforward interpretability means:
+
+    -   they can be used to better understand relationships between
+        variables
+
+    -   can quantify the effects of predictors on the response.
+
+-   Our primary interest is in the use of these models for prediction.
+
+-   **Point predictions** obtained by plugging required values of
+    predictors into fitted model equation.
+    $$\hat y = \hat \beta_0 + \hat \beta_1 x_{1} + \hat \beta_{2} x_{2} + \cdots + \hat \beta_p x_{p}$$
+
+-   **Prediction intervals** can also be obtained from linear models.
+
+    -   Prediction intervals give range of values associated with
+        specified level of confidence.
+
+    -   E.g. 95% sure that predicted value is in range $(a,b)$.
+
+---
+
+## Linear Regression Prediction in R
+
+-   Prediction for linear models in R carried out using the `predict`
+    command.
+
+-   Syntax for computing point predictions is as follows:
+
+        predict(my.lm, newdata=my.test.predictors)
+
+    -   `my.lm` is the fitted regression model to perform the
+        prediction,
+
+    -   `my.test.predictors` is a data frame containing (as rows) the
+        sets of predictors for which we wish to make predictions.
+
+-   Can obtain predictions intervals (in addition to the point
+    predictions) by specifying optiomal argument
+    `interval="prediction"`.
+
+-   By default the prediction interval will be at the 95% level
+
+    -   Adjust by specifying `level` (optional argument of `predict`)
+
+---
+
+## Linear Regression Prediction in R
+
+.left-code[
+```{r wagepred, eval=FALSE}
+pred <- predict(wage.lm,
+                newdata=wage.test)
+wage.test %>%
+  bind_cols(.pred=pred) %>% #<<
+  select(WAGE, .pred, everything())
+```
+
+When we run predict it returns
+an unnamed vector, so we have to
+name it if we want to bind it as
+a new column.
+]
+
+.right-plot[
+```{r, ref.label='wagepred', echo=FALSE}
+```
+]
+
+---
+
+## Linear Regression Prediction in R
+
+.left-code[
+```{r wagepredint, eval=FALSE}
+pred <- predict(wage.lm,
+                newdata=wage.test,
+                interval="prediction")
+wage.test %>%
+  bind_cols(pred) %>%
+  select(WAGE, fit, lwr, upr,
+         everything())
+```
+
+When we run predict with
+`interval="prediction"` it returns
+a three column matrix with columns
+for `fit`, `lwr` and `upr`.
+]
+
+.right-plot[
+```{r, ref.label='wagepredint', echo=FALSE}
+```
+]
+
+---
+
+## Tidier prediction
+
+.left-code[
+```{r wagepredtidy, eval=FALSE}
+library(broom)
+augment(wage.lm,
+        newdata=wage.test,
+        interval="prediction") %>%
+  select(WAGE, .fitted,
+         .lower, .upper,
+         everything())
+```
+
+The `broom::augment()` function always
+returns a data frame along with consistently
+named columns (e.g. predictions are always
+named `.fitted`).
+]
+
+.right-plot[
+```{r, ref.label='wagepredtidy', echo=FALSE, warning=FALSE}
+```
+]
+---
+
+.left-code[## Tidier prediction
+
+```{r wagepredplot, eval=FALSE}
+augment(wage.lm,
+        newdata=wage.test,
+        interval="prediction") %>%
+  select(WAGE, .fitted,
+         .lower, .upper) %>%
+  ggplot() +
+  geom_linerange(
+    mapping=aes(x=.fitted,
+                ymin=.lower,
+                ymax=.upper)
+  ) +
+  geom_point(
+    mapping=aes(x=.fitted,
+                y=WAGE),
+    col='red'
+  ) +
+  labs(x="Fitted WAGE",
+       y="True WAGE")
+```
+]
+
+.right-plot[
+```{r, ref.label='wagepredplot', echo=FALSE, warning=FALSE}
+```
+]
+
+---
+
+## Example: Predictions for wage data
+
+-   The (point) predictions are not terribly impressive.
+
+-   If the regression model produced highly accurate predictions then
+    the plot of true versus predicted values would lie more or less on a
+    $45^\circ$ straight line. Instead we see considerable variation.
+
+-   The prediction intervals are very wide, indicating a high degree of
+    imprecision in the predictions.
+
+    -   Consider, for example, that when the true value of `WAGE` is
+        about 8 dollars per hour, the prediction intervals range from
+        about $0$ to $16$ dollars per hour.
+
+-   Prediction intervals do not respect minimum value of zero for a
+    wage.
+
+---
+
+## Why are the Predictions So Imprecise?
+
+-   The wide prediction intervals indicate very high imprecision in the
+    predictions.
+
+-   With 10 predictor variables on 400 records, we might have hoped to
+    do better.
+
+-   Part of the problem may be that `WAGE` is just very difficult to
+    predict using the available attributes.
+
+-   However, at least part of the problem is that we may be including
+    several variables with at most weak associations with `WAGE`.
+
+-   Including (mostly) irrelevant variables adds noise to the model, and
+    reduces precision.
+
+---
+
+class: middle,inverse
+
+# The Bias-Variance trade-off
+
+---
+
+## The Bias-Variance trade-off
+
+-   If a predictor has no association with the target, then its true
+    coefficient is zero.
+
+    -   If $x_2$ not associated with $y$, then in truth $\beta_2 = 0$.
+
+-   In such a situation it is obviously best to exclude the predictor
+    from the model.
+
+    -   If you try to estimate $\beta_2$, you will probably get a small
+        but non-zero value: just adds to uncertainty in model.
+
+-   But what to do if there is a very weak association?
+
+    -   E.g. if $\beta_2 = 0.0001$ then $x_2$ has only tiny influence on
+        $y$ (assuming $x_2$ doesn't take huge values).
+
+-   If we omit predictor then we are fitting wrong model: this produces
+    **bias**.
+
+-   If we include predictor then we might well get an estimate of
+    coefficient with greater error than if we had set coefficient to
+    zero.
+
+-   Accepting a bit of bias by ignoring the variable might be
+    better than having to deal with the increased variance due to
+    having to estimate the variable's coefficient.
+
+---
