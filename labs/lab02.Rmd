@@ -157,7 +157,8 @@ We'll start by automatically downloading the file we want and loading it into R 
 
 ```{r}
 download.file(url = "https://www.health.govt.nz/system/files/documents/pages/q1-21-22-imms-coverage-ethnicity-and-deprivation-quarterly-1-july-30-sept-2021-for-v0-3.xlsx",
-              destfile = "immunisation.xlsx")
+              destfile = "immunisation.xlsx",
+              mode = "wb")
 excel_sheets("immunisation.xlsx")
 imm <- read_excel("immunisation.xlsx", sheet="Ethnicity")
 glimpse(imm)
