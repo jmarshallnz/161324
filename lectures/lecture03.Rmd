@@ -317,7 +317,7 @@ class: middle,inverse
 
 - Replace any missing values with the mean of the available data for numeric variables.
 
-- Replace missing values with modal (i.e. most common) category (level).
+- Replace missing values with the modal (i.e. most common) category (level).
 
 - Very simple to implement.
 
@@ -380,9 +380,9 @@ husbands_na %>%
 
     - For example, consider missing values for wife's age in husbands and wives data.
     - Mean imputation gives 40.7 years.
-    - This is an unlikely value if husband is 25.
-    - Better approach is to look at complete cases with husbands that are around 25 years old,
-      and use mean of their wives' ages.
+    - This is an unlikely value if the husband's age is 25.
+    - A better approach is to look at complete cases with husbands that are around 25 years old,
+      and use the mean of their wives' ages.
 
 ---
 
@@ -404,7 +404,7 @@ husbands_na %>%
 - We compute the distance from a row with missing data to all other rows where we have data, using
 the columns that are complete.
 
-- We then take the $k$ nearest complete row to our missing row.
+- We then take the $k$ nearest complete rows to the missing row.
 
 - We then summarise the variable of interest from those $k$ rows (e.g. use the mean or median) to impute the missing values.
 
@@ -477,12 +477,12 @@ husbands_na %>%
     - Imputed value will be somewhat unstable, being the average of just a few values (BAD).
     - Values that we will be averaging over will all be quite like the incomplete case under investigation, since we are dealing with only very near neighbours (GOOD).
 
-- If $k$ large:
+- If $k$ is large:
 
     - Imputed value will be more stable (GOOD).
     - Values will incorporate information from some cases that are quite unlike the record in question, so may not be appropriate (BAD).
 
-- There are some sophisticated methods for choosing $k$, but for in many cases $k=5$ is a reasonable rule-of-thumb.
+- There are some sophisticated methods for choosing $k$, but in many cases $k=5$ is a reasonable rule-of-thumb.
 
 - This is an example of the **Bias-Variance tradeoff**, something we'll be returning to over and over!
 
