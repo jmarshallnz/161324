@@ -27,6 +27,7 @@ We'll start by taking a look at the `husbands` dataset. This is (rather old-fash
 ```{r}
 husbands
 ```
+
 The first thing you should notice is that the `W.Age` column has an entry of 9999 in row 8. Clearly this is incorrect, as it is very unlikely that the wife's age was 9999 years. Instead, the person who put these data together coded the missing values as 9999. Indeed, the `skim` function in `skimr` is useful for taking a quick look across the data frame (the `skimr_include_summary=FALSE` chunk option omits the 'Data Summary' block when knitting).
 
 ```{r, skimr_include_summary = FALSE}
@@ -59,11 +60,13 @@ Now that we know we have missing values, a useful task is to visualise those val
 ```{r}
 vis_miss(husbands_na)
 ```
+
 From this we can see that the wife's age is missing relatively frequently, while the husbands age at marriage is only missing a few times. Of interest is whether these times coincide:
 
 ```{r}
 husbands_na %>% filter(is.na(H.Age.Marriage)) %>% vis_miss()
 ```
+
 Yes, we see that of the 4 rows where we have missing values for the husbands age at marriage, 3 of them also have the wife's age missing. Thus, if we want to try and guess what the Husbands Age at Marriage might be by utilising information in the `W.Age` column, we note that we'd only be able to guess one of the 4 missing observations.
 
 Another useful set of plots is the `gg_miss_var` and `gg_miss_case` functions:
