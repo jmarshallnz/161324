@@ -130,14 +130,13 @@ We can see that the imputation isn't particularly good! This really shouldn't be
 
 ## K-nearest neighbour imputation
 
-We can improve the imputation using numerous methods. A useful one is k-nearest neighbours utilising the `VIM` package.
+We can improve the imputation using numerous methods. A useful one is k-nearest neighbours utilising the `VIM` package. This automatically adds columns with the postfix `_imp` containing whether or not the column was imputed, so we don't need to `bind_shadow()`:
 
 ```{r}
 husbands_na %>%
-  bind_shadow() %>%
   kNN(k=5) %>%
   ggplot() +
-  geom_point(mapping = aes(x = H.Age, y = W.Age, col=W.Age_NA))
+  geom_point(mapping = aes(x = H.Age, y = W.Age, col=W.Age_imp))
 ```
 
 We see that this does quite a bit better!
@@ -146,7 +145,7 @@ We see that this does quite a bit better!
 
 1. Try altering the $k$ in k-nearest neighbour imputation. e.g. try $k=1$ or $k=100$ and see how they do.
 
-2. Take the `yeast_na` data and `select` out just the columns that start with `alpha`. Use k-nearest neighbour imputation on the this. Take a look at the relationship between `alpha.0` and `alpha.7` as a starting point. For plotting, you might want to add some `alpha` and arrange first by `alpha.7_NA`.
+2. Take the `yeast_na` data and `select` out just the columns that start with `alpha`. Use k-nearest neighbour imputation on the this. Take a look at the relationship between `alpha.0` and `alpha.7` as a starting point. For plotting, you might want to add some `alpha` and arrange first by `alpha.7_imp` so that the imputed points are drawn last.
 
 3. Play with $k=1$ and $k=1000$ as well.
 
