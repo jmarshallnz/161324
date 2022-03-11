@@ -24,10 +24,6 @@ library(tidyverse)
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
 theme_set(theme_minimal())
-library(palmerpenguins)
-hrc <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horizons_river_ecoli.csv")
-
-xaringanExtra:::use_freezeframe()
 ```
 
 ## Missing data
