@@ -858,6 +858,9 @@ y <- 1+ sin(1.5*x/(1+x^2/100)) + rnorm(400,sd=0.25)
 data.frame(x = x, y = y) %>%
   ggplot() +
   geom_point(mapping = aes(x=x, y=y))
+library(rpart)
+toy.rp <- rpart(y ~ x, cp=0.1)
+toy_splits <- round(toy.rp$splits[,"index"],3)
 ```
 
 A tree based method works by systematically splitting the data into
@@ -865,14 +868,12 @@ groups according to $x$, and then predicting the target using the means
 within each group. The recursive partitioning of the data (i.e. the
 division into groups) is displayed using a tree in Figure \@ref(fig:toytree2). From
 the first branching of the tree (at its root) we see that the initial
-step is to divide the data into two parts: those with $x < 6.213$ branch
-to the left, and those with $x \ge 6.213$ branch to the right. The next
-step is to further divide those group with $x < 6.213$ into sub-groups
-with $x < 2.163$ and $x \ge 2.163$.
+step is to divide the data into two parts: those with $x < `r toy_splits[1]`$ branch
+to the left, and those with $x \ge `r toy_splits[1]`$ branch to the right. The next
+step is to further divide those group with $x < `r toy_splits[1]`$ into sub-groups
+with $x < `r toy_splits[2]`$ and $x \ge `r toy_splits[2]`$.
 
 ```{r toytree2, echo=FALSE, message=FALSE, fig.cap="Regression tree for the toy dataset."}
-library(rpart)
-toy.rp <- rpart(y ~ x, cp=0.1)
 plot(toy.rp,compress=T,margin=0.1)
 text(toy.rp,cex=1)
 ```
@@ -885,13 +886,13 @@ predictions are constant across the range of x-values defining each
 leaf. This is illustrated in Figure \@ref(fig:toytree3).
 
 ```{r toytree3, echo=FALSE, fig.cap="Scatterplot of the toy dataset, with the partitioning of the data indicated by the background shading and the predictions within each group plotted as the horizontal line segments."}
-rect1 <- data.frame(x=c(-1,-1,2.113,2.113), y=c(-0.7,2.9,2.9,-0.7), col=grey(0.95))
-rect2 <- data.frame(x=c(2.113,2.113,6.013,6.013), y=c(-0.7,2.9,2.9,-0.7), col=grey(0.85))
-rect3 <- data.frame(x=c(6.013,6.013,11,11),y=c(-0.7,2.9,2.9,-0.7), col=grey(0.95))
+rect1 <- data.frame(x=c(-1,-1,toy_splits[2],toy_splits[2]), y=c(-0.7,2.9,2.9,-0.7), col=grey(0.95))
+rect2 <- data.frame(x=c(toy_splits[2],toy_splits[2],toy_splits[1],toy_splits[1]), y=c(-0.7,2.9,2.9,-0.7), col=grey(0.85))
+rect3 <- data.frame(x=c(toy_splits[1],toy_splits[1],11,11),y=c(-0.7,2.9,2.9,-0.7), col=grey(0.95))
 rects <- bind_rows(lst(rect1, rect2, rect3), .id="rect")
-segs <- bind_rows(lst(seg1 = data.frame(x = c(6.013,11), y = 1.794),
-                      seg2 = data.frame(x = c(2.113, 6.013), y = 0.5704),
-                      seg3 = data.frame(x = c(-1, 2.113), y = 1.645)), .id="seg")
+segs <- bind_rows(lst(seg1 = data.frame(x = c(toy_splits[1],11), y = 1.794),
+                      seg2 = data.frame(x = c(toy_splits[2], toy_splits[1]), y = 0.5704),
+                      seg3 = data.frame(x = c(-1, toy_splits[2]), y = 1.645)), .id="seg")
 
 data.frame(x=x, y=y) %>%
   ggplot() +
