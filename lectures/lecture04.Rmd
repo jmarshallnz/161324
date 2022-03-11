@@ -156,8 +156,8 @@ y_i &= \beta_0 + \beta_1 x_{i1} + \beta_{2} x_{i2} + \cdots + \beta_p x_{ip} + \
 -   Linear regression models can be fitted using the **method of least
     squares**.
 
--   We select the values $\hat \beta_0, \hat \beta_1, \ldots, \hat \beta_p$ that minimize the sum of squares
-    $$SS(\beta_0, \beta_1, \ldots, \beta_p) = \sum_{i=1}^n \left ( y_i - \beta_0 - \beta_1 x_{i1} - \beta_{2} x_{i2} - \cdots - \beta_p x_{ip} \right )^2.$$
+-   We select the values $\hat \beta_0, \hat \beta_1, \ldots, \hat \beta_p$ that minimize the residual sum of squares
+    $$\mathsf{RSS}(\beta_0, \beta_1, \ldots, \beta_p) = \sum_{i=1}^n \left ( y_i - \beta_0 - \beta_1 x_{i1} - \beta_{2} x_{i2} - \cdots - \beta_p x_{ip} \right )^2.$$
 
 -   Notice that this is minimising the squared distance between $\hat{y_i}$ predicted from the model and the true value $y_i$.
 
@@ -176,7 +176,7 @@ y_i &= \beta_0 + \beta_1 x_{i1} + \beta_{2} x_{i2} + \cdots + \beta_p x_{ip} + \
 
         y ~ 1 + x1 + x2
 
--   The number `1` on RHS indicates inclusion of intercept (i.e. a
+-   The number `1` on RHS indicates inclusion of an intercept (i.e. a
     $\hat \beta_0$) term. R includes an intercept by default, so this
     is equivalent to `y ~ x1 + x2`.
 
@@ -196,8 +196,8 @@ summary(wage.lm)
 ```
 
 ]
-.right-plot[
-```{r, ref.label="wagelm", echo=TRUE}
+.small-font.right-plot[
+```{r, ref.label="wagelm", echo=FALSE}
 ```
 ]
 
@@ -215,7 +215,8 @@ We get a table of:
 
 - A small p-value indicates statistically significant evidence.
 
-    -   e.g. `Union` is a significant predictor of `WAGE`.
+    - `UNION` is a significant predictor of `WAGE`.
+    - `RACE` is not a significant predictor of `WAGE`.
 
 ---
 
@@ -223,7 +224,7 @@ We get a table of:
 
 -   Regression models can be used for a variety of purposes.
 
--   For example, their straightforward interpretability means:
+-   Their straightforward interpretability means:
 
     -   they can be used to better understand relationships between
         variables
@@ -232,13 +233,13 @@ We get a table of:
 
 -   Our primary interest is in the use of these models for prediction.
 
--   **Point predictions** obtained by plugging required values of
+-   **Point predictions** are obtained by plugging the values of
     predictors into fitted model equation.
     $$\hat y = \hat \beta_0 + \hat \beta_1 x_{1} + \hat \beta_{2} x_{2} + \cdots + \hat \beta_p x_{p}$$
 
 -   **Prediction intervals** can also be obtained from linear models.
 
-    -   Prediction intervals give range of values associated with
+    -   Prediction intervals give the range of values associated with
         specified level of confidence.
 
     -   E.g. 95% sure that predicted value is in range $(a,b)$.
@@ -257,11 +258,11 @@ We get a table of:
     -   `my.lm` is the fitted regression model to perform the
         prediction,
 
-    -   `my.test.predictors` is a data frame containing (as rows) the
+    -   `my.test.predictors` is a data frame containing the
         sets of predictors for which we wish to make predictions.
 
 -   Can obtain predictions intervals (in addition to the point
-    predictions) by specifying optiomal argument
+    predictions) by specifying optional argument
     `interval="prediction"`.
 
 -   By default the prediction interval will be at the 95% level
@@ -351,8 +352,6 @@ named `.fitted`).
 augment(wage.lm,
         newdata=wage.test,
         interval="prediction") %>%
-  select(WAGE, .fitted,
-         .lower, .upper) %>%
   ggplot() +
   geom_linerange(
     mapping=aes(x=.fitted,
@@ -364,9 +363,14 @@ augment(wage.lm,
                 y=WAGE),
     col='red'
   ) +
-  labs(x="Fitted WAGE",
+  labs(x="Predicted WAGE",
        y="True WAGE")
 ```
+
+Plotting the predicted wage versus the
+true wage is one way to evaluate model fit.
+
+This is not a good effort!
 ]
 
 .right-plot[
@@ -391,12 +395,12 @@ augment(wage.lm,
         about 8 dollars per hour, the prediction intervals range from
         about $0$ to $16$ dollars per hour.
 
--   Prediction intervals do not respect minimum value of zero for a
+-   The prediction intervals do not respect the minimum value of zero for a
     wage.
 
 ---
 
-## Why are the Predictions So Imprecise?
+## Why are the predictions so imprecise?
 
 -   The wide prediction intervals indicate very high imprecision in the
     predictions.
@@ -421,33 +425,487 @@ class: middle,inverse
 
 ---
 
-## The Bias-Variance trade-off
+## Errors in Prediction Models
 
--   If a predictor has no association with the target, then its true
-    coefficient is zero.
+-   Errors in predictions $\hat y$ arise from bias and variance.
 
-    -   If $x_2$ not associated with $y$, then in truth $\beta_2 = 0$.
+-   **Bias** is systematic error, in the sense that $\mathbb{E}[\hat y]$ differs
+    from the mean target value.
 
--   In such a situation it is obviously best to exclude the predictor
-    from the model.
+-   **Variance** is a measure of the variability of prediction.
 
-    -   If you try to estimate $\beta_2$, you will probably get a small
-        but non-zero value: just adds to uncertainty in model.
-
--   But what to do if there is a very weak association?
-
-    -   E.g. if $\beta_2 = 0.0001$ then $x_2$ has only tiny influence on
-        $y$ (assuming $x_2$ doesn't take huge values).
-
--   If we omit predictor then we are fitting wrong model: this produces
-    **bias**.
-
--   If we include predictor then we might well get an estimate of
-    coefficient with greater error than if we had set coefficient to
-    zero.
-
--   Accepting a bit of bias by ignoring the variable might be
-    better than having to deal with the increased variance due to
-    having to estimate the variable's coefficient.
+-   Variance arises because of uncertainty in estimated model
+    parameters.
 
 ---
+
+## Example: Prediction with a Regression Model
+
+- Suppose we have a target variable $y$ and two predictors $x_1$ and $x_2$
+
+- The true relationship between variables is
+    $$y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \varepsilon$$
+
+- And suppose that $\mathbf{E}[\varepsilon] = 0$. i.e. the average unpredictable error is 0.
+
+- Hence
+$$\begin{aligned}\mathbf{E}[y] &= \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \mathbf{E}[\varepsilon] \\ &= \beta_0 + \beta_1 x_1 + \beta_2 x_2 \end{aligned}$$
+
+- The true regression equation estimates $y$ correctly on average.
+
+---
+
+## Example: Prediction with a Regression Model
+
+-   Least squares parameter estimates from the training data are
+    $\hat \beta_0$, $\hat \beta_1$, $\hat \beta_2$.
+
+-   Least squares estimators are **unbiased**, so
+    $\mathbb{E}[\hat \beta_0] = \beta_0$ etc.
+
+-   A test case has predictor values $x_{1,0}$ and $x_{2,0}$ and true (unobserved) target
+    $$y_0 = \beta_0 + \beta_1 x_{1,0} + \beta_2 x_{2,0} + \varepsilon_0$$
+
+-   Prediction based on the trained model is
+    $$\hat y_0 = \hat \beta_0 + \hat \beta_1 x_{1,0} + \hat \beta_2 x_{2,0}.$$
+
+-   This prediction is **unbiased:**
+
+$$\begin{aligned}\mathbb{E}[\hat y_0] &= \mathbb{E}[\hat \beta_0] + \mathbb{E}[\hat \beta_1] x_{1,0} + \mathbb{E}[\hat \beta_2] x_{2,0} \\
+               &= \beta_0 + \beta_1 x_{1,0} + \beta_2 x_{2,0} \\
+               &= \mathbb{E}[y_0]\end{aligned}$$
+
+-   But, the variance of prediction depends on the variance (standard errors and correlation) of the parameter estimators.
+
+---
+
+## Example: Prediction with a Regression Model
+
+- If our functional form is correct, the regression model `y ~ x1 + x2` will be unbiased.
+
+- However, suppose we instead use `y ~ x1`. Then this model is **misspecified** - it will be biased, as we're assuming that the coefficient of $x_2$ is zero, when it might not be.
+
+- We can also get model misspecification by assuming the functional form is linear when it isn't - this is often the case, as the linearity assumption is very strong!
+
+    - Perhaps the real form is $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2^2 + \varepsilon$.
+
+- If we get the functional form right our linear model will be unbiased.
+
+- However, sometimes it's OK to get it wrong - we'll introduce bias, but perhaps will have lower variance.
+
+---
+
+## Example: A misspecified model that does better.
+
+Suppose that we have $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \varepsilon$ and we fit two models:
+
+$$\begin{aligned}\mbox{Model 1:}~~~y &= \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \varepsilon \\[5pt]\mbox{Model 2:}~~~y &= \beta_0 + \beta_1 x_1 + \varepsilon\end{aligned}$$
+
+Then if $\beta_2 \neq 0$, we know Model 2 is misspecified and thus biased.
+
+But suppose $\beta_2$ is small, say $\beta_2 = 0.0001$. i.e. $x_2$ does contribute to $y$, but only a small amount.
+
+Then Model 2 won't be too biased - it is missing only the small contribution from $x_2$.
+
+Model 1 will be unbiased, but we'll need to estimate $\beta_2$ to fit the model. This estimation will include uncertainty which may increase variance.
+
+---
+
+## Simulation study on the misspecified model
+
+Let's simulate some data and see what happens.
+
+We'll simulate 150 observations of $x_1$ and $x_2$ from a standard normal distribution, along with 150 unpredictable errors $\varepsilon \sim N(0, 0.5^2)$ to add some noise.
+
+From there we'll compute $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \varepsilon$, where $\beta_0 = \beta_1 = 1$ and $\beta_2 = 0.001$. Thus $x_2$ contributes to $y$, but 1,000 times less than $x_1$ does.
+
+Finally, we split this data set into 100 training and 50 test records.
+
+```{r}
+set.seed(3)
+sim <- tibble(x1 = rnorm(150),
+              x2 = rnorm(150),
+              eps = rnorm(150, sd=0.5),
+              y = 1 + x1 + 0.001*x2 + eps)
+
+library(rsample)
+split <- initial_split(sim, prop=2/3)
+sim.train <- training(split)
+sim.test  <- testing(split)
+```
+
+---
+
+.left-code[
+## Simulation study on the misspecified model
+
+```{r simplot1, eval=FALSE}
+sim.train %>%
+  pivot_longer(c(x1,x2)) %>%
+  ggplot() +
+  geom_point(aes(x=value, y=y)) +
+  facet_wrap(vars(name), ncol=1)
+```
+
+We see that $y$ is predictable from $x_1$
+but not strongly predictable from $x_2$.
+]
+
+.right-plot[
+```{r, ref.label="simplot1", echo=FALSE}
+```
+]
+
+---
+
+## Simulation study on the misspecified model
+
+We fit two models
+
+```{r}
+model1 <- lm(y ~ x1 + x2, data=sim.train)
+model2 <- lm(y ~ x1, data=sim.train)
+```
+
+We know that `model1` will be unbiased, while `model2` will be biased as it is misspecified.
+
+And, as expected, `model1` has a better fit overall, a higher $R^2$.
+
+```{r}
+glance(model1) %>% pull(r.squared)
+glance(model2) %>% pull(r.squared)
+```
+
+---
+
+.left-code-wide[
+## Simulation study on the misspecified model
+
+```{r simpred, eval=FALSE}
+sim.pred <- 
+  bind_rows(
+    model1 = augment(model1,
+                     newdata = sim.test,
+                     interval="prediction"),
+    model2 = augment(model2,
+                     newdata = sim.test,
+                     interval="prediction"),
+    .id="model"
+  ) %>%
+  mutate(pred_length = .upper - .lower)
+
+ggplot(sim.pred) +
+  geom_boxplot(mapping=aes(x=model, y=pred_length)) +
+  labs(x=NULL,
+       y="Length of prediction intervals")
+```
+
+Model 2 has shorter prediction intervals
+than model 1.
+]
+
+.right-plot-narrow[
+```{r, ref.label='simpred', echo=FALSE, fig.dim=c(3.2,4.5)}
+```
+]
+
+---
+
+## Simulation study on the misspecified model
+
+So while model 2 is biased, it has shorter prediction intervals,
+and thus lower variance than model 1.
+
+It turns out it also does prediction better on average. We can measure prediction performance using the mean squared error:
+
+```{r, echo=FALSE}
+options(pillar.sigfig = 6)
+```
+
+```{r}
+sim.pred %>%
+  group_by(model) %>%
+  summarise(MSE = mean((y - .fitted)^2)) %>%
+  arrange(MSE)
+```
+
+There's not much difference, but the MSE of model 2 is better than model 1.
+
+This is because the MSE can be decomposed into Bias and Variance. Adding a bit of bias to reduce the variance can decrease the overall error.
+
+---
+
+## Mean Squared Error for Prediction
+
+Suppose that the true relationship between the target $y$ and predictors $x_j$ is given by
+
+$$y = f(x_1, x_2,\ldots,x_p) + \varepsilon,$$
+where
+
+- The function $f$ describes the true predictable relationship between the predictors and the target, and
+- $\varepsilon$ is the unpredictable error, with $\mathbb{E}[\varepsilon] = 0$.
+
+Suppose we have estimated $f$ using some model and training data to give $\hat{f}$.
+
+Ideally $\hat{f}$ will look something like $f$.
+
+We can evaluate how far it is away from $f$ by using the **mean squared error**:
+
+$$\mathsf{MSE}(\hat f) = \mathbb{E}\left [ (\hat f - f)^2 \right ].$$
+
+---
+
+## Decomposition of the MSE
+
+Mean squared error can be decomposed into squared bias and variance
+components.
+
+$$\begin{aligned}
+\mathsf{MSE}(\hat f) &= \mathbb{E}\left [ (\hat f - f)^2 \right ]  \\
+             &= \mathbb{E}\left [ (\hat f - \mathbb{E}[\hat f] + \mathbb{E}[\hat f] - f)^2 \right ]  \\
+             &= \mathbb{E}\left [ (\hat f - \mathbb{E}[\hat f])^2 + (\mathbb{E}[\hat f] - f)^2 + 2 (\hat f - \mathbb{E}[\hat f])(\mathbb{E}[\hat f] - f) \right ]  \\
+             &= \mathbb{E}\left [ (\hat f - \mathbb{E}[\hat f])^2 \right ] + \mathbb{E} \left [ (\mathbb{E}[\hat f] - f)^2 \right ] + 2 \mathbb{E} \left [  (\hat f - \mathbb{E}[\hat f])(\mathbb{E}[\hat f] - f) \right ]  \\
+             &= \mathbb{E}\left [ (\hat f - \mathbb{E}[\hat f])^2 \right ] +  (\mathbb{E}[\hat f] - f)^2  + 2 (\mathbb{E}[\hat f] - \mathbb{E}[\hat f])(\mathbb{E}[\hat f] - f)  \\
+             &= \mathbb{E}\left [ (\hat f - \mathbb{E}[\hat f])^2 \right ] +  (\mathbb{E}[\hat f] - f)^2   \\
+             &= \mathsf{Var}(\hat f) + \left [ \mathsf{Bias}(\hat f) \right ]^2\end{aligned}$$
+
+Remember that only $\hat{f}$ is random here. $f$ is the true relationship, so that $\mathbb{E}[f] = f$.
+
+---
+
+## The Bias-Variance Trade-Off
+
+-   The overall accuracy of a prediction can be measured by its mean
+    squared error (MSE).
+
+-   Mean squared error can be decomposed into variance and squared bias
+    components.
+
+-   Accepting some bias will be advantageous if it results in a more
+    substantial decrease in variance.
+
+-   In practice we will want to use a prediction model that gets the
+    right balance between prediction variance and bias so as to minimize
+    the prediction MSE.
+
+---
+
+class: middle,inverse
+
+# Model selection
+
+---
+
+## Model selection
+
+-   Model selection is critical for obtaining good predictions.
+
+-   One aspect of model selection is choosing between different types of model:
+    e.g. linear regression, regression trees, random forests,  or neural networks.
+
+-   A second aspect is optimizing the particular model under
+    consideration.
+
+-   For linear regression, this involves selecting the best set of
+    predictors such that we minimize the MSE of prediction.
+
+-   We know that selecting more predictors tends to reduce bias, but
+    increase variance.
+
+-   Hence model selection is intimately connected with the bias-variance
+    trade-off.
+
+---
+
+## Prediction for the Wage Data
+
+-   For the wage data we have a test dataset that includes values for
+    the target variable.
+
+-   As a consequence we can compute measures of prediction accuracy on
+    the test data.
+
+-   As we saw in a previous example, several predictors are
+    statistically insignificant. One of these was `RACE`.
+
+-   We will therefore try removing `RACE` from the model in order to
+    improve prediction performance courtesy of a bias-variance
+    trade-off.
+
+---
+
+## Prediction for the Wage Data
+
+If we do prediction on the **training** data, we find that our first
+model should be preferred:
+
+```{r}
+wage.lm2 <- lm(WAGE ~ . - RACE, data=wage.train)
+wage.train %>%
+  bind_cols(
+    model1 = predict(wage.lm),
+    model2 = predict(wage.lm2)
+  ) %>%
+  summarise(MSE.1 = mean((model1 - WAGE)^2), MSE.2 = mean((model2 - WAGE)^2))
+```
+
+---
+
+## Prediction for the Wage Data
+
+If we do prediction on the **test** data, we find that second model should be preferred:
+
+```{r}
+wage.lm2 <- lm(WAGE ~ . - RACE, data=wage.train)
+wage.test %>% #<<
+  bind_cols(
+    model1 = predict(wage.lm, newdata=wage.test), #<<
+    model2 = predict(wage.lm2, newdata=wage.test) #<<
+  ) %>%
+  summarise(MSE.1 = mean((model1 - WAGE)^2), MSE.2 = mean((model2 - WAGE)^2))
+```
+
+Plus, the MSE on the test data are much higher compared to the training MSE.
+
+**Why do we get these results?**
+
+---
+
+## Don't evaluate predictions on the training data
+
+-   Predictive accuracy based on the training data gives biased results.
+
+-   Our models are constructed using the training data, so are specially
+    tailored to that dataset.
+
+-   A model enjoys 'home ground advantage' when predicting on training
+    data. Prediction on test data is like playing away from home.
+
+-   $\mathsf{MSE}_{train} = \frac{1}{n} \sum_{i=1}^{n} \left ( y_{i} - \hat y_{i} \right )^2 = \mathsf{RSS}/n$.
+
+-   Removal of predictors can never reduce $\mathsf{RSS}$, and will generally
+    cause it to increase.
+
+-   Hence $\mathsf{MSE}_{train}$ will **always** favour the model with more
+    predictors.
+
+-   $\mathsf{MSE}_{train}$ fails to take proper account of the bias-variance
+    trade-off.
+
+---
+
+## Practical ways to evaluate predictions
+
+-   In practice we will not have target values for test cases.
+
+-   This means that we cannot use test data to obtain reliable MSE for
+    prediction.
+
+-   One approach is to split training data.
+
+    -   One part is used to 'build model' (i.e. estimate model
+        parameters);
+
+    -   Other part is used as a kind of independent test dataset to
+        compute reliable MSE values. Often called the **validation
+        dataset**.
+
+-   An alternative is to use model selection methods that are not
+    directly based on MSE for prediction.
+
+---
+
+## Akaike information criterion
+
+-   The **Akaike information criterion**, usually abbreviated to AIC, is
+    a measure of model quality.
+
+-   AIC requires only a training dataset.
+
+-   It takes account of bias-variance trade-off by penalizing models
+    that fit poorly or are overly complex.
+
+-   The lower the AIC value, the better the model.
+
+-   AIC can be used in a 'backwards variable selection algorithm', which
+    starts with all predictors and then removes predictors step by step
+    until AIC can be lowered no further.
+
+---
+
+## Backwards Variable Selection with AIC
+
+1.  Fit model with all predictors and compute AIC.
+
+    -   Call this the 'current model'.
+
+2.  Remove each predictor in turn, refit model, and compute AIC.
+
+    -   Call these models 'candidate models'.
+
+3.  If current model has lowest AIC then algorithm terminates and
+    returns current model.
+
+4.  Otherwise candidate model with lowest AIC becomes current model.
+    Then go to step 2.
+
+---
+
+.left-code[
+## Model selection for the Wage data
+
+```{r wageaic, eval=FALSE}
+wage.lm.step <- step(wage.lm)
+```
+
+The `step()` function does backwards
+variable selection.
+
+The `MARRIED` variable is removed first
+as doing so gives the best (lowest) AIC.
+
+Then the `AGE` variable is removed.
+]
+
+.small-font.right-plot[
+```{r, ref.label='wageaic', echo=FALSE}
+```
+]
+
+---
+
+## Model selection for the Wage data
+
+The final model includes `EDU`, `SOUTH`, `SEX`, `EXP`, `UNION`, `OCCUP` and `SECTOR`.
+
+```{r, echo=FALSE}
+options(pillar.sigfig = 3)
+```
+
+```{r}
+tidy(wage.lm.step)
+```
+
+---
+
+## Model selection for the Wage data
+
+The model with the lowest AIC does not guarantee that it will be good in terms of MSE:
+
+```{r, echo=FALSE}
+options(pillar.sigfig = 5)
+```
+
+```{r}
+wage.test %>%
+  bind_cols(
+    wage.lm = predict(wage.lm, newdata=wage.test),
+    wage.lm2 = predict(wage.lm2, newdata=wage.test),
+    wage.lm.step = predict(wage.lm.step, newdata=wage.test)
+  ) %>%
+  summarise(
+    across(starts_with("wage.lm"), ~ mean((. - WAGE)^2))
+    )
+```
+
+In this case, `wage.lm2` is best at prediction on the test set, though there isn't much in it!
