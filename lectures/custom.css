@@ -20,7 +20,7 @@
   float: left;
 }
 
-.right-out-narrow {
+.right-plot-narrow {
   width: 40%;
   float: right;
   padding-left: 1%;
@@ -47,4 +47,8 @@
 .center-fig {
   margin: auto;
   width: 75%;
+}
+
+.small-font .remark-code { /*Change made here*/
+  font-size: 70% !important;
 }
