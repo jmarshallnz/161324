@@ -1439,7 +1439,7 @@ Random forests are examples of **ensemble methods** which combine prediction acr
 There are two key parameters when fitting a random forest that can potentially be tuned:
 
 1. The number of predictor variables to consider for each split. This can be important for tuning model fit. Often using fewer predictor variables for each split can work well to ensure the trees differ.
-1. The tree depth. Typically the trees are not pruned, as we don't mind if the individual trees over-fit as we'll be averaging out any over-fitting. The depth of the tree is generally controlled by restricting splits to nodes with some minimum number of observations.
+2. The tree depth. Typically the trees are not pruned, as we don't mind if the individual trees over-fit as we'll be averaging out any over-fitting. The depth of the tree is generally controlled by restricting splits to nodes with some minimum number of observations.
 
 ### Implementation in R
 
