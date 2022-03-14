@@ -1,0 +1,226 @@
+---
+title: 'Workshop 3: Missing values and imputation'
+output: html_document
+---
+
+In this workshop we'll be looking at missing values, how to visualise where they are, and what we might do to impute their values. We'll be using the `nanier` package for missing values and the `simputation` and `VIM` packages for imputation techniques, along with the `skimr` and ackages for quickly summarising data.
+
+We start by loading the packages and some data.
+
+```{r, include=FALSE}
+library(tidyverse)
+library(naniar)
+library(simputation)
+library(skimr)
+library(VIM)
+
+husbands <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/husbands.csv")
+yeast <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/yeast.csv")
+```
+
+Note we've used `include=FALSE` here in the chunk header. This is to stop `knitr` outputting any messages, warnings or output. In this case we're suppressing the startup messages from the libraries and the output of column types from `read_csv`.
+
+## Recoding missing values
+
+We'll start by taking a look at the `husbands` dataset. This is (rather old-fashioned) data on husband and wife pairings. Each row is a husband and wife pair, and we have information on their age (`H.Age`, `W.Age`) and height (`H.Ht`, `W.Ht`) as well as the husbands age when they were married `H.Age.Marriage`. Let's take a look:
+
+```{r}
+husbands
+```
+
+The first thing you should notice is that the `W.Age` column has an entry of 9999 in row 8. Clearly this is incorrect, as it is very unlikely that the wife's age was 9999 years. Instead, the person who put these data together coded the missing values as 9999. Indeed, the `skim` function in `skimr` is useful for taking a quick look across the data frame (the `skimr_include_summary=FALSE` chunk option omits the 'Data Summary' block when knitting).
+
+```{r, skimr_include_summary = FALSE}
+husbands %>% skim()
+```
+
+We can see that both the `W.Age` and `H.Age.Marriage` contain entries of 9999 (note the p100 column, which is the maximum), whereas the other columns seem sensible. Indeed, this makes the mean wife age and mean husband age at marriage senseless.
+
+To fix this, we can use the `replace_with_na()` function in `naniar`. This takes an argument `replace` which should be a named list, where the names are column names and the values are the value(s) you wish to replace in each column with `NA`. Note that there is also a function for doing the opposite, `replace_na()` in the `tidyr` package (useful for filling in `NA` where you know the correct value).
+
+```{r, skimr_include_summary = FALSE}
+husbands_na <- husbands %>%
+  replace_with_na(replace = list(W.Age = 9999,
+                                 H.Age.Marriage = 9999))
+husbands_na %>% skim()
+```
+
+With this we see that the means are now sensible. We also know how many are missing.
+
+### Try yourself
+
+1. Use `skim` to take a look at the `yeast` data. You should notice it uses `999` for missing.
+
+```{r}
+skim(yeast)
+```
+
+2. Investigate the function `replace_with_na_all` to replace all the `999`'s with `NA`. Save the result in `yeast_na`.
+
+```{r}
+# Try replacing the 999 in just the first two numeric columns
+yeast_na <- yeast %>%
+  replace_with_na(replace = list(alpha.0 = 999,
+                                 alpha.7 = 999))
+skim(yeast_na)
+# Now try doing it all at once
+yeast_na <- yeast %>%
+  replace_with_na_all(condition = ~ .x == 999)
+skim(yeast_na)
+```
+
+3. Check it's worked using `skim`.
+
+```{r}
+skim(yeast_na)
+```
+
+
+## Visualising missing values
+
+Now that we know we have missing values, a useful task is to visualise those values. The `naniar` package contains a range of options for this. We start with a simple visualisation of where the missing values are across the data frame:
+
+```{r}
+vis_miss(husbands_na)
+```
+
+From this we can see that the wife's age is missing relatively frequently, while the husbands age at marriage is only missing a few times. Of interest is whether these times coincide:
+
+```{r}
+husbands_na %>% filter(is.na(H.Age.Marriage)) %>% vis_miss()
+```
+
+Yes, we see that of the 4 rows where we have missing values for the husbands age at marriage, 3 of them also have the wife's age missing. Thus, if we want to try and guess what the Husbands Age at Marriage might be by utilising information in the `W.Age` column, we note that we'd only be able to guess one of the 4 missing observations.
+
+Another useful set of plots is the `gg_miss_var` and `gg_miss_case` functions:
+
+```{r}
+gg_miss_var(husbands_na)
+gg_miss_case(husbands_na)
+```
+
+The first shows us how many are rows contain missing data for each variable, while the second shows how many variables have missing data for each row. We can also do an "upset" plot which shows interactions between missingness of variables:
+
+```{r}
+gg_miss_upset(husbands_na, nsets = 2)
+```
+
+From this we can clearly see that the Wife's Age has the most missing values, and for 3 of those, the husbands age at marriage is also missing.
+
+Of interest would be whether the missingness of the wife's age (or anything else!) is dependent on some of the data we have[^mar]. We can start by looking at the relationship between the wife's age and husband's age:
+
+```{r}
+ggplot(data = husbands_na) +
+  geom_point(mapping = aes(x=H.Age, y=W.Age))
+```
+
+We see a fairly linear relationship: The husband's age is a fairly good predictor of the wife's age. We can adapt this to show where the missing values are by switching to `geom_miss_point`:
+
+```{r}
+ggplot(data = husbands_na) +
+  geom_miss_point(mapping = aes(x=H.Age, y=W.Age))
+```
+
+Note that the wife's ages that are missing (red) are just given an arbitrary value off the bottom of the plot. From this we can see that there doesn't seem to be any clustering of the red points at any particular husband age. Thus, it seems reasonable that the wife's age might be missing completely at random, and in addition be predictable form the husband's age.
+
+### Try yourself
+
+1. Take a look at the relationship between `H.Age.Marriage` and `W.Age` using the `husbands_na` data. Is the husband's age at marriage useful for predicting the wife's age?
+
+```{r}
+ggplot(data = husbands_na) +
+  geom_miss_point(mapping = aes(x=H.Age.Marriage, y=W.Age))
+```
+
+2. Visualise the missingness in the `yeast_na` data. Look at the `alpha.0` and `alpha.7` columns for example.
+
+```{r}
+vis_miss(yeast_na)
+gg_miss_var(yeast_na)
+gg_miss_case(yeast_na)
+```
+
+## Mean value imputation
+
+One option for imputing (filling in) the missing values is to use the mean value for the variable at the non-missing values. Another option would be the median. Let's have a go for the `husbands_na` data.
+
+```{r, skimr_include_summary = FALSE}
+husbands_na %>%
+  mutate(W.Age = impute_mean(W.Age)) %>%
+  skim()
+
+# We could use a different variable name for this so we can visualise the effect of mean imputation:
+husbands_na %>%
+  mutate(W.Age.NA = impute_mean(W.Age)) %>%
+  ggplot() +
+  geom_histogram(mapping = aes(x=W.Age.NA, fill=is.na(W.Age)), bins=10)
+```
+
+Notice that what we've done is replaced the `W.Age` column with an imputed version there-of. It would be useful to be able to track what is going on (e.g. so we could visualise how we've done) - the `bind_shadow()` and `add_label_shadow()` functions are useful for this. `bind_shadow()` adds another set of columns, one for each variable, dictating whether it's missing or not. In this case we're utilising the added `W.Age_NA` column.
+
+```{r}
+husbands_na %>%
+  bind_shadow() %>%
+  mutate(W.Age = impute_mean(W.Age)) %>%
+  ggplot() +
+  geom_point(mapping = aes(x = H.Age, y = W.Age, col=W.Age_NA))
+```
+
+We can see that the imputation isn't particularly good! This really shouldn't be surprising to us!
+
+## K-nearest neighbour imputation
+
+We can improve the imputation using numerous methods. A useful one is k-nearest neighbours utilising the `VIM` package. This automatically adds columns with the postfix `_imp` containing whether or not the column was imputed, so we don't need to `bind_shadow()`:
+
+```{r}
+husbands_na %>%
+  kNN(k=5) %>%
+  ggplot() +
+  geom_point(mapping = aes(x = H.Age, y = W.Age, col=W.Age_imp))
+```
+
+We see that this does quite a bit better!
+
+### Try yourself
+
+1. Try altering the $k$ in k-nearest neighbour imputation. e.g. try $k=1$ or $k=100$ and see how they do.
+
+```{r}
+husbands_na %>%
+  kNN(k=10) %>%
+  ggplot() +
+  geom_point(mapping = aes(x = H.Age, y = W.Age, col=W.Age_imp))
+```
+
+2. Take the `yeast_na` data and `select` out just the columns that start with `alpha`. Use k-nearest neighbour imputation on the this. Take a look at the relationship between `alpha.0` and `alpha.7` as a starting point. For plotting, you might want to add some `alpha` and arrange first by `alpha.7_imp` so that the imputed points are drawn last.
+
+```{r}
+yeast_na %>%
+  select(starts_with('alpha')) %>%
+  kNN(k=5) %>%
+  arrange(alpha.7_imp) %>%
+  ggplot() +
+  geom_point(mapping = aes(x=alpha.0, y=alpha.7, col=alpha.7_imp), alpha=0.4)
+```
+
+3. Play with $k=1$ and $k=1000$ as well.
+
+```{r}
+yeast_na %>%
+  select(starts_with('alpha')) %>%
+  kNN(k=1) %>%
+  arrange(alpha.7_imp) %>%
+  ggplot() +
+  geom_point(mapping = aes(x=alpha.0, y=alpha.7, col=alpha.7_imp), alpha=0.4)
+
+yeast_na %>%
+  select(starts_with('alpha')) %>%
+  kNN(k=1000) %>%
+  arrange(alpha.7_imp) %>%
+  ggplot() +
+  geom_point(mapping = aes(x=alpha.0, y=alpha.7, col=alpha.7_imp), alpha=0.4)
+```
+
+
+[^mar]: Recall that this would be missing at random, rather than missing completely at random.
+
