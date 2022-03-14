@@ -49,16 +49,18 @@ wage.test  <- read_csv("../data/wage-test.csv")
 
     -   Recursive partitioning methods.
 
+-   Random forests are then collections of trees.
+
 ---
 
 ## Overview of Regression Trees
 
--   Basic idea is to split the data into groups using predictors, and
+-   The basic idea is to split the data into groups using the predictors, and
     then estimate the response within each group by a fixed value.
 
 -   Most commonly, the groups are formed by a sequence of **binary splits**.
 
--   Resulting partition of the data can be described by a **binary tree**.
+-   The resulting partition of the data can be described by a **binary tree**.
 
 -   Perhaps easiest to understand through an example.
 
@@ -69,8 +71,9 @@ wage.test  <- read_csv("../data/wage-test.csv")
 -   Artificial dataset of 400 observations with a single predictor $x$
     and a target $y$.
 
--   Relationship between $x$ and $y$ is quite complicated -- difficult
-    to model using linear regression.
+-   Relationship between $x$ and $y$ is quite complicated.
+
+-   It would be difficult to model using linear regression.
 ]
 
 .right-plot[
@@ -95,17 +98,17 @@ toy.rp <- rpart(y ~ x, cp=0.1, data=toytree)
 toy_splits <- round(toy.rp$splits[,"index"],3)
 ```
 
--   Tree formed by recursive binary partitioning of data.
+-   A tree is formed by recursive binary partitioning of data.
 
--   All data starts at 'root' node (at top).
+-   All data starts at the 'root' node at the top.
 
--   First split (branching) of the tree is at its root.
+-   The first split branching the tree is at its root.
 
     -   Data with $x < `r toy_splits[1]`$ branch left.
 
     -   Data with $x \ge `r toy_splits[1]`$ branch right.
 
--   Second split is to further divide the $x < `r toy_splits[1]`$ group to form two
+-   A second split further divides the $x < `r toy_splits[1]`$ group to form two
     sub-groups.
 
     -   Data with $x \ge `r toy_splits[2]`$ branch left.
@@ -159,7 +162,7 @@ ggplot(toytree) +
 
 ## How to Grow a Tree
 
--   At each stage in tree growth, want to select the best split.
+-   At each stage in tree growth, we want to select the best split.
 
     -   Which node to split at?
 
@@ -167,7 +170,7 @@ ggplot(toytree) +
 
     -   What value of that variable to split at?
 
--   Best split usually regarded as the one which results in smallest
+-   The best split is usually regarded as the one which results in smallest
     possible *residual sum of squares* on the training data:
     $$\mathsf{RSS}_{train} = \sum_{i=1}^n \left ( y_i - \hat y_i \right )^2$$
 
@@ -175,7 +178,7 @@ ggplot(toytree) +
     value at leaf containing record $i$. All predictions at leaf $\ell$
     are assigned the value $\bar y_{\ell}$.
 
--   The residual sum of squares for a tree can be written in the form
+-   The residual sum of squares for a tree can then be written as
     $$\mathsf{RSS} = \sum_{\ell} \sum_{i \in C_{\ell}} \left ( y_{i} - \bar y_{\ell} \right )^2$$
     where the set $C_{\ell}$ indexes the observation at leaf $\ell$.
 
@@ -232,14 +235,16 @@ $$\mathsf{RSS} = \left [ (2-2.5)^2 + (3-2.5)^2 \right ] + \left [ (7-7)^2 \right
 
 -   Factors are split by dividing the factor levels into two sets.
 
--   Observations are then sent down left or right branch according to this
+-   Observations are then sent down the left or right branch according to this
     division.
 
 -   The separation of the levels is again done so as to minimize the
     residual sum of squares.
 
--   Note that with factors with many levels, there are a (very) large number
+-   Note that for factors with many levels, there are a (very) large number
     of possible splits to consider.
+
+-   If there are $k$ levels, then there are $2^{k-1}-1$ possible splits to consider.
 
 ---
 
@@ -313,12 +318,12 @@ text(wage.rp)
 
 -   Regression trees can handle missing data using *surrogate splits*.
 
--   A surrogate split is an alternative that approximates the (best)
+-   A surrogate split is an alternative that approximates the best
     primary split.
 
--   Surrogate split on first node is $\verb"EDU" < 14.5$.
+-   Surrogate split on the first node is `EDU` $< 14.5$.
 
--   Any record with missing value on `OCCUP` will follow split according
+-   Any record with a missing value on `OCCUP` will split according
     to this surrogate.
 ]
 
@@ -344,9 +349,9 @@ wage.pred.rp %>%
 
 -   MSE of prediction for regression tree is $24.4$.
 
--   MSE of prediction with linear model was $21.9$.
+-   MSE of prediction with the linear model was $21.9$.
 
--   Suggests that relationship between target and predictors is
+-   This suggests that the relationship between target and predictors is
     reasonably linear.
 
 ---
@@ -364,7 +369,7 @@ wage.pred.rp %>%
 
 -   Consider the bias-variance trade off:
 
-    -   One observation per leaf implies lots of flexibility in model
+    -   One observation per leaf implies lots of flexibility in the model
         (so low bias) but high variability.
 
     -   Many observations per leaf reduce flexibility (introduce bias)
@@ -390,7 +395,7 @@ ggplot(toytree) +
 
 .left-code[## Example continued
 
--   Recall that regression trees imply 'step function' estimation of trend.
+-   Recall that regression trees imply a 'step function' estimation of the trend.
 
 -   The more complex the tree, the more complex the step function!
 ]
@@ -421,21 +426,21 @@ lines(x,predict(toy.rp.3),lwd=2)
 -   We can think about the bias-variance trade off in terms of model
     complexity.
 
--   Low complexity -- high bias -- low variability.
+-   Low complexity - high bias - low variability.
 
--   High complexity -- low bias -- high variability.
+-   High complexity - low bias - high variability.
 
--   This motivates the introduction of *complexity parameter* `cp`.
+-   This motivates the introduction of the **complexity parameter** `cp`.
 
 -   `cp` specifies the minimum improvement in model fit that warrants
-    inclusion of a new split in tree.
+    inclusion of a new split in the tree.
 
 -   Implies tree growth ceases when no split produces an improvement of
     at least `cp`.
 
 -   `cp` is the relative improvement in residual sum of squares.
 
--   Specified by `cp` argument of `rpart`, default `cp = 0.01`.
+-   Specified by `cp` argument of `rpart()`, default `cp=0.01`.
 
 ---
 
@@ -491,22 +496,22 @@ Prediction using `cp=0.001` is better than the default value of `cp=0.01` in thi
 
 -   The default value of $cp=0.01$ is only a rule-of-thumb.
 
--   Can often get better predictions by adjusting this parameter.
+-   We can often get better predictions by adjusting this parameter.
 
--   No use tuning on training data - will always select the most complex
-    tree (overfitting).
+-   Bu there is no use tuning using the training data - we will always select the most complex
+    tree, overfitting.
 
--   One approach is to divide available data into training and
-    *validation* datasets.
+-   One approach is to divide the available data into training and
+    **validation** datasets.
 
-    -   Usually training set larger - e.g. training to validation size
+    -   Usually the training set is larger - e.g. training to validation size
         ratio of 3:1, or even 9:1.
 
 -   Then use the training data for growing the tree.
 
 -   Predictive accuracy is then assessed by predicting on the validation dataset.
 
--   Pick the value of `cp` to that minimizes prediction error.
+-   Pick the value of `cp` that minimizes prediction error.
 
 ---
 
@@ -520,12 +525,12 @@ Prediction using `cp=0.001` is better than the default value of `cp=0.01` in thi
 -   The idea is that we split the data into equally size blocks
     (subgroups).
 
--   Each block in turn being set aside as the validation data, with
+-   Each block in turn is set aside as the validation data, with the
     remaining blocks combining to form the training set.
 
 -   The prediction error is then averaged over the results for each validation set.
 
--   Common to use *10-fold* cross-validation when the data are split into 10
+-   Common to use *10-fold* cross-validation where the data are split into 10
     blocks (so 90% to 10% training to validation ratio at each stage).
 
     -   Extreme version is 'leave-one-out' cross-validation.
@@ -566,3 +571,196 @@ class: middle,inverse
 # Forests
 
 ---
+
+## Tree instability
+
+- Decision tree models are known to be **unstable**.
+
+- When many variables are available, there are many potential competing splits that serve to improve the model fit by around the same amount.
+
+- The choice of which split to use can then result in very different subtrees.
+
+- We'll illustrate this by producing a tree and then resample the training data, re-selecting
+the same number of observations with replacement (*bootstrapping*) and produce a second tree.
+
+- Ideally the trees should not differ much as the data come from the same underlying population.
+
+---
+
+.left-code[
+## Tree instability
+
+```{r wagebs, eval=FALSE}
+set.seed(5)
+wage.train.bs <- slice_sample(
+                   wage.train,
+                   n=400,
+                   replace=TRUE)
+
+bind_rows(lst(wage.train,
+              wage.train.bs),
+          .id="data") %>%
+  select(data, WAGE,
+           AGE, EDU, EXP) %>%
+  pivot_longer(-c(data, WAGE)) %>%
+  ggplot() +
+  geom_point(aes(x=value, y=WAGE),
+             alpha=0.5) +
+  facet_grid(rows=vars(data),
+             cols=vars(name),
+             scales='free_x') +
+  labs(x=NULL)
+```
+
+The distributions of the two datasets are similar.
+]
+
+.right-plot[
+```{r, ref.label="wagebs", echo=FALSE}
+```
+]
+
+---
+
+.left-code[
+## Tree instability
+
+```{r wagebstree, eval=FALSE}
+m1 <- rpart(WAGE ~ .,
+            data=wage.train)
+m2 <- rpart(WAGE ~ .,
+            data=wage.train.bs)
+plot(m1, margin=0.1)
+text(m1)
+plot(m2, margin=0.1)
+text(m2)
+```
+
+The trees are very different.
+
+Even the variable at the first split differs.
+]
+
+.right-plot[
+```{r, echo=FALSE}
+m1 <- rpart(WAGE ~ ., data=wage.train)
+m2 <- rpart(WAGE ~ ., data=wage.train.bs)
+par(mfrow=c(2,1), mar=c(0,0,2,0))
+plot(m1, margin=0.1)
+text(m1)
+title("wage.train")
+plot(m2, margin=0.1)
+text(m2)
+title("wage.train.bs")
+```
+]
+
+---
+
+## Random forests
+
+A random forest is a collection of decision trees (e.g. regression trees) generated by applying two separate randomisation processes:
+
+1. The data (rows) are randomised through a bootstrap resample.
+2. A random selection of predictors (columns) are considered for each split, rather than considering all variables.
+
+Once done, a tree is fit to the data. The process is then repeated, and many trees are generated. Predictions are then averaged across all the trees in the forest.
+
+The forest **benefits** from the instability of the trees.
+
+ - Each bootstrap resample is likely to generate a different tree as tree building is brittle.
+ - Considering only a subset of the available predictor variables for each split in the tree helps ensure the trees a different.
+
+We end up exploring the data from many different angles.
+
+---
+
+## Random forests
+
+Random forests are examples of **ensemble methods**.
+
+They average predictions across multiple different trees to give a better prediction than any one tree.
+
+There are two key parameters when fitting a random forest that can potentially be tuned:
+
+1. The number of predictor variables to consider for each split.
+
+    - Using fewer predictor variables for each split can ensure the trees differ.
+
+2. The tree depth. Trees are not pruned - while individual trees over-fit, we average out the over-fitting.
+
+    - Controlled by restricting splits to nodes with some minimum number of observations.
+
+---
+
+.left-code[
+## Random forest: Wage data
+
+```{r, message=FALSE, warning=FALSE}
+library(randomForest)
+set.seed(1945)
+wage.rf.1 <- randomForest(WAGE ~ .,
+               data = wage.train)
+wage.rf.1.pred <- wage.test %>%
+  bind_cols(
+    .pred=predict(wage.rf.1,
+                  newdata=wage.test)
+    )
+wage.rf.1.pred %>%
+  summarise(
+    MSE = mean((.pred - WAGE)^2))
+```
+
+The forest does well without any tuning.
+
+The first two trees are very deep and very different.
+]
+
+.right-plot[
+```{r, echo=FALSE, message=FALSE}
+library(reprtree)
+tree1 <- reprtree:::as.tree(getTree(wage.rf.1, k=1, labelVar = TRUE),
+                            wage.rf.1)
+tree2 <- reprtree:::as.tree(getTree(wage.rf.1, k=2, labelVar = TRUE),
+                            wage.rf.1)
+par(mfrow=c(2,1), mar=c(0,0,1,0))
+plot(tree1, type="uniform", main="Tree 1")
+text(tree1, cex=0.4, label=NULL)
+plot(tree2, type="uniform", main="Tree 2")
+text(tree2, cex=0.4, label=NULL)
+```
+]
+
+---
+
+## Random forest: Tuning
+
+We can tune the number of predictors to consider at each split using `mtry`.
+
+- This defaults to $p/3$ where $p$ is the number of predictors, so in the case of the `WAGE` data will be 3.
+
+The tree depth is controlled by `nodesize`, the minimum size of nodes before a split is allowed.
+
+- This defaults to 5 for prediction.
+
+Tuning these parameters is sometimes useful for improving the model fit.
+---
+
+## Random forest: Tuning for the Wage data
+
+```{r}
+wage.rf.2 <- randomForest(WAGE ~ ., data=wage.train, mtry = 2)
+wage.rf.3 <- randomForest(WAGE ~ ., data=wage.train, mtry = 2, nodesize = 1)
+wage.rf.pred <- wage.test %>%
+                  bind_cols(
+                    .pred1 = predict(wage.rf.1, newdata=wage.test),
+                    .pred2 = predict(wage.rf.2, newdata=wage.test),
+                    .pred3 = predict(wage.rf.3, newdata=wage.test)
+                  )
+wage.rf.pred %>%
+  summarise(MSE.1 = mean((.pred1 - WAGE)^2),
+            MSE.2 = mean((.pred2 - WAGE)^2),
+            MSE.3 = mean((.pred3 - WAGE)^2))
+```
+
+In this example the original forest does better than the tuned ones.
