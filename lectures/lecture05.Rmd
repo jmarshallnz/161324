@@ -6,6 +6,8 @@ output:
     css: [default, default-fonts, "custom.css"]
     mathjax: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
     nature:
+      navigation:
+        scroll: false
       highlightStyle: tomorrow
       highlightLines: true
       countIncrementalSlides: false
@@ -155,24 +157,6 @@ ggplot(toytree) +
 
 ---
 
-## The Anatomy of a Tree
-
--   In mathematical terms, a tree is a type of *undirected graph*.
-
--   In the language of graph theory:
-
-    -   the branches of the trees are called *edges* or *arcs*.
-
-    -   the vertices are often referred to as *nodes*.
-
--   Regression trees are *rooted* (with the root of the tree
-    conventionally plotted at the top of the tree)
-
--   Vertices at the tips of the tree (i.e. those without further splits)
-    are called *leaves*.
-
----
-
 ## How to Grow a Tree
 
 -   At each stage in tree growth, want to select the best split.
@@ -186,18 +170,10 @@ ggplot(toytree) +
 -   Best split usually regarded as the one which results in smallest
     possible *residual sum of squares* on the training data:
     $$\mathsf{RSS}_{train} = \sum_{i=1}^n \left ( y_i - \hat y_i \right )^2$$
-    where $\hat y_i$ is the tree-based prediction.
 
----
-
-## How to Grow a Tree
-
--   Optimal (to minimize RSS) to define $\hat y_i$ to be mean
-    value at leaf containing record $i$.
-
-    -   I.e. if $i$ is assigned to leaf $\ell$, then
-        $\hat y_{i} = \bar y_{\ell}$ where $\bar y_{\ell}$ is the mean
-        of all data at that leaf.
+-   Optimal (to minimize RSS) to define $\hat y_i$ to be the mean
+    value at leaf containing record $i$. All predictions at leaf $\ell$
+    are assigned the value $\bar y_{\ell}$.
 
 -   The residual sum of squares for a tree can be written in the form
     $$\mathsf{RSS} = \sum_{\ell} \sum_{i \in C_{\ell}} \left ( y_{i} - \bar y_{\ell} \right )^2$$
@@ -205,9 +181,9 @@ ggplot(toytree) +
 
 ---
 
-## A Very Simple Choice of Splits
-
--   Data:
+## A Simple Choice of Splits
+.left-code[
+-   Suppose we have just 3 observations:
 
 | $x$ | $y$ |
 | --: | --: |
@@ -220,34 +196,33 @@ ggplot(toytree) +
     (i) split the data according to whether $x < 0.2$ or $x \ge 0.2$; or
 
     (ii) split the data according to whether $x < 0.4$ or $x \ge 0.4$.
+]
+--
+.right-plot[
+For tree (i):
 
----
+-   Mean for left-hand leaf is $\bar{y}_1 = 2$
 
-## Example continued
+-   Mean for right-hand leaf is $\bar{y}_2 = (3+7)/2 = 5$.
 
--   For tree (i):
+$$\mathsf{RSS} = \left [ (2-2)^2 \right ] + \left [ (3-5)^2 + (7-5)^2 \right ] = 8.$$
+]
 
-    -   Mean for left-hand leaf is $\bar{y}_1 = 2$
+--
+.right-plot[
+For tree (ii):
 
-    -   Mean for right-hand leaf is $\bar{y}_2 = (3+7)/2 = 5$.
+-   Mean for left-hand leaf is $\bar{y}_1 = (2+3)/2 = 2.5$
 
-    $$\mathsf{RSS} = \left [ (2-2)^2 \right ] + \left [ (3-5)^2 + (7-5)^2 \right ] = 8.$$
+-   Mean for right-hand leaf is $\bar{y}_2 = 7$.
 
--   For tree (ii):
+$$\mathsf{RSS} = \left [ (2-2.5)^2 + (3-2.5)^2 \right ] + \left [ (7-7)^2 \right ] = 0.5.$$
+]
 
-    -   Mean for left-hand leaf is $\bar{y}_1 = (2+3)/2 = 2.5$
-
-    -   Mean for right-hand leaf is $\bar{y}_2 = 7$.
-
-    $$\mathsf{RSS} = \left [ (2-2.5)^2 + (3-2.5)^2 \right ] + \left [ (7-7)^2 \right ] = 0.5.$$
-
--   We conclude that tree (ii) is preferable.
-
--   Could have got same results using different splits;
-
-    -   E.g. a split of $x < 0.11$ and $x \ge 0.11$ for tree (i).
-
--   Conventional to split at a midpoint.
+--
+.right-plot[
+**We conclude that tree (ii) is preferable.**
+]
 
 ---
 
@@ -255,121 +230,85 @@ ggplot(toytree) +
 
 -   So far we have dealt only with splits based on numerical predictors.
 
--   With factors split by dividing the factor levels into two sets.
+-   Factors are split by dividing the factor levels into two sets.
 
--   Observations sent down left or right branch according to this
+-   Observations are then sent down left or right branch according to this
     division.
 
 -   The separation of the levels is again done so as to minimize the
     residual sum of squares.
 
----
-
-## Implementing Regression Trees in R
-
--   Regression trees constructed in R using `rpart`
-
-    -   Name is an abbreviation of *recursive partitioning*.
-
--   Function is part of the `rpart` library, which must be pre-loaded.
-
--   Basic syntax for `rpart` mirrors that for `lm`.
-
--   For example:
-
-        rpart(y ~ x1 + x2, data=mydata)
-
-    fits regression tree with target variable `y` and predictors `x1`
-    and `x2`, from data frame `mydata`.
+-   Note that with factors with many levels, there are a (very) large number
+    of possible splits to consider.
 
 ---
 
+.left-code[
 ## Regression Tree for the Wage Data
 
-```{r}
+```{r wagerp, eval=FALSE}
 library(rpart)
-wage.rp <- rpart(WAGE ~ . ,data=wage.train)
+wage.rp <- rpart(WAGE ~ . ,
+                 data = wage.train)
 summary(wage.rp)
 ```
 
+The `rpart()` command fits a regression tree,
+using a similar syntax to `lm()`.
+
+Note copious output from `summary()`.
+
+We see the first split is on `OCCUP` where
+the first, third, fifth and sixth levels
+go down the left branch, while the second
+and fourth levels go to the right.
+
+This split was chosen as it improved the RSS by 17.2%.
+The next best option is to split on `EDU < 13.5`.
+]
+
+.scroll-box-right.small-font.right-plot[
+```{r, ref.label="wagerp", echo=FALSE}
+```
+]
+
 ---
 
-## Example continuedR code continued
+.left-code[
+## Regression Tree for the Wage Data
 
-```{r}
-plot(wage.rp, compress=TRUE)
+```{r wagerp2, eval=FALSE}
+plot(wage.rp,
+     compress = TRUE,
+     margin = 0.1)
 text(wage.rp)
 ```
 
----
+The `plot` command visualises the tree,
+whilst the `text` command adorns it with
+labels.
 
-## Example continuedCommentary on R code
+The `compress=TRUE` tends to make the tree
+more visually appealing, while `margin=0.1`
+adds a bit of whitespace.
 
--   We start by loading the `rpart` package.
+Note that factor levels are reassigned the values
+a, b, c etc.
+]
 
--   The second command saves a regression tree as `wage.rp`.
-
-    -   Note the use of the dot in the model formula (works as for
-        `lm`).
-
--   Summary of `wage.rp` describes formation of all splits.
-
--   The table provides information on the extent to which each new split
-    has improved the model.
-
--   The remainder of the summary output describes each node in turn.
-
-    -   We get an ordered list of the top few possible splits (the
-        *primary splits*).
-
-    -   Listed improvements are measured in terms of a the fractional
-        reduction in the residual sum of squares for the data at the
-        node in question (the *parent* node for the split).
+.right-plot[
+```{r, echo=FALSE}
+par(mar=c(0,0,0,0))
+plot(wage.rp,
+     compress = TRUE,
+     margin = 0.1)
+text(wage.rp)
+```
+]
 
 ---
 
-## Example continuedCommentary on R code continued
-
--   First node (at root) formed by splitting on the variable `OCCUP`.
-
-    -   Observations at levels 1, 3, 5 and 6 (i.e. `Management`,
-        `Clerical`, `Professional` and `Other`) sent down the left-hand
-        branch
-
-    -   Observations at levels 2 and 4 (i.e. `Sales` and `Service`) sent
-        down the right-hand branch.
-
--   Splitting in this way results in a 17.2% reduction in the residual
-    sum of squares.
-
--   Next best option would have been to split according to `EDU < 13.5`,
-    which would have resulted in a 14% reduction in residual sum of
-    squares.
-
--   Leaves of tree (i.e. terminal nodes) are described by the number of
-    observations, the mean response (i.e. prediction) and sum of squares
-    at each one.
-
-    -   For example, there is a leaf (node 30) with 11 observations and
-        mean target value $12.18$.
-
----
-
-## Example continuedComments on plot
-
--   `plot(wage.rp)` plots just the structure of the regression tree.
-
-    -   Optional argument `compress=TRUE` tends to improve appearance of
-        plot.
-
--   We add text describing the splits by `text(wage.rp`).
-
--   Note that the splits based on factors use alphabetically ordered
-    letters to represent the factor levels (i.e. 'a' for level 1, 'b'
-    for level 2 and so forth).
-
----
-
+.left-code[
 ## Missing Data and Surrogate Splits
 
 -   Regression trees can handle missing data using *surrogate splits*.
@@ -377,52 +316,30 @@ text(wage.rp)
 -   A surrogate split is an alternative that approximates the (best)
     primary split.
 
--   If an observation lacks data on the current primary split variable,
-    then it will be assigned to a branch by applying the surrogate
-    splitting rule.
-
----
-
-## Example revisited
-
-    Node number 1: 400 observations,    complexity param=0.1718578
-      mean=8.930075, MSE=24.86239 
-      left son=2 (280 obs) right son=3 (120 obs)
-      Primary splits:
-          OCCUP splits as  LRLRLL,   improve=0.17185780, (0 missing)
-          EDU   < 13.5 to the left,  improve=0.13989640, (0 missing)
-          AGE   < 26.5 to the left,  improve=0.06522658, (0 missing)
-          SEX   splits as  LR,       improve=0.03670674, (0 missing)
-          EXP   < 9.5  to the left,  improve=0.03420540, (0 missing)
-      Surrogate splits:
-          EDU < 14.5 to the left,  agree=0.832, adj=0.442, (0 split)
-    .....
-
--   Surrogate split on first note is $\verb"EDU" < 14.5$.
+-   Surrogate split on first node is $\verb"EDU" < 14.5$.
 
 -   Any record with missing value on `OCCUP` will follow split according
     to this surrogate.
+]
 
+.scroll-box-right.small-font.right-plot[
+```{r, ref.label="wagerp", echo=FALSE}
+```
+]
 ---
 
 ## Prediction Using Regression Trees
 
--   Prediction works by running each test case down the tree.
-
-    -   Uses surrogate splits where necessary.
-
--   Use R function `predict`.
-
--   Syntax mirrors prediction for linear models.
-
----
-## Tree-based Prediction for the Wage Data
+Prediction works by running each test case down the tree, using surrogate splits where necessary.
 
 ```{r}
-wage.rp.pred <- predict(wage.rp,wage.test)
-head(wage.rp.pred)
-mse.rp <- mean((wage.rp.pred - wage.test$WAGE)^2)
-mse.rp
+wage.pred.rp <- 
+  wage.test %>%
+  bind_cols(
+    .pred = predict(wage.rp, newdata=wage.test)
+  )
+wage.pred.rp %>%
+  summarise(MSE =  mean((.pred - WAGE)^2))
 ```
 
 -   MSE of prediction for regression tree is $24.4$.
@@ -436,7 +353,7 @@ mse.rp
 
 ## Pruning Trees
 
--   In principle we can continue to split nodes of a tree until there is
+-   In principle we can continue to split the nodes of a tree until there is
     one leaf corresponding to each unique observed set of predictor
     variables.
 
@@ -445,7 +362,7 @@ mse.rp
 
 -   This would lead to a highly unstable regression tree.
 
--   Consider bias-variance trade off:
+-   Consider the bias-variance trade off:
 
     -   One observation per leaf implies lots of flexibility in model
         (so low bias) but high variability.
@@ -460,7 +377,7 @@ mse.rp
 
 -   Optimal prediction will aim for 'predictable' trend.
 
--   No hope of predicting 'noise' based on available predictor.
+-   We have no hope of predicting the 'noise' based on the single available predictor.
 ]
 
 .right-plot[
@@ -475,7 +392,7 @@ ggplot(toytree) +
 
 -   Recall that regression trees imply 'step function' estimation of trend.
 
--   The more complex the tree, the more complex the step function.
+-   The more complex the tree, the more complex the step function!
 ]
 
 .right-plot[
@@ -483,7 +400,7 @@ ggplot(toytree) +
 toy.rp.1 <- rpart(y ~ x, cp=0.1, data=toytree)
 toy.rp.2 <- rpart(y ~ x, cp=0.01, data=toytree)
 toy.rp.3 <- rpart(y ~ x, cp=0.000001, data=toytree, minsplit=3)
-par(mar=c(4,1,1,1))
+par(mar=c(3,1,1,1))
 par(mfrow=c(3,2))
 plot(toy.rp.1,compress=T,margin=0.1)
 plot(x,y,col=2,pch=19)
@@ -501,47 +418,50 @@ lines(x,predict(toy.rp.3),lwd=2)
 
 ## Model Complexity
 
--   Can think about bias-variance trade off in terms of model
+-   We can think about the bias-variance trade off in terms of model
     complexity.
 
 -   Low complexity -- high bias -- low variability.
 
 -   High complexity -- low bias -- high variability.
 
--   Motivates introduction of *complexity parameter* $cp$.
+-   This motivates the introduction of *complexity parameter* `cp`.
 
--   $cp$ specifies minimum improvement in model fit that warrants
+-   `cp` specifies the minimum improvement in model fit that warrants
     inclusion of a new split in tree.
 
 -   Implies tree growth ceases when no split produces an improvement of
-    at least $cp$.
+    at least `cp`.
 
--   $cp$ relates to relative improvement in residual sum of squares.
+-   `cp` is the relative improvement in residual sum of squares.
 
--   Specified by `cp` argument of `rpart`, default `cp`$=0.01$.
+-   Specified by `cp` argument of `rpart`, default `cp = 0.01`.
 
 ---
 
 .left-code[## Regression Trees of different complexities
 
 ```{r}
-wage.rp.1 <- rpart(WAGE ~ .,
+wage.rp.2 <- rpart(WAGE ~ .,
                    data=wage.train,
                    cp=0.1)
-wage.rp.2 <- rpart(WAGE ~ .,
+
+wage.rp.3 <- rpart(WAGE ~ .,
                    data=wage.train,
                    cp=0.001)
 ```
+
+There is a clear difference in complexity here!
 ]
 
 .right-plot[
 ```{r, echo=FALSE}
 par(mfrow=c(2,1), mar=c(0,0,1,0))
-plot(wage.rp.1,compress=T,margin=0.1)
-text(wage.rp.1,cex=0.7)
-title("cp=0.1")
 plot(wage.rp.2,compress=T,margin=0.1)
 text(wage.rp.2,cex=0.7)
+title("cp=0.1")
+plot(wage.rp.3,compress=T,margin=0.1)
+text(wage.rp.3,cex=0.7)
 title("cp=0.001")
 ```
 ]
@@ -553,45 +473,46 @@ title("cp=0.001")
 ```{r}
 wage.rp.pred <- wage.test %>%
   bind_cols(
-    .pred1 = predict(wage.rp.1, newdata=wage.test),
-    .pred2 = predict(wage.rp.2, newdata=wage.test)
+    .pred1 = predict(wage.rp, newdata=wage.test),
+    .pred2 = predict(wage.rp.2, newdata=wage.test),
+    .pred3 = predict(wage.rp.3, newdata=wage.test)
   )
 wage.rp.pred %>%
   summarise(MSE.1 = mean((.pred1 - WAGE)^2),
-            MSE.2 = mean((.pred2 - WAGE)^2))
+            MSE.2 = mean((.pred2 - WAGE)^2),
+            MSE.3 = mean((.pred3 - WAGE)^2))
 ```
 
--   Prediction using `cp`$=0.001$ better than default value in this
-    case.
+Prediction using `cp=0.001` is better than the default value of `cp=0.01` in this case.
 
 ---
 
 ## Validation
 
--   Default value of $cp=0.01$ is only a rule-of-thumb.
+-   The default value of $cp=0.01$ is only a rule-of-thumb.
 
 -   Can often get better predictions by adjusting this parameter.
 
--   No use tuning on training data -- will always select most complex
+-   No use tuning on training data - will always select the most complex
     tree (overfitting).
 
 -   One approach is to divide available data into training and
     *validation* datasets.
 
-    -   Usually training set larger -- e.g. training to validation size
+    -   Usually training set larger - e.g. training to validation size
         ratio of 3:1, or even 9:1.
 
--   Training data used for growing tree.
+-   Then use the training data for growing the tree.
 
--   Predictive accuracy assessed by predicting on validation dataset.
+-   Predictive accuracy is then assessed by predicting on the validation dataset.
 
--   Pick value of $cp$ to give minimize prediction error.
+-   Pick the value of `cp` to that minimizes prediction error.
 
 ---
 
 ## Cross-Validation
 
--   Validation results depend on particular decomposition into training
+-   Validation results will depend on the particular decomposition into training
     and validation subsets.
 
 -   Cross-validation addresses this issue.
@@ -600,29 +521,33 @@ wage.rp.pred %>%
     (subgroups).
 
 -   Each block in turn being set aside as the validation data, with
-    remaining blocks combining to form training set.
+    remaining blocks combining to form the training set.
 
--   Prediction error averaged over results for each validation set.
+-   The prediction error is then averaged over the results for each validation set.
 
--   Common to use *10-fold* cross-validation when data split into 10
+-   Common to use *10-fold* cross-validation when the data are split into 10
     blocks (so 90% to 10% training to validation ratio at each stage).
 
     -   Extreme version is 'leave-one-out' cross-validation.
 
--   Can be run for different values of $cp$.
+-   Can be run for different values of `cp`.
 
 ---
 
 .left-code[## Cross-Validation for the Wage Data Trees
 
--   A table of model characteristics for different values of $cp$ can be
-    obtained using the command `printcp`.
-
--   Mirrors output from `summary` of a regression tree.
+A table of model characteristics for different values of `cp` can be
+obtained using the command `printcp`.
 
 ```{r wagecp, eval=FALSE}
-printcp(wage.rp.2)
+printcp(wage.rp.3)
 ```
+
+The `xerror` column contains cross-validation estimates of the
+(relative) prediction error.
+
+`xstd` is the standard error (i.e. an estimate of the uncertainty)
+for these cross-validation estimates.
 ]
 
 .small-font.right-plot[
@@ -630,22 +555,9 @@ printcp(wage.rp.2)
 ```
 ]
 
----
-
-## Example continued
-
--   `xerror` column contains cross-validation estimates of the
-    (relative) prediction error.
-
--   `xstd` is the standard error (i.e. an estimate of the uncertainty)
-    for these cross-validation estimates.
-
--   Minimum cross-validation error occurs when $cp=0.02396$.
-
--   Note that differences between the values of `xerror` are quite small
-    compared to the entries in `xstd`, indicating that the
-    cross-validation results do not provide a strong preference for any
-    tree with between 1 and 31 vertices.
+--
+.left-code[**No real evidence to prefer any tree past 1 split!**
+]
 
 ---
 

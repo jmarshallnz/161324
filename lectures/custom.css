@@ -52,3 +52,13 @@
 .small-font .remark-code { /*Change made here*/
   font-size: 70% !important;
 }
+
+.scroll-output {
+  height: 90%;
+  overflow-y: scroll;
+}
+
+.scroll-box-right {
+  height:33em;
+  overflow-y: scroll;
+}
