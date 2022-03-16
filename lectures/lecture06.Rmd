@@ -1,6 +1,6 @@
 ---
 title: 'Lecture 6'
-subtitle: 'Neural networks'
+subtitle: 'Neural networks and tidy models'
 output:
   xaringan::moon_reader:
     css: [default, default-fonts, "custom.css"]
@@ -23,6 +23,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 library(tidyverse)
+library(skimr)
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
 theme_set(theme_minimal())
@@ -362,6 +363,544 @@ wage.test %>%
 
 class: middle,inverse
 
-# A prediction example
+# Tidy models
 
 ---
+
+## Tidy models
+
+We've seen how to do prediction using linear models, regression trees, forests,
+and neural networks.
+
+In each case both the model fitting and obtaining predictions was consistent:
+
+- We use a formula syntax to specify the model and provide the training data.
+- We use the `predict` command on the resulting model object, providing testing data.
+
+This works well as long as all our models follow this same syntax. Unfortunately,
+many models require different syntaxes for one or both of these steps.
+
+We also likely want to process the data beforehand.
+
+- Impute missing values
+- Convert predictors to a common scale.
+
+And we'd potentially be better to assess model predictions using metrics
+other than MSE.
+
+The `tidymodels` set of packages deals with these tasks.
+
+---
+
+## Tidymodels
+
+We will look at just part of the `tidymodels` framework, focusing on four packages:
+
+- `rsample` for resampling.
+- `recipes` for data processing.
+- `parsnip` for model fitting.
+- `yardstick` for measuring model performance.
+
+The [tidymodels website](https://tidymodels.org) has a number of excellent tutorials and an overview of some of the additional packages available (e.g. `tune`, `workshop`).
+
+We'll demonstrate these via an example.
+
+---
+
+## Example: COVID-19 vaccinations
+
+In October 2021, the Ministry of Health released the first set of COVID-19 vaccination data at a fine spatial scale, statistical area units level 2, or `SA2`. In urban areas, each SA2 covers around 2,000 to 4,000 residents. In highly rural areas the areas are larger but can contain fewer (less than 1,000) residents.
+
+```{r, message=FALSE}
+vacc <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/covid19/covid-vacc.csv")
+vacc
+```
+
+---
+
+## Example: COVID-19 vaccinations
+
+Unfortunately, the `VaccRate` data has become corrupted, and `r vacc %>% filter(is.na(VaccRate)) %>% nrow()` SA2s are missing `VaccRate`:
+
+```{r, echo=FALSE, skimr_include_summary = FALSE}
+skim(vacc %>% select(where(is.numeric)), -sa2)
+```
+
+Out goal is to predict `VaccRate` in the regions where it is unknown. We also have some map data:
+
+```{r, message=FALSE, warning=FALSE}
+library(sf)
+sa2_map <- read_sf("https://www.massey.ac.nz/~jcmarsha/data/covid19/sa2_boundary.sqlite")
+```
+
+---
+
+.left-code[
+## Example: COVID-19 vacc
+
+```{r covidreg, eval=FALSE}
+sa2_map %>%
+  left_join(vacc) %>%
+  ggplot() +
+  geom_sf(aes(fill=VaccRate),
+          size=0.1) +
+  scale_fill_viridis_c(
+    option="A",
+    begin=0.5,
+    na.value = 'grey30'
+  )
+```
+
+We see that vaccination rates in an area
+are similar to neighbouring areas.
+
+But the regions that are missing are mostly
+spatially contiguous.
+
+This will make things harder, as we can't
+rely on spatial auto-correlation.
+]
+
+.right-plot[
+```{r, ref.label="covidreg", echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+## Example: COVID-19 vaccination
+
+We'll start by dividing into training and test sets:
+
+```{r}
+vacc.train <- vacc %>% filter(!is.na(VaccRate))
+vacc.test  <- vacc %>% filter(is.na(VaccRate)) %>% select(-VaccRate)
+```
+
+Out goal now will be to build some models with `vacc.train` and apply these to do prediction on `vacc.test`.
+
+As we don't know the target in `vacc.test`, we will set it aside and concentrate our modelling efforts on `vacc.train`.
+
+---
+
+.left-code[
+## Example: COVID-19 vacc
+
+We start by plotting the relationships between the covariates and vaccination rates.
+
+First the numeric measures:
+
+```{r vaccrel, eval=FALSE}
+vacc.train %>%
+  pivot_longer(c(Population,
+                 SocialDeprivation,
+                 DistanceToVacc,
+                 PropUnder30)) %>%
+  ggplot() +
+  geom_point(aes(x=value,
+                 y=VaccRate),
+             alpha=0.4) +
+  facet_wrap(vars(name),
+             scales='free_x') +
+  labs(x=NULL)
+```
+]
+
+.right-plot[
+```{r, ref.label="vaccrel", echo=FALSE}
+```
+]
+
+---
+
+.left-code[
+## Example: COVID-19 vacc
+
+And now the factors:
+
+```{r vaccrel2, eval=FALSE}
+vacc.train %>%
+  pivot_longer(
+    c(DHB, TertiaryStudents)) %>%
+  ggplot() +
+  geom_boxplot(aes(x=VaccRate,
+                   y=value)) +
+  facet_wrap(vars(name),
+             scales='free_y') +
+  labs(y=NULL)
+```
+
+It seems all of these variables
+are important for vaccination rates.
+]
+
+.right-plot[
+```{r, ref.label="vaccrel2", echo=FALSE}
+```
+]
+---
+
+## Example: COVID-19 vacc
+
+We'll now start modelling. Our process will be:
+
+1. Splitting our training data into training and validation sets.
+
+    - We need an independent set from that used to train models in order to assess model performance.
+
+2. Processing the data so that the numeric measures are on similar scales.
+
+    - This is particularly important for neural networks to avoid computational difficulties.
+    - But also we might like to do a transformation. e.g. the `DistanceToVacc` variable might warrant
+    a log transformation.
+
+3. Model training using the prepared training data.
+
+4. Prediction on the prepared validation data.
+
+5. Select the best model.
+
+6. Re-fit the best model on all the training data and use it to predict the unknown vaccination rates on the test data.
+
+---
+
+## Step 1: Splitting the data
+
+We'll utilise the `rsample` package in `tidymodels` for splitting data. The `initial_split()` function is useful for a single split:
+
+```{r}
+library(rsample)
+split <- initial_split(vacc.train, prop=0.75)
+split
+```
+
+The `split` object contains information on how the data should be split: which rows should be assigned to the dataset for analysis, and which should be assigned to the dataset for assessment or validation.
+
+We can extract the datasets using `training()` and `testing()` functions:
+
+```{r}
+vacc.analysis <- training(split)
+vacc.validation <- testing(split)
+```
+
+---
+
+## Step 2: Prepare the data
+
+We'll utilise the `recipes` package in `tidymodels` to codify the operations we wish to perform on the data. This ensures our operations are consistent when applied to multiple dataset.
+
+- If we're scaling data, then the amount we scale in both datasets must be exactly the same.
+
+We start by creating a `recipe` using a model formula and some template data
+
+- The dataset passed in is just a template to derive the variable names and roles. This isn't model fitting.
+
+```{r, message=FALSE}
+library(recipes)
+vacc.base <- recipe(VaccRate ~ ., data=vacc.analysis)
+vacc.base
+```
+
+---
+
+## Step 2: Prepare the data
+
+.left-code[
+
+```{r vaccrec, eval=FALSE}
+vacc.rec <- vacc.base %>%
+  update_role(sa2,
+              new_role="id") %>%
+  step_log(DistanceToVacc) %>%
+  step_normalize(
+    all_numeric_predictors())
+
+vacc.rec
+```
+
+The `sa2` variable (region) is a row identifier
+so shouldn't be used for prediction.
+
+The `DistanceToVacc` variable will be log transformed.
+
+All numeric variables will be normalised to a common scale
+with mean 0 and variance 1.
+]
+
+.right-plot[
+```{r, ref.label="vaccrec", echo=FALSE}
+```
+]
+---
+
+## Step 2: Prepare the data
+
+Now that we have our recipe, we can prepare it using the analysis data set. This will train the various data transformations:
+
+```{r}
+vacc.prep <- vacc.rec %>% prep(vacc.analysis)
+vacc.prep
+```
+
+---
+
+## Step 2: Preparing the data
+
+Finally, we can bake our prepared recipe to produce the final analysis set:
+
+```{r, eval=FALSE}
+vacc.analysis.baked <- vacc.prep %>% bake(vacc.analysis)
+skim(vacc.analysis.baked)
+```
+```{r, echo=FALSE, skimr_include_summary = FALSE}
+vacc.analysis.baked <- vacc.prep %>% bake(vacc.analysis)
+skim(vacc.analysis.baked %>% select(where(is.numeric), -sa2))
+```
+
+---
+
+## Step 2: Preparing the data
+
+The final validation set is baked in the same way:
+
+```{r, eval=FALSE}
+vacc.validation.baked <- vacc.prep %>% bake(vacc.validation)
+skim(vacc.validation.baked)
+```
+```{r, echo=FALSE, skimr_include_summary = FALSE}
+vacc.validation.baked <- vacc.prep %>% bake(vacc.validation)
+skim(vacc.validation.baked %>% select(where(is.numeric), -sa2))
+```
+Note the mean and sd are not 0 and 1, because the transformation was trained
+using the `vacc.analysis` set and we've used the same scaling coefficients here.
+
+---
+
+## Step 3: Modelling
+
+Now we have our baked data, we can start training models. We'll use the `parsnip` package for this.
+
+The `parsnip` package provides a consistent interface for different model types across different fitting engines.
+
+- Model types generally define the structure of the model.
+- Different engines can and do produce different estimators for a particular model.
+
+For a linear model, we use `linear_reg()` to setup the regression model. We can fit the linear regression using:
+ - least squares with `lm`.
+ - penalised least squares (LASSO/Ridge) with `glmnet`.
+ - a Bayesian framework with `stan`.
+ 
+`parsnip` unifies the interface across all the different model types and engines.
+- The same parameter names are used across engines.
+- Everything has a `fit()` and `predict()` function that act in predictable ways.
+
+---
+
+## Step 3: Modelling
+
+Let's fit a linear regression, a random forest and a neural network.
+
+For the neural network we'll use 12 hidden units<sup>1</sup> and 10,000 epochs (iterations).
+
+```{r, message=FALSE}
+library(parsnip)
+spec.lm <- linear_reg(mode = "regression", engine = "lm")
+spec.rf <- rand_forest(mode = "regression", engine = "randomForest")
+spec.nn <- mlp(mode = "regression", engine="nnet", hidden_units = 12, epochs = 10000)
+```
+
+We then fit the models with `fit()`. Notice how this is consistent for all models:
+
+```{r}
+set.seed(9)
+fit.lm <- spec.lm %>% fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
+fit.rf <- spec.rf %>% fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
+fit.nn <- spec.nn %>% fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
+```
+
+.footnote[
+[1] We have $p = 4 + (20-1) + (2-1) = 24$ effective predictors.
+]
+---
+
+.left-code[## Step 3: Modelling
+
+If we like, we can extract the underlying model
+object to interrogate it:
+
+```{r parsniplm, eval=FALSE}
+fit.lm %>%
+  extract_fit_engine() %>%
+  summary()
+```
+
+```{r, echo=FALSE}
+lm.tidy <- fit.lm %>% glance()
+```
+
+- Larger population centers are more vaccinated.
+- More young people lowers vaccination.
+- Increased social deprivation lowers vaccination.
+- Increased distance to vaccination lowers vaccination.
+- Places with tertiary students are more vaccinated.
+
+The overall model fit isn't too bad, explaining `r round(100*lm.tidy$r.squared,1)`%
+of the variation.
+]
+
+.scroll-box-right.small-font.right-plot[
+```{r, ref.label="parsniplm", echo=FALSE}
+```
+]
+
+---
+
+## Step 4: Prediction
+
+.left-code-wide[
+We then do prediction from our fitted models using our baked validation set:
+
+```{r parsnippred, eval=FALSE}
+pred.lm <- fit.lm %>%
+  predict(new_data=vacc.validation.baked)
+pred.rf <- fit.rf %>%
+  predict(new_data=vacc.validation.baked)
+pred.nn <- fit.nn %>%
+  predict(new_data=vacc.validation.baked)
+
+vacc.validation %>%
+  select(VaccRate) %>%
+  bind_cols(pred.lm %>% rename(lm = .pred),
+            pred.rf %>% rename(rf = .pred),
+            pred.nn %>% rename(nn = .pred))
+```
+
+`predict` returns a `tibble` with a `.pred` column,
+so needs to be renamed if you want separate columns.
+
+There is correlation between `VaccRate` and predictions.
+]
+
+.right-plot-narrow[
+```{r, ref.label="parsnippred", echo=FALSE}
+```
+]
+
+---
+
+.left-code-wide[
+## Step 4: Prediction
+
+It's tidier to bind the predictions into one column:
+
+```{r plotpred, eval=FALSE}
+pred.lm <- vacc.validation %>%
+  bind_cols(fit.lm %>% predict(vacc.validation.baked))
+pred.rf <- vacc.validation %>%
+  bind_cols(fit.rf %>% predict(vacc.validation.baked))
+pred.nn <- vacc.validation %>%
+  bind_cols(fit.nn %>% predict(vacc.validation.baked))
+
+pred <- bind_rows(
+  lst(pred.lm, pred.rf, pred.nn),
+  .id="model")
+
+pred %>% ggplot() +
+  geom_abline(slope=1, intercept=0) +
+  geom_point(aes(x=.pred, y=VaccRate), alpha=0.3) +
+  facet_wrap(vars(model), ncol=1)
+```
+
+The predictions generally look reasonable.
+
+The neural net and linear regression have predicted vaccination rates over 1.
+]
+
+.right-plot-narrow[
+```{r, ref.label="plotpred", echo=FALSE, fig.dim=c(3.2,4.5)}
+```
+]
+
+---
+
+## Step 5: Model selection
+
+To evaluate the best model we can use the `yardstick` package.
+
+The `metrics` function gives us the root mean squared error, mean absolute error and $R^2$ statistic
+for prediction:
+
+```{r, message=FALSE}
+library(yardstick)
+pred %>%
+  group_by(model) %>%
+  metrics(truth=VaccRate, .pred) %>%
+  pivot_wider(names_from=.metric, values_from=.estimate)
+```
+
+For all metrics, the random forest is best.
+
+---
+
+## Step 6: Predicting the unknown
+
+Now that we know which model is best<sup>1</sup> we can now re-train it using all the training data (rather than just our analysis subset) and use this to do prediction for the unknown vaccination rates:
+
+```{r testfit, eval=FALSE}
+trained_fit <- spec.rf %>% fit(VaccRate ~ . -sa2, bake(vacc.prep, vacc.train))
+
+vacc.test.pred <- vacc.test %>%
+                    bind_cols(
+                      predict(trained_fit, bake(vacc.prep, vacc.test))
+                    ) %>%
+                    rename(VaccRate = .pred)
+vacc.test.pred %>% slice_head(n=5)
+```
+
+```{r, echo=FALSE}
+old_width <- options(width=100)
+```
+
+.small-font[
+```{r, ref.label="testfit", echo=FALSE}
+```
+]
+
+```{r, echo=FALSE}
+options(width=old_width[["width"]])
+```
+
+.footnote[
+[1] We haven't tuned these models, so they may not be best!
+]
+
+---
+
+.left-code[
+## Step 6: Predicting the unknown
+
+```{r predmap, eval=FALSE}
+vacc_all <- bind_rows(
+  list(train=vacc.train,
+       test=vacc.test.pred),
+       .id="set")
+
+sa2_map %>%
+  left_join(vacc_all) %>%
+  ggplot() +
+  geom_sf(aes(fill=VaccRate),
+          size=0.1) +
+  scale_fill_viridis_c(
+    begin=0.5,
+    option="A"
+  )
+```
+
+We now have predictions for the
+vaccination rates in all regions.
+]
+
+.right-plot[
+```{r, ref.label="predmap", message=FALSE, echo=FALSE}
+```
+]
