@@ -1683,12 +1683,22 @@ trying $p/2 = 8$ nodes in the hidden layer.
 library(nnet)
 set.seed(1069)
 wage.nn.1 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE)
+```
+
+Notice that this network stopped training after 100 iterations, the default.
+
+We should increase the number of iterations to ensure convergence. We'll also
+try varying the `decay` and `size` parameters:
+
+```{r}
 set.seed(1069)
-wage.nn.2 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE)
+wage.nn.1 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE, maxit=250)
 set.seed(1069)
-wage.nn.3 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE, decay=0.01)
+wage.nn.2 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE, maxit=1000, decay=0.01)
 set.seed(1069)
-wage.nn.4 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE, decay=0.01)
+wage.nn.3 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE, maxit=250)
+set.seed(1069)
+wage.nn.4 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE, maxit=1000, decay=0.01)
 wage.nn.pred <- wage.test %>% bind_cols(
   nn.1 = predict(wage.nn.1, newdata=wage.test),
   nn.2 = predict(wage.nn.2, newdata=wage.test),
@@ -1727,16 +1737,32 @@ Some points to note:
     error for this model on the artificial test set is
     $\textsf{MSE}= `r round(mse.nn$nn.1, 1)`$.
 
--   In the second neural network we try 5 hidden nodes, giving a total
-    of 91 weights to be determined. (Check that you can work out why
-    this is the number of weights in the model.) We get
-    $\textsf{MSE}= `r round(mse.nn$nn.2, 1)`$.
+-   In the second model we try specifying 0.01 for the `decay` argument. As a result
+    we notice a much better training RSS (the final value of iteration output), but
+    a significantly worse prediction on the independent test set of $\textsf{MSE}= `r round(mse.nn$nn.2, 1)`$.
+    This is due to **overfitting**. We have so many degrees of freedom that we've
+    coerced the neural network into fitting the training data too well - with new
+    observations that are just a bit different, we get the predictions badly wrong.
+    We can see this when we look at the prediction on the training data, which are
+    significantly lower for `wage.nn.2`:
+    
+    ```{r}
+    wage.nn.pred.train <- wage.train %>% bind_cols(
+      nn.1 = predict(wage.nn.1, newdata=wage.train),
+      nn.2 = predict(wage.nn.2, newdata=wage.train),
+      nn.3 = predict(wage.nn.3, newdata=wage.train),
+      nn.4 = predict(wage.nn.4, newdata=wage.train)
+    )
+    wage.nn.pred.train %>%
+      pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") %>%
+      group_by(model) %>%
+      summarise(MSE = mean((.pred - WAGE)^2))
+    ```
 
--   The third and fourth models differ from the first and second only in
-    that we specify a value of $0.01$ for the `decay` argument. As a
-    result, the prediction error for the neural net with 8 hidden nodes
-    gets a little worse ($`r round(mse.nn$nn.3, 1)`$) but the error for the
-    network of size 5 improves, to $`r round(mse.nn$nn.4, 1)`$.
+-   The third and fourth models differ from the first and second only in that we
+    reduce the number of hidden nodes to 5, thus reducing the number of weights
+    to 91. As a result, the prediction errors for the neural nets are $`r round(mse.nn$nn.3, 1)`$ for
+    the default value of `decay` and $`r round(mse.nn$nn.4, 1)`$ for decay 0.01.
 :::
 
 ## Summary of Prediction Methods
