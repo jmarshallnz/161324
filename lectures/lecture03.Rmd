@@ -221,7 +221,7 @@ There are three main types of missing values:
 
 - Let's pretend that we have a class, and the students are handing in some homework.
 
-- The teacher finds they don't have all the homework - some is missing.
+- The teacher finds they don't have all the homework - some is missing, being eaten by a dog.
 
 - The dog might belong to the teacher, who got into the stack and just ate some of it.
 
@@ -239,7 +239,7 @@ There are three main types of missing values:
 
 - Let's pretend that we have a class, and the students are handing in some homework.
 
-- The teacher finds they don't have all the homework - some is missing.
+- The teacher finds they don't have all the homework - some is missing, being eaten by a dog.
 
 - Suppose now the dog belongs to a flat of students.
 
@@ -257,7 +257,7 @@ There are three main types of missing values:
 
 - Let's pretend that we have a class, and the students are handing in some homework.
 
-- The teacher finds they don't have all the homework - some is missing.
+- The teacher finds they don't have all the homework - some is missing, being eaten by a dog.
 
 - Suppose now that the dog has been trained to only eat bad homework, but the teacher doesn't know that.
 
