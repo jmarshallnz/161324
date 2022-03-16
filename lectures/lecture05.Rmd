@@ -555,7 +555,7 @@ The `xerror` column contains cross-validation estimates of the
 for these cross-validation estimates.
 ]
 
-.small-font.right-plot[
+.scroll-box-right.small-font.right-plot[
 ```{r, ref.label='wagecp', echo=FALSE}
 ```
 ]
