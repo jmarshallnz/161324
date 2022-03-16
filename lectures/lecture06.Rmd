@@ -35,7 +35,7 @@ wage.test  <- read_csv("../data/wage-test.csv")
 .left-code[
 ## Neural Networks
 
--   An artificial neural network (or just 'neural network') is
+-   An artificial neural network is
     a type of prediction model based on a crude representation
     of a human brain.
 
@@ -57,13 +57,16 @@ knitr::include_graphics("graphics/brain.jpg")
 
 An artificial feed-forward neural network:
 
--   Comprises ordered sequence of layers of neurons.
+-   Comprises an ordered sequence of layers of neurons.
 
 -   Each node connects to all nodes in next layer.
 
--   Input layer (predictor nodes) feeds to hidden layer
-    ('derived features' $z$), and then to output node (target
+-   The input layer (predictor nodes) feeds to a hidden layer
+    (derived features $z$), and then to an output node (target
     variable).
+
+-   Can have multiple hidden layers (deep learning) but we'll be
+    sticking with one for simplicity!
 ]
 
 .right-plot[
@@ -114,8 +117,7 @@ text(8,10.2,"Output",cex=1.5)
     3.  choose a function to describe the predicted target $\hat y$ in
         terms of $z_1, \ldots, z_M$.
 
--   Neural networks so complex that little theory exists to help with
-    these choices.
+-   There is little theory to help with these choices.
 
 -   Rule of thumb: try $\lceil p/2 \rceil$ hidden nodes.
 
@@ -123,10 +125,10 @@ text(8,10.2,"Output",cex=1.5)
         $p/2$; e.g. $\lceil 7/2 \rceil = 4$.
 
     -   $p$ is effective number of predictors, where a factor on $K$
-        levels contributes $K-1$ predictors (through coding to dummy
+        levels contributes $K-1$ predictors (through coding to indicators
         variables).
 
-    -   E.g. If there are 3 numerical predictors and one factor on 4
+    -   e.g. If there are 3 numerical predictors and one factor on 4
         levels, then $p = 3+ (4-1) = 6$.
 ---
 
@@ -142,10 +144,15 @@ text(8,10.2,"Output",cex=1.5)
 -   Hence $z_k = \phi(v_k)$ where
     $$v_k = \alpha_{0k} + \alpha_{1k} x_1 + \cdots + \alpha_{pk} x_p~~~~(k=1,\ldots,M)$$
 
--   Predicted target $\hat y$ is derived as a linear combination of the
+-   The predicted target $\hat y$ is derived as a linear combination of the
     hidden features:
     $$\hat y = \beta_0 + \beta_1 z_1 + \cdots + \beta_M z_M.$$
 
+-   There are $M$ linear models with $p+1$ parameters for the hidden layer which are then transformed with the non-linear function $\phi$.
+
+-   There is then another linear model with $M+1$ parameters for the predicted target.
+
+-   This allows a **lot** of flexibility.
 ---
 
 .left-code[
@@ -171,12 +178,12 @@ ggplot() +
 
 ## Fitting A Neural Network
 
--   Neural network defined by large number of parameters:
-    $\alpha_{01}, \alpha_{11}, \ldots, \beta_{M}$.
+-   A neural network is defined by large number of parameters:
+    $\alpha_{01}, \alpha_{11}, \ldots, \alpha_{pM}, \beta_0, \ldots, \beta_{M}$.
 
 -   These are often referred to as *weights* for the neural net.
 
--   They must be estimated by fitting the model to training data.
+-   The $M(p+1)+M+1$ weights must be estimated by fitting the model to training data.
 
 -   We aim to select the weights that minimize the residual sum of
     squares for predictions from the neural network.
@@ -184,9 +191,9 @@ ggplot() +
 -   Not straightforward because of the complexity of the model.
 
     -   Consider the sheer number of parameters that need to be
-        estimated.
+        estimated, complicated by the non-linear transformation.
 
--   In practice neural networks are fitted using a so-called *back
+-   In practice neural networks are fitted using the *back
     propagation algorithm*.
 
 -   This involves a complicated search over possible weights, and can be
@@ -194,17 +201,29 @@ ggplot() +
 
 ---
 
+## Basic idea of back propagation:
+
+0.  We generate random initial starting weights.
+
+1.  We 'feed-forward' the training data through the layers to give a prediction $\hat{y}$.
+
+2.  We compute the residual sum of squares RSS. This is our *loss function* that we want to minimise.
+
+3.  RSS is a complicated function of the weights, but it's construction means we can compute the partial derivatives with respect to each weight quite easily (i.e. the direction and amount each weight needs to move to decrease RSS).
+
+4.  We use *batch gradient descent* to move all the weights $w$ a step in the right direction. The step size is known as the *decay* - it's basically to ensure we don't overshoot the minimum RSS.
+
+5.  We take the step, update the weights, then loop back to step 1.
+
+---
+
 ## Implementing Neural Networks in R
 
--   R function for fitting a neural network is `nnet`.
+-   R function for fitting a neural network is `nnet()` from the `nnet` package.
 
--   This is part of the `nnet` package which must be pre-loaded.
+-   The syntax to fit a neural network is of the familiar form
 
--   The syntax to fit a neural network is of the form
-
-        nnet(y ~ x1 + x2 + x3, data=mydata, size=2, linout=T)
-
--   The specification of the model formula and data frame is familiar.
+        nnet(y ~ x1 + x2 + x3, data=mydata, size=2, linout=TRUE)
 
 -   `size` argument specifies the number of nodes in the hidden layer.
     It has no default value.
@@ -213,11 +232,11 @@ ggplot() +
     relationship between the prediction (output $\hat y$) and the
     derived features is linear or not.
 
-    -   Default setting for `linout` is `FALSE`, when `nnet` produces
-        output constrained to internal $[0,1]$. (Good as classification
-        probability.)
+    -   The default setting for `linout` is `FALSE`, when `nnet` produces
+        output constrained to the internal $[0,1]$ by applying an additional
+        sigmoid activation function.
 
-    -   For prediction problems we must set `linout=T`.
+    -   For prediction problems we must set `linout=TRUE`.
 
 ---
 
@@ -225,12 +244,9 @@ ggplot() +
 
 -   `nnet` has optional arguments controlling model fitting.
 
--   `decay` controls weight updating rate in back propagation algorithm.
+-   `decay` controls the weight updating rate (learning rate) in back propagation algorithm.
 
-    -   Can have quite a significant impact on the results.
-
-    -   Default value is zero, but setting `decay` to a value such as
-        $0.01$ or $0.001$ often a better choice.
+    -   Setting `decay` to a value such as $0.01$ or $0.001$ can be useful to speed up or slow down learning.
 
 -   The model fitting algorithm used by `nnet` needs initial values for
     the weights.
@@ -245,16 +261,18 @@ ggplot() +
     -   Can suppress this variation by setting the random number seed
         with the `set.seed()` command.
 
+-   `nnet` uses a small number of iterations (100) by default. Increasing this can be required if the decay/learning rate is low. We set this by specifying `maxit`.
+
 ---
 
 ## Neural Networks for the Wage Data
 
 -   We will train a neural network on wage data.
 
--   For number of hidden nodes to use initially, need to count number of
+-   For the number of hidden nodes to use initially, we need the number of
     effective predictors.
 
--   Data frame has 5 numerical predictors:
+-   There are 5 numerical predictors:
 
     -   `EDU`, `SOUTH`, `EXP`, `UNION`, and `AGE`;
 
@@ -267,73 +285,183 @@ ggplot() +
 
 -   Suggests we try $p/2 = 8$ nodes in the hidden layer.
 
--   Will obtain predictions using `predict` function applied to trained
-    network.
-
 ---
 
+.left-code-wide[
 ## Neural Networks for the Wage Data
 
-```{r}
+```{r wagenn1, eval=FALSE}
 library(nnet)
 set.seed(1069)
-wage.nn.1 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE)
-wage.test %>%
-  bind_cols(
-    .pred = predict(wage.nn.1, newdata=wage.test)
-  ) %>%
-  summarise(MSE = mean((.pred - WAGE)^2))
+wage.nn.1 <- nnet(WAGE ~ .,size=8,
+                  data=wage.train,
+                  linout=TRUE)
 ```
 
----
-
-## Example continuedMore R code
-
-```{r}
-set.seed(1069)
-wage.nn.2 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE)
-set.seed(1069)
-wage.nn.3 <- nnet(WAGE ~ .,size=8, data=wage.train, linout=TRUE, decay=0.01)
-set.seed(1069)
-wage.nn.4 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE, decay=0.01)
-wage.test %>%
-  bind_cols(
-    pred1 = predict(wage.nn.1, newdata=wage.test),
-    pred2 = predict(wage.nn.2, newdata=wage.test),
-    pred3 = predict(wage.nn.3, newdata=wage.test),
-    pred4 = predict(wage.nn.4, newdata=wage.test),
-  ) %>%
-  summarise(across(starts_with('pred'), ~mean((. - WAGE)^2)))
-```
-
----
-
-## Example continuedCommentary on R code
-
--   We reinitialize random number generator with `set.seed` before
-    fitting each model so as to improve comparability between models.
-
--   The first model has 8 hidden nodes. How many weights?
+This first model has 8 hidden nodes. How many weights?
 
     -   $p+1 = 17$ weights per hidden node (number of $\alpha$s);
 
     -   $8+1=9$ weights for output node (number of $\beta$s);
 
-    -   Net hence has $17\times 8 + 9 = 145$ weights to be determined.
+    -   So $17\times 8 + 9 = 145$ weights to be determined.
 
--   Mean square prediction error for this model is $\MSE = 22.3$.
+The neural network has stopped learning
+after 100 iterations - it has not converged.
+]
 
--   Second neural network:
+.right-plot-narrow[
+```{r, ref.label='wagenn1', echo=FALSE}
+```
+]
 
-    -   5 hidden nodes, (so 91 weights to be determined).
+---
 
-    -   We get $\MSE = 23.7$.
+.left-code-wide[
+## Neural Networks for the Wage Data
 
--   Third and fourth nets differ from the first and second only in that
-    we specify a value of $0.01$ for the `decay` argument.
+```{r wagenn2, eval=FALSE}
+set.seed(1069)
+wage.nn.1 <- nnet(WAGE ~ .,size=8,
+                  data=wage.train,
+                  linout=TRUE,
+                  maxit=250) #<<
+```
 
--   Results in small changes to prediction errors (better in one case,
-    worse in other).
+Giving more iterations enables it to converge.
+]
+
+.right-plot-narrow[
+```{r, ref.label='wagenn2', echo=FALSE}
+```
+]
+
+---
+
+.left-code-wide[
+## Neural Networks for the Wage Data
+
+```{r wagenn3, eval=FALSE}
+set.seed(1069)
+wage.nn.2 <- nnet(WAGE ~ .,size=8,
+                  data=wage.train,
+                  linout=TRUE,
+                  maxit=1000,
+                  decay=0.01) #<<
+```
+
+Using a different `decay` value can
+sometimes allow it to converge to a different
+place.
+
+Because we have so many parameters, there
+are often multiple minima available.
+
+Running with different seeds and different
+decay rates can change which minima we settle
+in (which may result in a lower RSS, so a
+better fit).
+]
+
+.scroll-box-right.small-font.right-plot-narrow[
+```{r, ref.label='wagenn3', echo=FALSE}
+```
+]
+
+---
+
+.left-code-wide[
+## Neural Networks for the Wage Data
+
+```{r wagenn4, eval=FALSE}
+set.seed(1069)
+wage.nn.3 <- nnet(WAGE ~ .,
+                  size=5, #<<
+                  data=wage.train,
+                  linout=TRUE,
+                  maxit=250)
+```
+
+The `size` parameter can be worth tuning,
+as it heavily influences the flexibility
+of the resulting model.
+
+This model has 91 weights.
+]
+
+.scroll-box-right.small-font.right-plot-narrow[
+```{r, ref.label='wagenn4', echo=FALSE}
+```
+]
+
+---
+
+.left-code-wide[
+## Neural Networks for the Wage Data
+
+```{r wagenn5, eval=FALSE}
+set.seed(1069)
+wage.nn.4 <- nnet(WAGE ~ .,
+                  size=5, #<<
+                  data=wage.train,
+                  linout=TRUE,
+                  decay=0.01, #<<
+                  maxit=1000)
+```
+
+We often need to tune both, and there's
+not necessarily a systematic way of doing
+this well (other than brute force) due
+to the complexity of the model.
+]
+
+.scroll-box-right.small-font.right-plot-narrow[
+```{r, ref.label='wagenn5', echo=FALSE}
+```
+]
+
+---
+
+## Neural Networks for the Wage Data
+.left-code-wide[
+```{r wagenetsumm, eval=FALSE}
+wage.test %>%
+  bind_cols(
+    nn.1 = predict(wage.nn.1, newdata=wage.test),
+    nn.2 = predict(wage.nn.2, newdata=wage.test),
+    nn.3 = predict(wage.nn.3, newdata=wage.test),
+    nn.4 = predict(wage.nn.4, newdata=wage.test),
+  ) %>%
+  summarise(
+    across(starts_with('nn.'), ~mean((. - WAGE)^2)))
+```
+```{r wagenetsumm2, eval=FALSE}
+wage.train %>%
+  bind_cols(
+    nn.1 = predict(wage.nn.1, newdata=wage.train),
+    nn.2 = predict(wage.nn.2, newdata=wage.train),
+    nn.3 = predict(wage.nn.3, newdata=wage.train),
+    nn.4 = predict(wage.nn.4, newdata=wage.train),
+  ) %>%
+  summarise(
+    across(starts_with('nn.'), ~mean((. - WAGE)^2)))
+```
+]
+
+.right-plot-narrow[
+Test data:
+```{r, ref.label="wagenetsumm", echo=FALSE}
+```
+
+Training data:
+```{r, ref.label="wagenetsumm2", echo=FALSE}
+```
+
+**Beware of overfitting!**
+
+`wage.nn.2` gave a much lower RSS in training, but
+gave very poor predictions on the test data!
+]
 
 ---
 
@@ -351,13 +479,13 @@ wage.test %>%
 
 -   Training neural nets is a complex problem.
 
-    -   Fitting methods less stable than for linear models and
-        regression trees.
+    -   Fitting methods are less stable than for linear models and
+        regression trees or forests.
 
-    -   Numerical issues can arise when predictors of (very) different
-        scales.
+    -   Numerical issues can arise when predictors are on (very) different
+        scales, particularly if large in magnitude.
 
-    -   Pre-scaling of predictors can be advisable.
+    -   Pre-scaling predictors can be advisable.
 
 ---
 
