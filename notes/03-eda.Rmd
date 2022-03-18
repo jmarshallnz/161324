@@ -343,10 +343,6 @@ straightforward.
 While interesting, the details of these alternative methods of
 imputation are beyond the scope of this course.
 
-[^gaussian]: The normal distribution is sometimes referred to as the Gaussian
-    distribution after German mathematician (and absolute genius) Carl
-    Friedrich Gauss (1777--1855).
-
 [^missingness]: If you were wondering, 'missingness' is a real word! It appears
     uncommon in everyday usage (it does not appear in my 1876 page
     Shorter Oxford English Dictionary, although it is in the full OED)
