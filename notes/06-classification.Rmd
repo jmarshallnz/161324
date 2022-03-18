@@ -6,7 +6,7 @@ library(tidyverse)
 knitr::opts_chunk$set(comment = "#>")
 theme_set(theme_minimal())
 options(pillar.sigfig = 5)
-wine <- read_csv("data/wine.csv")
+wine <- read_csv("../data/wine.csv")
 ```
 
 ## Introduction to Classification
@@ -43,7 +43,9 @@ derive a classification method with a high degree of accuracy when using
 information from all the variables.
 
 ```{r wineclass, echo=FALSE, fig.cap="Plot of percentage alcohol content against hue for a sample of Italian wines. The coloured plotting symbols distinguish the three different cultivars for the wines."}
-plot(Alcohol ~ Hue, data=wine, col=Cultivar+1)
+ggplot(wine) +
+  geom_point(mapping = aes(x=Hue, y=Alcohol, col=Cultivar)) +
+  guides(col='none')
 ```
 
 If we think of class membership as being defined by a categorical target
@@ -55,7 +57,7 @@ Tree-based methods and neural networks are two prime examples that will
 be considered in this chapter. We shall also a examine some specialized
 methods for classification, including logistic regression, linear
 discriminant analysis, kernel discriminant analysis and naive Bayes
-classifiers[^1].
+classifiers[^discrimination].
 
 In general, no classification method is likely to be 100% accurate. This
 is because there will always be inherent uncertainty on class membership
@@ -92,7 +94,7 @@ In classification we assume that each observation belongs to one of a
 finite number of classes, which we will label $1, 2, \ldots, C$. We will
 make each classification based on the observed vector
 $\boldsymbol{x}= (x_1, x_2, \ldots, x_p)$ of variables (features). Let
-the joint probability function[^2] of $\boldsymbol{x}$ for individuals
+the joint probability function[^jointpdf] of $\boldsymbol{x}$ for individuals
 in class $j$ be denoted by $f_j$.
 
 Now, suppose that we have some prior ideas about the probabilities of
@@ -114,7 +116,7 @@ belong to? To answer this, we must compute the conditional probabilities
 ${\textsf P}(j | \boldsymbol{x})$ for $j=1,\ldots,C$. The quantity
 ${\textsf P}(j | \boldsymbol{x})$ is the probability that the individual
 belongs to class $j$ given that they have feature vector
-$\boldsymbol{x}$. Now, by Bayes' Theorem[^3] we have
+$\boldsymbol{x}$. Now, by Bayes' Theorem[^bayesthm] we have
 \begin{equation}
 {\textsf P}(j | \boldsymbol{x}) = \frac{ \pi_j f_j(\boldsymbol{x}) }{f(\boldsymbol{x})}~~~~~~~~~~(j=1,\ldots,C)
 (\#eq:bayes)
@@ -258,7 +260,7 @@ is equal to one (irrespective of class). Finally, let both features have
 mean zero in group 1, and let both features have mean 1 in group 2. In
 other words, if $\mu_{ij}$ is the mean for feature $i$ in group $j$ then
 $\mu_{11} = \mu_{21} = 0$, and $\mu_{21} = \mu_{22} = 1$. Now, using
-standard results for the multivariate normal distribution[^4], we have
+standard results for the multivariate normal distribution[^theorypaper], we have
 $$\begin{align}
 f_j(\boldsymbol{x}) &= \frac{1}{2 \pi} \exp \left \{ -\frac {(x_1 - x_{1j})^2}{2} \right \}  \exp \left \{ -\frac{(x_2 - x_{2j})^2}{2} \right \}\\
          &= 
@@ -350,6 +352,11 @@ proportions in the data.
 Predicted classes from an LDA model are obtained by the `predict`
 function in the usual kind of way.
 
+While this is relatively consistent with what we've seen in the past,
+we'll be utilising the `tidymodels` framework instead, using `parsnip`
+with the `discrim_linear()` function. We can then use the `yardstick`
+to evaluate performance.
+
 ::: {.example}
 **Prediction for the Wine Data Using LDA**
 
@@ -357,82 +364,80 @@ We start by splitting the wine data into training and test data (which
 we shall refer to throughout this chapter). The `wine` data is in truth
 a relatively straightforward one for classification, so we make things a
 little more challenging by leaving only 100 observations in the training
-set (with the remaining 78 in the validation dataset). We randomize the
-order of the data (to avoid any potential bias in the formation of the
-datasets). These operations are performed in the R code below, where we
-first convert the target variable `Cultivar` (which is numeric by
-default) to a factor.
+set (with the remaining 78 in the validation dataset). These operations
+are performed in the R code below, where we
+first convert the target variable `Cultivar` to a factor.
 
 ```{r, message=FALSE}
-wine <- read_csv("data/wine.csv")
-wine$Cultivar <- as.factor(wine$Cultivar)
+library(rsample)
+wine <- read_csv("../data/wine.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+
 set.seed(2021)
-random.order <- sample(1:nrow(wine), size=nrow(wine), replace=FALSE)
-wine <- wine[random.order,]
-wine.train <- wine[1:100,]
-wine.valid <- wine[101:178,]
-head(wine.train)
+split <- initial_split(wine, prop=100/178)
+wine.train <- training(split)
+wine.test <- testing(split)
+wine.train
 ```
 
 We initially consider prediction with LDA using all the variables.
 
 ```{r, message=FALSE}
-library(MASS)
-wine.lda1 <- lda(Cultivar ~ ., data=wine.train)
+library(discrim)
+library(yardstick)
+wine.lda1 <- discrim_linear() %>% fit(Cultivar ~ ., data=wine.train)
 wine.lda1
-wine.lda1.pred <- predict(wine.lda1, newdata=wine.valid)$class
-table(wine.lda1.pred, wine.valid$Cultivar)
+wine.lda1.pred <- wine.lda1 %>% augment(new_data=wine.test)
+wine.lda1.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-get_perf <- function(pred, truth) {
-  perf = data.frame(pred=pred, true = truth)
-  perf %>% summarise(wrong = sum(pred != true), total = n(),
+get_perf <- function(data, true, pred) {
+  data %>% summarise(wrong = sum({{pred}} != {{true}}), total = n(),
                       perc = round(wrong/total*100,1))
 }
-perf.lda1 <- get_perf(wine.lda1.pred, wine.valid$Cultivar)
+perf.lda1 <- wine.lda1.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
 Note the following:
 
--   We have first loaded the `MASS` library, in order to access the
-    `lda` function.
+-   We have first loaded the `parsnip` library, in order to access the
+    `discrim_linear` function. The model wrappers are actually in the
+    `discrim` package, so you may need to install that first.
 
 -   The dot on the right-hand side of a model formula has the usual
     meaning (of all variables in the data frame barring the response on
     the left-hand side).
 
--   The `summary` command is not very useful when applied to `lda`
-    fitted models. We therefore examine the fitted object `wine.lda1` by
-    simply typing the name of the object. Much of the resulting output
+-   The fit object `wine.lda1` is a parsnip model which then prints the
+    output from `lda()`. Much of the resulting output
     is self explanatory. We note that the table of coefficients of the
     linear discriminants is a matrix which transforms standardized
     versions of the original observations to the linear discriminants.
 
--   The command `predict(wine.lda1, newdata=wine.valid)` obtains class
-    predictions for the observations in `wine.valid`. The resulting
-    object is a *list* with components `class`, `posterior` and `x`. The
-    first of these contains the class predictions (based on maximum
-    posterior probabilities) while the second is a matrix of the
-    aforementioned posterior probabilities. The component `x` includes
-    the 'score' for each observation on the discriminant variables.
+-   We use `augment()` to add the `.pred_class`, `.pred_A`, `.pred_B`
+    and `.pred_C` columns to the `wine.test` data. The first of these
+    are the "hard" class predictions (based on maximum posterior
+    probabilities) while the last 3 are the aforementioned posterior
+    probabilities.
 
--   The command `table(wine.lda1.pred, wine.valid$Cultivar)` generates a
-    cross table of predicted classes against true classes; i.e. the
-    confusion matrix. We see that the overall misclassification rate is
+-   The `yardstick` function `conf_mat` tabulates the predicted classes
+    against the true classes; i.e. the confusion matrix. We see that the
+    overall misclassification rate is
     $`r perf.lda1$wrong`/`r perf.lda1$total` \approx `r perf.lda1$perc`\%$.
 
 We now consider trying to perform LDA using just the variables
 `Alcohol`, `Color` and `Hue`.
 
 ```{r}
-wine.lda2 <- lda(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.lda2.pred <- predict(wine.lda2,wine.valid)$class
-table(wine.lda2.pred,wine.valid$Cultivar)
+wine.lda2 <- discrim_linear() %>% fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.lda2.pred <- wine.lda2 %>% augment(new_data=wine.train)
+wine.lda2.pred %>% conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.lda2 <- get_perf(wine.lda2.pred, wine.valid$Cultivar)
+perf.lda2 <- wine.lda2.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
 We get a worse misclassification rate in this case:
@@ -448,26 +453,22 @@ approaches (though these are beyond the scope of this paper).
 Finally, we have used the training sample relative frequencies to define
 the prior probabilities in both of these LDA classifiers. As you will
 see from the output for `wine.lda1`, this gave
-$(\pi_1,\pi_2,\pi_3) = (`r wine.lda1$prior`)$. We can instead specify our
-own prior probabilities through the `prior` argument to LDA. For
+$(\pi_1,\pi_2,\pi_3) = (`r wine.lda1$fit$prior`)$. We can instead specify our
+own prior probabilities through the `prior` argument to lda(). For
 example, suppose that we thought that in practice all three cultivars
 are equally prevalent. Then we could perform classification using the
-prior $(\pi_1,\pi_2,\pi_3) = (1/3,  1/3,  1/3)$ by
+prior $(\pi_1,\pi_2,\pi_3) = (1/3,  1/3,  1/3)$ instead. Unfortunately
+this isn't yet supported by the `discrim_linear()` framework[^discrim_prior_issue].
 
-```{r, eval=FALSE}
-wine.lda3 <- lda(Cultivar ~ ., data=wine.train, prior=c(1,1,1)/3)
-```
-
-You might like to see what the classifications are like with this
-updated LDA. Given that the prior is only a little different, you should
-expect only small changes from the results obtained using `wine.lda1`.
+However, we wouldn't expect the classifications to change much as the prior
+is only a little different.
 
 ## Kernel Discriminant Analysis{#sec:kda}
 
 While linear discriminant analysis can work well in many applications,
 it can also fail spectacularly when the boundaries between the groups
 are highly non-linear. Consider, for instance, the (artificial) data set
-displayed in Figure \@ref(fig:circledata). The separation between the red and cyan
+displayed in Figure \@ref(fig:circledata). The separation between the red and black
 observations is clear to the eye, but linear discriminant analysis
 cannot handle such a scenario.
 
@@ -481,43 +482,51 @@ y <- as.factor(y)
 circle.df <- data.frame(x1,x2,y)
 circle.df <- circle.df[sqrt(x1^2+x2^2)<2,]
 circle.df <- circle.df[1:500,]
-plot(x2 ~ x1, data=circle.df, pch=19, col=3*as.numeric(y)-1, 
-     xlim=c(-2.2,2.2),ylim=c(-2.2,2.2),xlab=expression(x[1]),ylab=expression(x[2]))
+ggplot(circle.df) +
+  geom_point(aes(x=x1, y=x2, col=y)) +
+  labs(x = expression(x[1]),
+       y = expression(x[2])) +
+  scale_colour_manual(values = c('red', 'black')) +
+  guides(col='none')
 ```
 
 A (far) more flexible approach than LDA is to estimate the probability
-functions $f_1,\ldots,f_C$ using kernel density estimation, as discussed
-in section \@ref(sec:kde). Specifically, we will use the training data from
-each class to construct kernel estimates $\hat f_1, \ldots, \hat f_C$
-when all the predictor variables are continuous. Substituting these
-estimates in Equation \@ref(eq:bayes) leads to *kernel discriminant analysis*.
+functions $f_1,\ldots,f_C$ using kernel density estimation.
+
+Recall that kernel density estimation in one dimension is where we estimate
+a distribution $f$ using the mean of kernel functions (typically guassian)
+centered at each observation.
+
+$$
+\hat{f}(x) = \frac{1}{n}\sum_{i=1}^n \frac{1}{h}K(\frac{x - x_i}{h}).
+$$
+
+Here, $h$ is the *bandwidth* of the kernel density estimator, which essentially
+controls the amount of smoothing: a small value of $h$ will result in a noisy
+distribution, while a large value of $h$ will result in something that may be overly
+smooth and miss fine detail.
+
+We can extend this concept readily to higher dimensions, though the bandwidth $h$
+is replaced by a square matrix of bandwidths of size $d$ if the dimension is $d$.
+
+In the case where we have continuous predictor variables, we can use the training
+data from each class to construct kernel estimates $\hat f_1, \ldots, \hat f_C$.
+Substituting these estimates in Equation \@ref(eq:bayes) leads to *kernel discriminant analysis*.
 
 While kernel discriminant analysis wins over LDA in terms of
 flexibility, the method can be somewhat unreliable when there are large
 numbers of predictor variables. Indeed, kernel density estimation will
-typically prove difficult in more than 5 or 6 dimensions, unless there
+typically prove difficult in more than 3 dimensions, unless there
 are very large numbers of observations available.
 
 Kernel discriminant analysis is implemented in R using the `kda`
-function within the `ks` library, which must be pre-loaded. The syntax
-is a little different for this function to those we have met previously,
-being of the form
+function within the `ks` library. To keep things consistent, we will
+use the `tidykda` package[^tidykda] which implements a wrapper to coerce kernel
+discriminant analysis into the `parsnip` framework.
 
-```{r, eval=FALSE}
-kda(x, x.group, eval.points, Hs=...)
-```
-
-where the argument `x` takes a matrix of (numerical) predictors for the
-training set and `x.group` takes a factor describing class membership
-for the observations in the training set. The optional argument `Hs`
-defines the bandwidths for each class (the default usually works well,
-so there is little reason to supply this argument), while `eval.points`
-takes the matrix of predictors for the test set[^5].
-
-The requisite bandwidths can be obtained using the function `Hkda` which
-takes arguments `x` and `x.group` as defined above. This function can
-take some time to run when applied to large datasets. The functions
-`kda` and `Hkda` will not work on data with more than six predictors.
+The bandwidths are automatically found using a plugin-estimator, so
+all we need to do is provide at most 3 predictors and utilise
+the `discrim_kernel()` function. This can take some time to run for large datasets.
 
 ::: {.example}
 **Kernel Discriminant Analysis for the Wine Data**
@@ -527,30 +536,20 @@ Specifically, we attempt to classify `Cultivar` based on the three
 predictors `Alcohol`, `Colour` and `Hue`.
 
 ```{r}
-library(ks)
-wine.train.X <- wine.train[,c(2,11,12)]
-wine.valid.X <- wine.valid[,c(2,11,12)]
-wine.kda <- kda(wine.train.X, wine.train$Cultivar, eval.points=wine.valid.X)
-wine.kda$x.group.estimate
-table(wine.kda$x.group.estimate, wine.valid$Cultivar)
+library(tidykda)
+wine.kda <- discrim_kernel() %>% fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.kda.pred <- wine.kda %>% augment(new_data=wine.test)
+wine.kda.pred %>% conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.kda <- get_perf(wine.kda$x.group.estimate, wine.valid$Cultivar)
+perf.kda <- wine.kda.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
 Points to note:
 
--   The target `Cultivar` is the first column of `wine.train`, and hence
-    may be specified as `wine.train[,1]`.
-
--   The predictors for this problem are columns 2, 11 and 12
-    respectively of the training dataset, and hence are specified as
-    `wine.train[,c(2,11,12)]`.
-
--   The output from the `kda` function is a an object containing several
-    named variables. The `x.group.estimate` variable is a factor
-    containing the predicted classes[^6].
+-   We use only 3 predictors, as this is the most that `discrim_kernel`
+    will accept.
 
 -   The error rate using kernel discriminant analysis is
     $`r perf.kda$wrong`/`r perf.kda$total` \approx `r perf.kda$perc`\%$.
@@ -675,16 +674,22 @@ using all the predictor variables and then using just `Alcohol`,
 library(e1071)
 wine.nB.1 <- naiveBayes(Cultivar ~ ., data=wine.train)
 wine.nB.1
-wine.nB.1.pred <- predict(wine.nB.1, newdata=wine.valid[,2:14])
-table(wine.nB.1.pred,wine.valid$Cultivar)
+wine.nB.1.pred <- predict(wine.nB.1, newdata=wine.test[,2:14])
+table(wine.nB.1.pred, wine.test$Cultivar)
 wine.nB.2 <- naiveBayes(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.nB.2.pred <- predict(wine.nB.2, wine.valid[,c(2,11,12)])
-table(wine.nB.2.pred, wine.valid$Cultivar)
+wine.nB.2.pred <- predict(wine.nB.2, wine.test[,c(2,11,12)])
+table(wine.nB.2.pred, wine.test$Cultivar)
 ```
 
 ```{r, echo=FALSE}
-perf.nB1 <- get_perf(wine.nB.1.pred, wine.valid$Cultivar)
-perf.nB2 <- get_perf(wine.nB.2.pred, wine.valid$Cultivar)
+get_perf <- function(pred, truth) {
+  perf = data.frame(pred=pred, true = truth)
+  perf %>% summarise(wrong = sum(pred != true), total = n(),
+                      perc = round(wrong/total*100,1))
+}
+
+perf.nB1 <- get_perf(wine.nB.1.pred, wine.test$Cultivar)
+perf.nB2 <- get_perf(wine.nB.2.pred, wine.test$Cultivar)
 ```
 
 Points to note:
@@ -696,7 +701,7 @@ Points to note:
     deviation (by group) for numerical predictors.
 
 -   Notice that the test or validation data supplied to the predict
-    functions contains only the columns of `wine.valid` corresponding to
+    functions contains only the columns of `wine.test` corresponding to
     predictors in the model.
 
 -   The naive Bayes classifier implement with all predictors has an
@@ -1112,12 +1117,12 @@ library.
 library(nnet)
 wine.mn <- multinom(Cultivar ~ ., data=wine.train)
 summary(wine.mn)
-wine.mn.pred <- predict(wine.mn, newdata=wine.valid)
-table(wine.mn.pred, wine.valid$Cultivar)
+wine.mn.pred <- predict(wine.mn, newdata=wine.test)
+table(wine.mn.pred, wine.test$Cultivar)
 ```
 
 ```{r, echo=FALSE}
-perf.mn <- get_perf(wine.mn.pred, wine.valid$Cultivar)
+perf.mn <- get_perf(wine.mn.pred, wine.test$Cultivar)
 ```
 
 Some comments:
@@ -1137,12 +1142,12 @@ We continue by attempting to fit a model containing just the variables
 
 ```{r}
 wine.mn2 <- multinom(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.mn2.pred <- predict(wine.mn2, newdata=wine.valid)
-table(wine.mn2.pred, wine.valid$Cultivar)
+wine.mn2.pred <- predict(wine.mn2, newdata=wine.test)
+table(wine.mn2.pred, wine.test$Cultivar)
 ```
 
 ```{r, echo=FALSE}
-wine.mn2 <- get_perf(wine.mn2.pred, wine.valid$Cultivar)
+wine.mn2 <- get_perf(wine.mn2.pred, wine.test$Cultivar)
 ```
 
 We get a worse misclassification rate in this case of
@@ -1176,12 +1181,12 @@ model with reduced AIC.
 ```{r}
 wine.mn3 <- step(wine.mn, trace=FALSE)
 summary(wine.mn3)
-wine.mn3.pred <- predict(wine.mn3, newdata=wine.valid)
-table(wine.mn3.pred, wine.valid$Cultivar)
+wine.mn3.pred <- predict(wine.mn3, newdata=wine.test)
+table(wine.mn3.pred, wine.test$Cultivar)
 ```
 
 ```{r, echo=FALSE}
-wine.mn3 <- get_perf(wine.mn3.pred, wine.valid$Cultivar)
+wine.mn3 <- get_perf(wine.mn3.pred, wine.test$Cultivar)
 ```
 
 Some comments on this R snippet.
@@ -1262,25 +1267,25 @@ results when these data are transformed to a common scale.
 
 ```{r, message=FALSE}
 library(class)
-wine.knn.1 <- knn(wine.train[,2:14], wine.valid[,2:14], wine.train$Cultivar, k=5)
+wine.knn.1 <- knn(wine.train[,2:14], wine.test[,2:14], wine.train$Cultivar, k=5)
 wine.knn.1
-table(wine.knn.1, wine.valid$Cultivar)
+table(wine.knn.1, wine.test$Cultivar)
 wine.train.scale <- wine.train[,2:14]
-wine.valid.scale <- wine.valid[,2:14]
+wine.test.scale <- wine.test[,2:14]
 wine.means <- apply(wine.train.scale, 2, mean)
 wine.sds <- apply(wine.train.scale, 2, sd)
 wine.train.scale <- scale(wine.train.scale, center=wine.means, scale=wine.sds)
-wine.valid.scale <- scale(wine.valid.scale, center=wine.means, scale=wine.sds)
-wine.knn.2 <- knn(wine.train.scale, wine.valid.scale, wine.train$Cultivar, k=5)
+wine.test.scale <- scale(wine.test.scale, center=wine.means, scale=wine.sds)
+wine.knn.2 <- knn(wine.train.scale, wine.test.scale, wine.train$Cultivar, k=5)
 wine.knn.2
-table(wine.knn.2, wine.valid$Cultivar)
-wine.knn.3 <- knn(wine.train.scale, wine.valid.scale, wine.train$Cultivar, k=10)
-table(wine.knn.3, wine.valid$Cultivar)
+table(wine.knn.2, wine.test$Cultivar)
+wine.knn.3 <- knn(wine.train.scale, wine.test.scale, wine.train$Cultivar, k=10)
+table(wine.knn.3, wine.test$Cultivar)
 ```
 
 ```{r, echo=FALSE}
-perf.knn1 <- get_perf(wine.knn.1, wine.valid$Cultivar)
-perf.knn2 <- get_perf(wine.knn.2, wine.valid$Cultivar)
+perf.knn1 <- get_perf(wine.knn.1, wine.test$Cultivar)
+perf.knn2 <- get_perf(wine.knn.2, wine.test$Cultivar)
 ```
 
 Points to note:
@@ -1360,13 +1365,13 @@ settings.
 ```{r, message=FALSE}
 library(rpart)
 wine.rp.1 <- rpart(Cultivar ~ . ,data=wine.train)
-wine.rp.1.prob <- predict(wine.rp.1, newdata=wine.valid)
+wine.rp.1.prob <- predict(wine.rp.1, newdata=wine.test)
 head(wine.rp.1.prob)
-wine.rp.1.pred <- predict(wine.rp.1, newdata=wine.valid, type="class")
-table(wine.rp.1.pred, wine.valid$Cultivar)
+wine.rp.1.pred <- predict(wine.rp.1, newdata=wine.test, type="class")
+table(wine.rp.1.pred, wine.test$Cultivar)
 ```
 ```{r, echo=FALSE}
-perf.rp1 <- get_perf(wine.rp.1.pred, wine.valid$Cultivar)
+perf.rp1 <- get_perf(wine.rp.1.pred, wine.test$Cultivar)
 ```
 
 This R snippet should largely be self explanatory, although the
@@ -1429,19 +1434,19 @@ techniques from Lab 6).
 library(nnet)
 set.seed(1000)
 wine.train.scale <- wine.train
-wine.valid.scale <- wine.valid
+wine.test.scale <- wine.test
 wine.train.max <- apply(wine.train[,2:14], 2, max)
 wine.train.scale[,2:14] <- sweep(wine.train[,2:14], 2, wine.train.max, FUN="/")
-wine.valid.scale[,2:14] <- sweep(wine.valid[,2:14], 2, wine.train.max, FUN="/")
+wine.test.scale[,2:14] <- sweep(wine.test[,2:14], 2, wine.train.max, FUN="/")
 wine.nn.1 <- nnet(Cultivar ~ . , size=7, data=wine.train.scale)
-wine.nn.1.prob <- predict(wine.nn.1, newdata=wine.valid.scale)
+wine.nn.1.prob <- predict(wine.nn.1, newdata=wine.test.scale)
 head(wine.nn.1.prob)
-wine.nn.1.pred <- predict(wine.nn.1, newdata=wine.valid.scale, type="class")
-table(wine.nn.1.pred, wine.valid$Cultivar)
+wine.nn.1.pred <- predict(wine.nn.1, newdata=wine.test.scale, type="class")
+table(wine.nn.1.pred, wine.test$Cultivar)
 ```
 
 ```{r, echo=FALSE}
-perf.nn1 <- get_perf(wine.nn.1.pred, wine.valid$Cultivar)
+perf.nn1 <- get_perf(wine.nn.1.pred, wine.test$Cultivar)
 ```
 
 As with prediction using `rpart`, the default action of the `predict`
@@ -1476,31 +1481,30 @@ website for such competitions.
 
 **You should now do Computer Lab 9.**
 
-[^1]: As the names of the first two listed techniques suggest,
+[^discrimination]: As the names of the first two listed techniques suggest,
     statistical classification can also be referred to as discriminant
     analysis. As we saw earlier, *supervised learning* is another name
     for classification, favoured in computer science and related areas.
 
-[^2]: We use the somewhat ambiguous term *probability function* to refer
+[^jointpdf]: We use the somewhat ambiguous term *probability function* to refer
     to the probability mass function for discrete random variables, or
     the probability density function for continuous random variables, as
     appropriate.
 
-[^3]: Bayes' Theorem is a result of huge importance in Statistics. The
+[^bayesthm]: Bayes' Theorem is a result of huge importance in Statistics. The
     result is credited to English mathematician and Presbyterian
     minister, Reverend Thomas Bayes (1701?-1760).
 
-[^4]: If you would like to learn more about the multivariate normal
+[^theorypaper]: If you would like to learn more about the multivariate normal
     distribution, and the theory of statistics in general (which is both
     wonderfully elegant and useful) then you should consider taking the
-    paper 161.200.
+    paper 161.304.
 
-[^5]: Note that older versions of the `ks` library use `y` in place of
-    `eval.points`, and also require input for the argument `Hs`.
+[^discrim_prior_issue]: See https://github.com/tidymodels/discrim/pull/48 for an
+implementation that remedies this.
 
-[^6]: In older versions of the `ks` library, the `kda` function returned
-    the predicted classes directly, negating the need to append
-    `$x.group.estimate`.
+[^tidykda]: Note that this package is not on CRAN but can be installed from Github
+using the `remotes` package. See https://github.com/jmarshallnz/tidykda for details.
 
 [^7]: We need estimate only 2 of the probabilities because the third is
     then determined by the constraint that the probabilities in a
