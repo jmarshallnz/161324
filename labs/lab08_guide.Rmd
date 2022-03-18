@@ -1,0 +1,19 @@
+---
+title: 'Workshop 8: Regression classifiers'
+output: html_document
+---
+
+We'll be looking at classifiers based on the generalised linear model:
+
+- Logistic regression
+- Multinomial regression
+
+We'll look at one dataset on Horse Colic, and then take another look at the wine data,
+assessing whether scaling the predictor variables makes a difference for the multinomial
+regression classifier.
+
+Start by downloading lab08.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab08.Rmd
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**

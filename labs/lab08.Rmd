@@ -1,0 +1,80 @@
+---
+title: 'Workshop 8: Regression classifiers'
+output: html_document
+---
+
+In this workshop we'll be looking at classifiers based on the generalised linear model:
+
+- Logistic regression
+- Multinomial regression
+
+## Logistic regression for Horse Colic data
+
+This Exercise uses the data on horses with colic. Colic can be a serious
+illness for horses and can result in death. Physiological data on 368
+horses with Colic were recorded, along with whether surgery was
+required, with some of the horses dying and some surviving.
+
+The goal is to train a logistic regression classifier in order to
+classify the horses into whether they're likely to survive or die based
+on the physiological parameters measured.
+
+We'll start by loading packages and reading in the data, and then converting a bunch of the columns to factors:
+
+```{r, message=FALSE}
+library(tidyverse)
+library(rsample)
+library(skimr)
+library(discrim)
+library(yardstick)
+library(recipes)
+step <- stats::step # override recipes::step() with stats::step()
+
+horse.orig <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horse2.csv")
+
+horse <- horse.orig %>%
+  mutate(across(-c(RectalTemp, Pulse, RespRate, PckCellVol, TotlProtein), as_factor))
+
+set.seed(2013)
+
+split <- initial_split(horse, prop=0.75)
+horse.train <- training(split)
+horse.test  <- testing(split)
+```
+
+### Try yourself
+
+1. Use `logistic_reg()` with the `glm` engine to build a logistic model for `Died` based on all the other physiological parameters.
+
+2. Take a look at the model summary - recall that you can do this with `tidy()` or alternatively `extract_fit_engine()` and then `summary()`.
+
+3. Compute the odds ratio for the `Surgery` predictor, where a 1 specifies that the horse had surgery. Does having surgery increase or decrease the odds of the horse dying?
+
+4. Perform a prediction on the test data set for whether the horses will die or not, and assess the misclassification rate.
+
+5. Try using the `step` command to derive a simpler model for the data, and check how the simpler model performs as a classifier. *NOTE: You'll have to re-fit the model directly using `glm` before running `step`. Once done, you can feed the final model formula into `fit()` to get back into tidymodel land!*
+
+## Classifying the Italian wine data
+
+We'll use multinomial regression on the Italian wine data to examine the effects of data scaling on classification results.
+
+We'll start by loading the wine test and training data in:
+
+```{r, message=FALSE}
+wine.train <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/wine-train.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+wine.test  <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/wine-test.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+```
+
+### Try yourself
+
+1. Use `multinom_reg()` to fit a multinomial regression model on all the data. Remember that the number of iterations (epochs) is important to ensuring it converges.
+
+2. Evaluate the performance of classification on the test set by computing accuracy and a confusion table.
+
+3. Now create a `recipe` to scale the numeric predictors, and refit the multinomial regression model using the scaled data.
+
+4. Evaluate the performance of the classifiers before and after scaling. Which does better?
+
+5. You might want to investigate running `step()` on these multinomial models to simplify them. Again, this has to be done outside the `tidymodels` framework.
