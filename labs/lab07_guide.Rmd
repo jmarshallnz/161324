@@ -1,0 +1,32 @@
+---
+title: 'Workshop 7: Generative classifiers'
+output: html_document
+---
+
+We'll be looking at the classifiers that are generated from Bayes' Theorem:
+
+ - Linear discriminant analysis
+ - Kernel discriminant analysis
+ - Naive Bayes
+
+We'll look at these first using some synthetic data where we can clearly see the effect of the modelling assumptions of these models, and then look at a real dataset.
+
+### Before you start
+
+You'll need to install the `tidykda` package from Github for this workshop. You can do this by running:
+
+``` r
+remotes::install_github("jmarshallnz/tidykda")
+```
+
+(You may need to install `remotes` first if you haven't already!)
+
+### Todays workshop sheet
+
+Once you have `tidykda` installed, download lab07.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab07.Rmd
+
+There are a bunch of packages you'll likely need to install - you'll probably get them listed in a yellow bar at the top of the editor pane.
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**
