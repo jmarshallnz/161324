@@ -15,9 +15,7 @@ In some cases we may be able to fill in these gaps through judicious use of othe
 variables for which the data are not missing. In other cases it may be best to discard
 variables or observations for which we have little data.
 
-## Dealing with Missing Values{#sec:missing}
-
-### Patterns of Missingness
+## Patterns of Missingness{#sec:missing}
 
 As noted in Section \@ref(sec:missing1), it is not unusual for real datasets to
 contain missing values. We have already met some examples, with missing
@@ -70,7 +68,7 @@ worth keeping in mind that the conclusions drawn from any data mining
 procedure may be sensitive to the assumptions that we make about missing
 values.
 
-### Visualising missing values
+## Visualising missing values
 
 It is useful to get an overview of where missing values are, as that may
 assist us in determining how to procede. For example, if almost all the
@@ -96,7 +94,7 @@ while the other rows are complete. Depending on the analyses, it might be approp
 the `Ozone` variable before continuing on.
 :::
 
-### Working with Complete Cases
+## Working with Complete Cases
 
 The impact that missing data will have on any subsequent analysis will
 depend on the proportion of the data points that are missing (all other
@@ -177,7 +175,7 @@ Points to note:
     husbands' ages (`W.Age` and `H.Age`).
 :::
 
-### Missing Data Imputation
+## Missing Data Imputation
 
 In the previous example, deletion of the incomplete cases led to a
 relatively small reduction in the sample size: $n=199$ down to $n=169$.
@@ -315,7 +313,7 @@ ggplot(husbands.imp) +
 
 :::
 
-### Alternative Methods of Imputation
+## Alternative Methods of Imputation
 
 There are alternatives to mean imputation and k-nearest neighbour
 imputation. For example, regression based imputation applies (linear)
