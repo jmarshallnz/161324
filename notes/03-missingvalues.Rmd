@@ -302,7 +302,7 @@ Points to note:
 
 Finally, Figure \@ref(fig:impute2) displays scatterplots of wife's age against
 husband's age using the imputed data set just created. As before, the
-imputed values are coloured blue. It is clear that k nearest neighbour
+imputed values are coloured red. It is clear that k nearest neighbour
 imputation does a far better job than mean imputation for this dataset.
 
 ```{r impute2, echo=FALSE, fig.cap="Scatterplot of wife's age against husband's age for the k nearest neighbout imputed dataset using $k=5$. Imputed values are coloured red."}
