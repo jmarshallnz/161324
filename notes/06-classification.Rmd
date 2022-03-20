@@ -259,10 +259,10 @@ are statistically independent, and that the standard deviation of each
 is equal to one (irrespective of class). Finally, let both features have
 mean zero in group 1, and let both features have mean 1 in group 2. In
 other words, if $\mu_{ij}$ is the mean for feature $i$ in group $j$ then
-$\mu_{11} = \mu_{21} = 0$, and $\mu_{21} = \mu_{22} = 1$. Now, using
+$\mu_{11} = \mu_{21} = 0$, and $\mu_{12} = \mu_{22} = 1$. Now, using
 standard results for the multivariate normal distribution[^theorypaper], we have
 $$\begin{align}
-f_j(\boldsymbol{x}) &= \frac{1}{2 \pi} \exp \left \{ -\frac {(x_1 - x_{1j})^2}{2} \right \}  \exp \left \{ -\frac{(x_2 - x_{2j})^2}{2} \right \}\\
+f_j(\boldsymbol{x}) &= \frac{1}{2 \pi} \exp \left \{ -\frac {(x_1 - \mu_{1j})^2}{2} \right \}  \exp \left \{ -\frac{(x_2 - \mu_{2j})^2}{2} \right \}\\
          &= 
 \left \{
 \begin{array}{ll}
@@ -276,8 +276,8 @@ $\boldsymbol{x}= (x_1, x_2)$ to class $1$ if and only if
 $$\begin{align}
                  f_1(\boldsymbol{x}) &> f_2(\boldsymbol{x}) \\
 \Rightarrow\quad      \exp\{ (-x_1^2/2 - x_2^2/2)\}  &> \exp\{ (-(x_1-1)^2/2 - (x_2-1)^2/2)\} \\
-\Rightarrow\quad      -x_1^2/2 - x_2^2/2  &> -(x_1-1)^2/2 - (x_2-1)^2/2) \\
-\Rightarrow\quad      x_1^2/2 + x_2^2/2   &<  x_1^2 - 2 x_1 + 1 + x_2^2 - 2 x_2 +1 \\
+\Rightarrow\quad      -x_1^2/2 - x_2^2/2  &> -(x_1-1)^2/2 - (x_2-1)^2/2 \\
+\Rightarrow\quad      x_1^2 + x_2^2   &<  x_1^2 - 2 x_1 + 1 + x_2^2 - 2 x_2 +1 \\
 \Rightarrow\quad      0  &< - 2 x_1 + 1 - 2 x_2 +1 \\
 \Rightarrow\quad      x_1 + x_2 &<  1\\\end{align}$$
 Time to take stock.
@@ -432,7 +432,7 @@ We now consider trying to perform LDA using just the variables
 
 ```{r}
 wine.lda2 <- discrim_linear() %>% fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.lda2.pred <- wine.lda2 %>% augment(new_data=wine.train)
+wine.lda2.pred <- wine.lda2 %>% augment(new_data=wine.test)
 wine.lda2.pred %>% conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
