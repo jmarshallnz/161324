@@ -274,8 +274,6 @@ interesting that the military occupation comes up in the top 5
 association rules.
 :::
 
-**You should now do Computer Lab 11.**
-
 [^paranoid]: or, for the paranoid, a more complete profile of each user.
 
 [^subset]: Note, however, that we may also be filtering out useful

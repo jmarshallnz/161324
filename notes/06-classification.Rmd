@@ -1456,13 +1456,12 @@ there is no need to do so explicitly).
 **Neural Network Classification for the Wine Data**
 
 We will apply a neural network for classifying the Italian wine data. As
-we saw in Computer Lab 6, the `nnet` function does not work well if
+was indicated in the chapter on prediction, the `nnet` function does not work well if
 there is significant variation in the scales of the predictor variables.
 This is certainly the case with the wine data; for example, in the
 training set the variable `Proline` ranges from 290 to 1680, while
 `Non.Flav` ranges from 0.14 to 0.66. We therefore begin by transforming
-all the predictors on to the interval $[0,1]$ (again following the
-techniques from Lab 6).
+all the predictors on to the interval $[0,1]$..
 
 ```{r}
 library(nnet)
@@ -1512,8 +1511,6 @@ percent. There are frequently competitions on the Internet where teams
 of researchers seek to obtain the best classifications possible. At
 present, Kaggle (`www.kaggle.com`) hosts arguably the most well known
 website for such competitions.
-
-**You should now do Computer Lab 9.**
 
 [^discrimination]: As the names of the first two listed techniques suggest,
     statistical classification can also be referred to as discriminant

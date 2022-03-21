@@ -793,8 +793,6 @@ Plots are given in Figure \@ref(fig:silhouetteiris). Points to note:
     cluster) may give different results, in the same way that single and
     complete linkage give different results in heirarchical clustering.
 
-**You should now do Computer Lab 10.**
-
 [^supervised]: In fields such as computer science and image analysis, cluster
     analysis is referred to as *unsupervised learning* and discriminant
     analysis is referred to as *supervised learning*.
