@@ -593,7 +593,7 @@ function for predictor $x_i$ in class $j$. To appreciate the extent to
 which this simplifies the problem, let us return to out example with 10
 predictive factors each with 3 levels. In order to estimate the marginal
 probability distribution for any single factor we need only estimate 2
-probabilities[^7]. This in turn means that we need only estimate
+probabilities[^sumtoone]. This in turn means that we need only estimate
 $10\times 2=20$ probabilities in total to fully specify the probability
 function in Equation \@ref(eq:factorize).
 
@@ -644,72 +644,72 @@ Nonetheless, such a simplification may still be a good idea, based on
 the kind of bias-variance trade off arguments with which you should now
 be familiar.
 
-Naive Bayes classification in R is implemented using the function
-`naiveBayes` within the package `e1071` (which must be pre-loaded, as
-usual). The function has a standard type of syntax, being of the form
+Naive Bayes classification in R is implemented in a range of different packages,
+such as the `e1071` package (with function `naiveBayes()`), the `naivebayes`
+package (with function `naivebayes()`) and the `klaR` package (with function `NaiveBayes()`).
 
-```{r, eval=FALSE}
-naiveBayes(formula, data)
-```
+As before, we will be using the `tidymodels` framework, where `discrim` provides
+the model tidier `naive_Bayes()`. We'll utilise the `naivebayes` engine.
+Predictions will then be made in the same way
+(i.e. using `predict()` or `augment()`).
 
-Predictions can be obtained by applying the `predict` function to an
-object output from `naiveBayes`. The only small change is that the test
-or validation data in this case must be stripped of irrelevant variables
-(which are simply ignored for prediction for `lda` objects, for
-example). This R implementation of the naive Bayes classifier can take
+The implementation of the naive Bayes classifier can take
 both quantitative and categorical predictors. The marginal distributions
 (i.e. the $f_j(x_i)$ mentioned above) for the numerical variables are
-estimated as univariate normal distributions, while marginal
-probabilities for the categorical variables are estimated using
-class-specific proportions.
+estimated using kernel density estimators (or, alternatively univariate normal
+distributions), while marginal probabilities for the categorical variables are
+estimated using class-specific proportions.
 
 ::: {.example}
 **Naive Bayes Classification for the Wine Data**
 
 We apply naive Bayes classification to the Italian wine data, first
 using all the predictor variables and then using just `Alcohol`,
-`Colour` and `Hue`.
+`Colour` and `Hue`. Lastly, we'll use a normal distribution in place
+of the kernel density estimates.
 
 ```{r, message=FALSE}
-library(e1071)
-wine.nB.1 <- naiveBayes(Cultivar ~ ., data=wine.train)
-wine.nB.1
-wine.nB.1.pred <- predict(wine.nB.1, newdata=wine.test[,2:14])
-table(wine.nB.1.pred, wine.test$Cultivar)
-wine.nB.2 <- naiveBayes(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.nB.2.pred <- predict(wine.nB.2, wine.test[,c(2,11,12)])
-table(wine.nB.2.pred, wine.test$Cultivar)
+spec_nB <- naive_Bayes(engine="naivebayes")
+wine.nB.1 <- spec_nB %>%
+  fit(Cultivar ~ ., data=wine.train)
+wine.nB.1.pred <- wine.nB.1 %>%
+  augment(new_data=wine.test)
+wine.nB.1.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+wine.nB.2 <- spec_nB %>%
+  fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.nB.2.pred <- wine.nB.2 %>%
+  augment(new_data=wine.test)
+wine.nB.2.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+wine.nB.3 <- spec_nB %>%
+  set_engine(engine="naivebayes", usekernel=FALSE) %>%
+  fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.nB.3
+wine.nB.3.pred <- wine.nB.3 %>%
+  augment(new_data=wine.test)
+wine.nB.3.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-get_perf <- function(pred, truth) {
-  perf = data.frame(pred=pred, true = truth)
-  perf %>% summarise(wrong = sum(pred != true), total = n(),
-                      perc = round(wrong/total*100,1))
-}
-
-perf.nB1 <- get_perf(wine.nB.1.pred, wine.test$Cultivar)
-perf.nB2 <- get_perf(wine.nB.2.pred, wine.test$Cultivar)
+perf.nB1 <- wine.nB.1.pred %>% get_perf(Cultivar, .pred_class)
+perf.nB2 <- wine.nB.2.pred %>% get_perf(Cultivar, .pred_class)
+perf.nB3 <- wine.nB.3.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
 Points to note:
 
--   The output for the fitted object `wine.nB.1` is a little antiquated,
-    in that it appears to refer to the case when `naiveBayes` could
-    handle only discrete predictors. In fact the tables are not
-    conditional probabilities, but are instead mean and standard
-    deviation (by group) for numerical predictors.
-
--   Notice that the test or validation data supplied to the predict
-    functions contains only the columns of `wine.test` corresponding to
-    predictors in the model.
+-   The output for the fitted objects (e.g. `wine.nB.3`) aren't
+    strongly useful. There are tables per predictor with a summary of
+    the model fit - kernel densities or the mean/sd of the normal
+    distributions as seen for `wine.nB.3`.
 
 -   The naive Bayes classifier implement with all predictors has an
     error rate of $`r perf.nB1$wrong`/`r perf.nB1$total` \approx `r perf.nB1$perc`\%$. With just the predictors
-    `Alcohol`, `Colour` and `Hue` this rises to $`r perf.nB2$wrong`/`r perf.nB2$total` \approx `r perf.nB2$perc`\%$.
+    `Alcohol`, `Colour` and `Hue` this rises to $`r perf.nB2$wrong`/`r perf.nB2$total` \approx `r perf.nB2$perc`\%$. Using normal distributions rather than kernel densities
+    for the marginal distributions is worse again, at $`r perf.nB3$wrong`/`r perf.nB3$total` \approx `r perf.nB3$perc`\%$
 :::
-
-**You should now do Computer Lab 7.**
 
 ## Logistic regression
 
@@ -735,19 +735,28 @@ It is linear in the sense that a transformation links a linear
 combination of predictors
 $$\theta(\boldsymbol{x}) = \beta_0 + \beta_1 x_1 + \cdots + \beta_p x_p,$$
 with the probability
-$p(\boldsymbol{x}) = {\textsf P}(y=1 | \boldsymbol{x})$[^11]. This
-transformation is the sigmoid function[^12], also known as the *logistic*
+$p(\boldsymbol{x}) = {\textsf P}(y=1 | \boldsymbol{x})$[^whichp]. This
+transformation is the sigmoid function[^sigmoid], also known as the *logistic*
 function:
 $$p(\boldsymbol{x}) = \frac{1}{1+e^{-\theta(\boldsymbol{x})}}.$$ The
 logistic function ensures that the expected outcome is between 0 and 1,
 see the left-hand panel of Figure \@ref(fig:logistic).
 
-```{r logistic, echo=FALSE, fig.cap = "The logistic and logit functions."}
-par(mfrow=c(1,2))
-curve(1/(1+exp(-x)),-6,6,ylab=expression(p),xlab=expression(theta))
-title("logistic function")
-curve(log(x/(1-x)),0.0001,0.9999,xlab=expression(p),ylab=expression(theta))
-title("logit function")
+```{r logistic, message=FALSE, echo=FALSE, fig.cap = "The logistic and logit functions."}
+g1 <- ggplot() +
+  geom_function(fun = ~1/(1+exp(-.x)), xlim=c(-5, 5)) +
+  labs(x = expression(theta),
+       y = expression(p),
+       title = "logistic function")
+
+g2 <- ggplot() +
+  geom_function(fun = ~log(.x/(1-.x)), xlim=c(0.00001, 0.99999)) +
+  labs(x = expression(p),
+       y = expression(theta),
+       title = "logit function")
+
+library(patchwork)
+g1+g2
 ```
 
 The inverse of the logistic function is the *logit* function
@@ -810,7 +819,7 @@ Unlike linear regression, we cannot estimate the unknown regression
 coefficients $\beta_1, \ldots, \beta_p$ via a closed form expression
 that minimises the sum of squared errors. Instead, we must find the
 regression coefficients by an iterative procedure which attempts to
-maximise the *likelihood* of the data[^13] The likelihood is simply the
+maximise the *likelihood* of the data[^maths] The likelihood is simply the
 probability of the data regarded as a function of the parameters.
 
 For a particular observation $y_i$, the likelihood for logistic
@@ -831,7 +840,7 @@ L(\boldsymbol{\beta}) = P(\boldsymbol{y}|\boldsymbol{x},\boldsymbol{\beta}) = \p
 The parameter vector $\boldsymbol{\beta}$ that maximises equation
 \@ref(eq:likelihood) will be the one that is most likely to
 produce the data we observe, known as the *maximum likelihood estimate*
-[^14]. In practice, we typically maximise the log-likelihood function
+[^mle]. In practice, we typically maximise the log-likelihood function
 instead
 $$\begin{aligned}
 \ell(\boldsymbol{\beta}) = \log L(\boldsymbol{\beta}) &= \sum_{i=1}^n \log\left(\frac{e^{(-\beta_0 - \sum_j \beta_j x_{ij})(1-y_i)}}{1 + e^{-\beta_0 - \sum_j \beta_j x_{ij}}}\right)\\
@@ -853,7 +862,7 @@ where
 -   `formula` is the model formula,
 
 -   `family` describes the error distribution. Specify `family=binomial`
-    for logistic regression[^15],
+    for logistic regression[^glm],
 
 -   `data` is the data frame to use (optional).
 
@@ -872,8 +881,7 @@ predictor variables, either quantitative or factors.
 ::: {.example}
 **Logistic regression modelling for Swiss bank notes**
 
-Recall that the swiss bank notes data from Example 4.1 contained
-measurements on 100 forged and 100 genuine Swiss bank notes. On each
+We have measurements on 100 forged and 100 genuine Swiss bank notes. On each
 bank note the size of the bottom margin was recorded, as was the
 diagonal length of the note (all measurements in mm). We are interested
 in classifying the notes into forged and genuine classes based on the
@@ -881,10 +889,10 @@ margin and diagonal measurements. The data has been split into training
 and validation sets, containing 120 and 80 notes respectively.
 
 ```{r, message=FALSE}
-swiss.train <- read_csv("data/swiss-train.csv")
-swiss.valid <- read_csv("data/swiss-valid.csv")
-swiss.train$type <- as.factor(swiss.train$type)
-swiss.valid$type <- as.factor(swiss.valid$type)
+swiss.train <- read_csv("../data/swiss-train.csv") %>%
+  mutate(type = factor(type))
+swiss.test <- read_csv("../data/swiss-test.csv") %>%
+  mutate(type = factor(type))
 glimpse(swiss.train)
 swiss.glm.1 <- glm(type ~ margin, family=binomial, data=swiss.train)
 summary(swiss.glm.1)
@@ -927,7 +935,7 @@ Some comments on this R snippet.
     prediction, we can use backwards variable selection implemented to
     minimze AIC as a way of finding a reasonable set of predictor
     variables. In this particular case we see that the model
-    `swiss.glm.1` has a lower AIC than either of the models that can be
+    `swiss.glm.2` has a lower AIC than either of the models that can be
     obtained by removing a single predictor, so the backwards variable
     selection algorithm (implemented using `step`) terminates
     immediately.
@@ -971,70 +979,66 @@ surprisingly large bottom margins.
 
 The `predict` command on a fitted model object from `glm` by default
 returns predictions from the linear predictor, rather than on the
-original scale of the data. This is exactly what we want in this case,
-as we can assign the positive predictions to the second class (class 1),
-and the negative productions to the first class (class 0). This may be
-achieved in a number of ways, as shown in the following example.
+original scale of the data. This is a bit fiddly - we could optionally
+assign the positive predictions to the second class (class 1),
+and the negative productions to the first class (class 0).
+
+Alternatively, we can just use the `tidymodels` framework with the
+`logistic_reg()` function in place of `glm()`.
 
 ::: {.example}
 **More on Classifying the Swiss Bank Notes data**
 
-We continue our example on the Swiss bank notes with the following R
-snippet. We start by looking a predictions on the default (logit) scale,
-and on the probability (response) scale.
+We continue our example on the Swiss bank notes by using the output
+from `glm()` to compute the class probabilities ourselves:
 
 ```{r}
-swiss.glm.2.logit <- predict(swiss.glm.2, newdata=swiss.valid)
-head(swiss.glm.2.logit)
-swiss.glm.2.pr <- predict(swiss.glm.2, newdata=swiss.valid, type="response")
-head(swiss.glm.2.pr)
+swiss.glm.2 %>% augment(newdata=swiss.test) %>%
+  mutate(.pred_genuine = 1/(1 + exp(-.fitted)))
+```
+```{r, echo=FALSE}
+swiss.glm.2.logit <- swiss.glm.2 %>% augment(newdata=swiss.test) %>% pull(.fitted)
 ```
 
-The vector `swiss.glm.2.logit` contains the predicted logits for the
+The `.fitted` entry contains the predicted logits for the
 validation cases. Hence for validation case 1 (the predictors for which
 we denote by the vector $\boldsymbol{x}_0$),
 $$\theta(\boldsymbol{x}_0) = \log \left ( \frac{p(\boldsymbol{x}_0)}{1 - p(\boldsymbol{x}_0)} \right ) = `r round(swiss.glm.2.logit[1], 2)` .$$
 It follows that
-$${\textsf P}(y=1 | \boldsymbol{x}_0) = 1/(1+e^{-\theta(\boldsymbol{x}_0)}) = 1/(1+e^{`r -round(swiss.glm.2.logit[1], 2)`}) \approx 1.$$
+$${\textsf P}(y=1 | \boldsymbol{x}_0) = 1/(1+e^{-\theta(\boldsymbol{x}_0)}) = 1/(1+e^{`r -round(swiss.glm.2.logit[1], 2)`}) \approx 0.$$
 
-Each test case will be assigned to the genuine class (coded $y=1$) if
+Thus, each test case will be assigned to the genuine class (coded $y=1$) if
 and only if it has a posterior probability $p(\boldsymbol{x}) > 0.5$, or
 equivalently if and only if its linear predictor
-$\theta(\boldsymbol{x}_0) > 0$. Working on the linear predictor scale,
-we can obtain coded predictions in (at least) two equivalent ways.
+$\theta(\boldsymbol{x}_0) > 0$.
+
+Ofcourse, the `tidymodels` framework takes care of this for us, so if we
+instead utilise our existing framework knowledge, we can get the same
+predictions as we're used to:
 
 ```{r}
-swiss.glm.pred <- predict(swiss.glm.2,swiss.valid)
-swiss.glm.pred <- swiss.glm.pred > 0
-swiss.glm.pred
-swiss.glm.pred[swiss.glm.pred==TRUE] <- "genuine"
-swiss.glm.pred[swiss.glm.pred==FALSE] <- "forged"
-swiss.glm.pred <- as.factor(swiss.glm.pred)
-swiss.glm.pred
-swiss.glm.pred <- predict(swiss.glm.2,swiss.valid)
-swiss.glm.pred <- cut(swiss.glm.pred, breaks=c(-Inf,0,Inf),
-                      labels=levels(swiss.valid$type))
-swiss.glm.pred
-table(swiss.glm.pred, swiss.valid$type)
+swiss.lr.2 <- logistic_reg() %>%
+  fit(type ~ ., data=swiss.train)
+swiss.lr.2.pred <- swiss.lr.2 %>%
+  augment(new_data=swiss.test)
+swiss.lr.2.pred
+```
+
+As always, `augment()` augments the test data `swiss.test` with the
+predicted class `.pred_class` as well as the predicted probabilies
+of each class (`.pred_forged` and `.pred_genuine`). We can thus
+directly cross tabulate the usual way:
+
+```{r}
+swiss.lr.2.pred %>%
+  conf_mat(truth=type, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.glm <- get_perf(swiss.glm.pred, swiss.valid$type)
+perf.glm <- swiss.lr.2.pred %>% get_perf(type, .pred_class)
 ```
 
-Some comments on this R snippet.
-
--   The first method of obtaining the classifications takes a few lines
-    of code, but all should be familiar. All that is going on is a
-    little manipulation of the object `swiss.glm.pred` to turn it into a
-    vector with the requisite levels.
-
--   The second approach uses the `cut` command. This takes the values
-    from the linear predictor and breaks it into classes specified by
-    `breaks`, labelling the classes by the `labels`. The `breaks`
-    argument here specifies two classes: One from $-\infty$ to $0$, and
-    one from $0$ to $+\infty$. We label them the same as the levels of
-    the `type` factor.
+Some comments:
 
 -   The confusion matrix tabulates the predicted class versus the true
     class from the `swiss.valid` set. This shows that all but one of the
@@ -1058,15 +1062,19 @@ observation in the `swiss.train` data set slightly. The plot is given in
 Figure \@ref(fig:swiss5).
 
 ```{r swiss5, fig.cap="Forged (black) and genuine (red) Swiss bank notes from Example \\@ref(exm:swiss5)"}
-swiss2.train <- swiss.train
-swiss2.train$diagonal[103] <- 140.2
-plot(diagonal ~ margin, col=type, data=swiss2.train)
-swiss2.glm <- glm(type ~ ., family=binomial, data=swiss2.train)
+swiss2.train <- swiss.train %>%
+  mutate(diagonal = if_else(row_number() == 103, 140.2, diagonal))
+
+ggplot(data=swiss2.train) +
+  geom_point(mapping = aes(x=margin, y=diagonal, col=type)) +
+  scale_colour_manual(guide = 'none', values=c('red', 'black'))
+
+swiss2.lr <- logistic_reg() %>% fit(type ~ ., data=swiss2.train)
 ```
 
 Some comments on the R code.
 
--   `glm` gives two warning messages, firstly that the algorithm did not
+-   `glm.fit` gives two warning messages, firstly that the algorithm did not
     converge, and secondly that fitted probabilities that were
     numerically no different than 0 or 1 occurred.
 
@@ -1097,32 +1105,33 @@ $$p_c = \left\{ \begin{array}{ll}\frac{\displaystyle 1}{\displaystyle 1 + \sum_{
 \end{array}\right.$$ Notice that we now have $C-1$ lots of $k$
 coefficients to estimate, one set for each of the classes excluding one.
 The last class need not have separate estimators, as the probabilities
-$p_c$ must sum to one[^16].
+$p_c$ must sum to one[^lastclass].
 
 Such models are typically referred to as *multinomial* regression
 models, as they extend the binomial distribution to trials with more
 than 2 outcomes.
 
-The `multinom` function in the `nnet` library utilises neural networks
-to fit multinomial regression models. We illustrate this with an
+The `multinom_reg` function in `parsnip` fits this by default using
+a neural network via the `nnet` library. We illustrate this with an
 analysis of the Italian wine data.
 
 ::: {.example}
 **Multinomial Regression for the Wine Data**
 
-We perform classification using the `multinom` function from the `nnet`
-library.
+We perform classification using the `multinom_reg` function.
 
 ```{r, message=FALSE}
-library(nnet)
-wine.mn <- multinom(Cultivar ~ ., data=wine.train)
-summary(wine.mn)
-wine.mn.pred <- predict(wine.mn, newdata=wine.test)
-table(wine.mn.pred, wine.test$Cultivar)
+wine.mn <- multinom_reg() %>%
+  fit(Cultivar ~ ., data=wine.train)
+wine.mn %>%
+  extract_fit_engine()
+wine.mn.pred <- wine.mn %>% augment(new_data=wine.test)
+wine.mn.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.mn <- get_perf(wine.mn.pred, wine.test$Cultivar)
+perf.mn <- wine.mn.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
 Some comments:
@@ -1131,9 +1140,6 @@ Some comments:
     coefficients for classes 2 and 3 but not for class 1, as that is
     then determined as the probabilities sum to 1.
 
--   The `predict` function in multinomial regression returns the classes
-    directly.
-
 -   A misclassification rate of $`r perf.mn$wrong`/`r perf.mn$total` \approx `r perf.mn$perc`\%$ is
 similar to that achieved earlier.
 
@@ -1141,13 +1147,15 @@ We continue by attempting to fit a model containing just the variables
 `Alcohol`, `Color`, and `Hue`.
 
 ```{r}
-wine.mn2 <- multinom(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.mn2.pred <- predict(wine.mn2, newdata=wine.test)
-table(wine.mn2.pred, wine.test$Cultivar)
+wine.mn2 <- multinom_reg() %>%
+  fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.mn2.pred <- wine.mn2 %>% augment(new_data=wine.test)
+wine.mn2.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-wine.mn2 <- get_perf(wine.mn2.pred, wine.test$Cultivar)
+wine.mn2 <- wine.mn2.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
 We get a worse misclassification rate in this case of
@@ -1172,33 +1180,54 @@ regression in the same way as it was used in linear regression. Indeed,
 we can utilise the `step` function to perform backwards elimination from
 a full model.
 
+Unfortunately, doing so means moving away from the `tidymodels` framework,
+as `step()` does not know what to do with the wrapped `glm` or `multinom`
+model. The nicest way to do this is to fit the model using `multinom` and
+then `step`. Then, refit the resulting model in the `tidymodels` framework
+to benefit from the improved manipulation tools.
+
 ::: {.example}
 **Multinomial model selection for the Wine Data**
 
 We use the `step` function on the full model `wine.mn` to produce a
 model with reduced AIC.
 
-```{r}
-wine.mn3 <- step(wine.mn, trace=FALSE)
-summary(wine.mn3)
-wine.mn3.pred <- predict(wine.mn3, newdata=wine.test)
-table(wine.mn3.pred, wine.test$Cultivar)
+```{r, results="hide"}
+wine.mn.refit <- nnet::multinom(Cultivar ~ ., data=wine.train, trace=FALSE)
+wine.mn3.refit <- step(wine.mn.refit)
+summary(wine.mn3.refit)
 ```
 
 ```{r, echo=FALSE}
-wine.mn3 <- get_perf(wine.mn3.pred, wine.test$Cultivar)
+summary(wine.mn3.refit)
+```
+
+```{r}
+wine.mn3 <- multinom_reg() %>%
+  fit(Cultivar ~ Alcohol + Flav + Hue + Proline, data=wine.train)
+wine.mn3.pred <- wine.mn3 %>% augment(new_data=wine.test)
+wine.mn3.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+```
+
+```{r, echo=FALSE}
+wine.mn3 <- wine.mn3.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
 Some comments on this R snippet.
 
 -   The `step` command can be used in the same way as for linear
-    regression.
+    regression, but only if not using the `tidymodels` framework.
+    Note that we've used `nnet::multinom()` - this means we don't
+    have to explicitly load the `nnet` library (it will be implicitly
+    loaded).
 
--   The final model contained `Alcohol`, `Flav`, and `Proline` as
-    predictors.
+-   The final model contained `Alcohol`, `Flav`, `Hue` and `Proline` as
+    predictors. We then re-fit this model in the `tidymodels` framework
+    so we can simply use `augment()` and `conf_mat()` as always.
 
 -   The final model has a misclassification rate of $`r wine.mn3$wrong`/`r wine.mn3$total` \approx `r wine.mn3$perc`\%$
-    which is worse than the full model, however it contains only 3
+    which is the same as the full model, however it contains only 4
     predictors.
 :::
 
@@ -1284,6 +1313,11 @@ table(wine.knn.3, wine.test$Cultivar)
 ```
 
 ```{r, echo=FALSE}
+get_perf <- function(pred, truth) {
+  perf = data.frame(pred=pred, true = truth)
+  perf %>% summarise(wrong = sum(pred != true), total = n(),
+                      perc = round(wrong/total*100,1))
+}
 perf.knn1 <- get_perf(wine.knn.1, wine.test$Cultivar)
 perf.knn2 <- get_perf(wine.knn.2, wine.test$Cultivar)
 ```
@@ -1408,7 +1442,7 @@ more classes. In the former case there is need for just one output node,
 and model fitting is done with respect to the entropy criterion of
 Equation \@ref(eq:entropy). When the target variable has three or more
 classes, the number of output nodes equals the number of classes, and
-fitting is done using conditional maximum likelihood estimation[^17]. In
+fitting is done using conditional maximum likelihood estimation[^maxlik]. In
 either case, the the output is a classification probability (and so
 constrained to the interval $[0,1]$) given by
 $$\hat p = \psi(\beta_0 + \beta_1 z_1 + \cdots + \beta_M z_M)$$
@@ -1506,11 +1540,11 @@ implementation that remedies this.
 [^tidykda]: Note that this package is not on CRAN but can be installed from Github
 using the `remotes` package. See https://github.com/jmarshallnz/tidykda for details.
 
-[^7]: We need estimate only 2 of the probabilities because the third is
+[^sumtoone]: We need estimate only 2 of the probabilities because the third is
     then determined by the constraint that the probabilities in a
     distribution must sum to one.
 
-[^11]: Beware of a possible notational confusion between
+[^whichp]: Beware of a possible notational confusion between
     $p=p(\boldsymbol{x})$, the probability of a response $y=1$ given
     predictors $\boldsymbol{x}=(x_1, \ldots, x_p)^\mathsf{T}$, and $p$
     the number of predictors. The distinction will usually be obvious by
@@ -1518,27 +1552,27 @@ using the `remotes` package. See https://github.com/jmarshallnz/tidykda for deta
     the probability, emphasising its dependence on the predictor
     variables.
 
-[^12]: Recall the sigmoid function was also used for the activation
+[^sigmoid]: Recall the sigmoid function was also used for the activation
     function in neural networks.
 
-[^13]: If the mathematics that follows below is beyond you, do not worry:
+[^maths]: If the mathematics that follows below is beyond you, do not worry:
     you won't be examined on this. We include it for the mathematically
     interested. Nonetheless, be aware that if you want to learn more
     about statistics and data mining, then it is important to learn
     enough mathematics so that you can cope with this type of material.
 
-[^14]: The maximum likelihood estimate in linear regression is given by
+[^mle]: The maximum likelihood estimate in linear regression is given by
     the least squares solution, as the log-likelihood reduces to the sum
     of squared residuals.
 
-[^15]: The `glm` function may be used for more than just logistic
+[^glm]: The `glm` function may be used for more than just logistic
     regression. It can be used in place of `lm` for linear regression
     via `family=gaussian`, or used for Poisson regression via
     `family=poisson`.
 
-[^16]: For the same reason, we required only one probability $p$ for the
+[^lastclass]: For the same reason, we required only one probability $p$ for the
     binary case, as the other probability was necessarily $1-p$.
 
-[^17]: We do not cover the details of conditional maximum likelihood
+[^maxlik]: We do not cover the details of conditional maximum likelihood
     here. An introduction to the method of maximum likelihood estimation
     is provided in the paper 161.304 Statistical Modelling.
