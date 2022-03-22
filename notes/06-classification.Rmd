@@ -457,10 +457,15 @@ $(\pi_1,\pi_2,\pi_3) = (`r wine.lda1$fit$prior`)$. We can instead specify our
 own prior probabilities through the `prior` argument to lda(). For
 example, suppose that we thought that in practice all three cultivars
 are equally prevalent. Then we could perform classification using the
-prior $(\pi_1,\pi_2,\pi_3) = (1/3,  1/3,  1/3)$ instead. Unfortunately
-this isn't yet supported by the `discrim_linear()` framework[^discrim_prior_issue].
+prior $(\pi_1,\pi_2,\pi_3) = (1/3,  1/3,  1/3)$ instead. To pass the `prior`
+information through from `discrim_linear()` we would use the `set_engine()`
+function:
 
-However, we wouldn't expect the classifications to change much as the prior
+```{r, eval=FALSE}
+spec_lda_equal_priors <- discrim_linear() %>% set_engine("MASS", prior = c(1,1,1)/3)
+```
+
+Note that we wouldn't expect the classifications to change much as the prior
 is only a little different.
 
 ## Kernel Discriminant Analysis{#sec:kda}
@@ -1530,9 +1535,6 @@ website for such competitions.
     distribution, and the theory of statistics in general (which is both
     wonderfully elegant and useful) then you should consider taking the
     paper 161.304.
-
-[^discrim_prior_issue]: See https://github.com/tidymodels/discrim/pull/48 for an
-implementation that remedies this.
 
 [^tidykda]: Note that this package is not on CRAN but can be installed from Github
 using the `remotes` package. See https://github.com/jmarshallnz/tidykda for details.
