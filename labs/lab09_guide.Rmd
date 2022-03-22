@@ -1,0 +1,21 @@
+---
+title: 'Workshop 9: More classifiers'
+output: html_document
+---
+
+We'll be looking at some more classifiers, all of which you have met before:
+
+- k-nearest neighbours
+- trees and forests
+- neural networks
+
+As always, we'll use the `tidymodels` framework for fitting, estimating classes and for
+model accuracy.
+
+We'll use the `glass` dataset you are already familiar with, along with some new data from a palaeographic analysis of the "Avila" Bible produced during the XII century between Italy and Spain.
+
+Start by downloading lab09.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab09.Rmd
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**
