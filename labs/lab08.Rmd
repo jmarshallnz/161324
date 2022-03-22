@@ -61,9 +61,9 @@ We'll use multinomial regression on the Italian wine data to examine the effects
 We'll start by loading the wine test and training data in:
 
 ```{r, message=FALSE}
-wine.train <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/wine-train.csv") %>%
+wine.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-train.csv") %>%
   mutate(Cultivar = factor(Cultivar))
-wine.test  <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/wine-test.csv") %>%
+wine.test  <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-test.csv") %>%
   mutate(Cultivar = factor(Cultivar))
 ```
 

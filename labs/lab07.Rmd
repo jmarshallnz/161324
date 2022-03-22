@@ -144,7 +144,7 @@ We read the data in and split into training and test sets as follows:
 ```{r}
 library(rsample)
 set.seed(1234)
-glass <- read.csv(file="http://www.massey.ac.nz/~jcmarsha/data/glass.csv") %>%
+glass <- read_csv(file="https://www.massey.ac.nz/~jcmarsha/data/glass.csv") %>%
   mutate(Type = as_factor(Type))
 split <- initial_split(glass, prop=0.75)
 glass.train <- training(split)
