@@ -1268,7 +1268,9 @@ to centimetres will change the resulting classifier, which is
 undesirable. If the raw variables are on comparable, natural scales then
 this may not be a significant problem, but otherwise it will usually be
 wise to transform the predictors so that they have common means and
-standard deviations.
+standard deviations. Fortunately, the default engine for nearest neighbours
+in the `tidymodels` framework automatically scales the predictors to have
+common standard deviations for us.
 
 Turning to the choice of $k$, the usual considerations of the
 bias-variance trade-off apply. A small value of $k$ (e.g. $k=1$) will
@@ -1279,86 +1281,37 @@ at the expense of introducing bias (since we will be comparing
 observations with greater disparity in the pattern of predictor values).
 
 The method of k-nearest neighbour classification is implemented in R by
-the function `knn`, which is part of the `class` package (which must be
-pre-loaded). The syntax is
-
-```{r, eval=FALSE}
-knn(train, test, cl, k = 1)
-```
-
-where the argument `train` takes the matrix of training set predictor
-variables; `test` takes the matrix of test set predictor variables; `cl`
-takes the vector of training set classes; and `k` specifies the number
-of near neighbours to use. The output from the function is a vector of
-class predictions for the test data.
+several packages. We'll be utilising the `kknn` package for this via
+the `parship` wrapper `nearest_neighbour()`.
 
 ::: {.example}
 **k-Nearest Neighbour Classification for the Wine Data**
 
-We perform classification using the k-nearest neighbour method. Our
-first attempt is based on the raw predictor data. We then examine
-results when these data are transformed to a common scale.
+We perform classification using the k-nearest neighbour method. Note
+that this automatically scales our predictor variables to have a common
+variance. We try $k=1$ and $k=20$ to compare.
 
 ```{r, message=FALSE}
-library(class)
-wine.knn.1 <- knn(wine.train[,2:14], wine.test[,2:14], wine.train$Cultivar, k=5)
-wine.knn.1
-table(wine.knn.1, wine.test$Cultivar)
-wine.train.scale <- wine.train[,2:14]
-wine.test.scale <- wine.test[,2:14]
-wine.means <- apply(wine.train.scale, 2, mean)
-wine.sds <- apply(wine.train.scale, 2, sd)
-wine.train.scale <- scale(wine.train.scale, center=wine.means, scale=wine.sds)
-wine.test.scale <- scale(wine.test.scale, center=wine.means, scale=wine.sds)
-wine.knn.2 <- knn(wine.train.scale, wine.test.scale, wine.train$Cultivar, k=5)
-wine.knn.2
-table(wine.knn.2, wine.test$Cultivar)
-wine.knn.3 <- knn(wine.train.scale, wine.test.scale, wine.train$Cultivar, k=10)
-table(wine.knn.3, wine.test$Cultivar)
+wine.knn1 <- nearest_neighbor(mode="classification", neighbors = 1) %>%
+  fit(Cultivar ~ ., data=wine.train)
+wine.knn1.pred <- wine.knn1 %>%
+  augment(new_data = wine.test)
+wine.knn1.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+wine.knn2 <- nearest_neighbor(mode="classification", neighbors = 20) %>%
+  fit(Cultivar ~ ., data=wine.train)
+wine.knn2.pred <- wine.knn2 %>%
+  augment(new_data = wine.test)
+wine.knn2.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-get_perf <- function(pred, truth) {
-  perf = data.frame(pred=pred, true = truth)
-  perf %>% summarise(wrong = sum(pred != true), total = n(),
-                      perc = round(wrong/total*100,1))
-}
-perf.knn1 <- get_perf(wine.knn.1, wine.test$Cultivar)
-perf.knn2 <- get_perf(wine.knn.2, wine.test$Cultivar)
+perf.knn1 <- wine.knn1.pred %>% get_perf(Cultivar, .pred_class)
+perf.knn2 <- wine.knn2.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
-Points to note:
-
--   The results using the data on the raw scale are not very impressive.
-    The overall misclassification rate is $`r perf.knn1$wrong`/`r perf.knn1$total` \approx `r perf.knn1$perc`\%$.
-    Changing the value of $k$ from our choice of $5$ makes little
-    difference.
-
--   The functions
-    
-    ```{r, eval=FALSE}
-    wine.means <- apply(wine.train.scale, 2, mean)
-    wine.sds <- apply(wine.train.scale, 2, sd)
-    ```
-
-    apply the functions `mean` and `sd` to the second margin (i.e. the
-    columns) of the matrix `wine.train.scale`, and hence output the
-    vector of predictor means and standard deviations respectively for
-    the training data.
-
--   We use these means and standard deviations to centre and scale
-    respectively both the training and test data predictors. (It is
-    essential that both training and test data are transformed in
-    exactly the same way.) This is done using the `scale` command in R,
-    with centre (to be subtracted from data) and scale (by which data
-    are divided) specified by the arguments in the natural way.
-
--   The classifier works far better using the transformed predictors.
-    With $k=5$ we get an overall misclassification rate of
-    $`r perf.knn2$wrong`/`r perf.knn2$total` \approx `r perf.knn2$perc`\%$.
-    The results using $k=10$ nearest neighbours
-    are a little worse (but still much improved on the classification
-    based on the raw data).
+Using $k=1$ results in a misclassification rate of $`r perf.knn1$wrong`/`r perf.knn1$total` \approx `r perf.knn1$perc`\%$, while using $k=20$ results in a missclassification rate of $`r perf.knn2$wrong`/`r perf.knn2$total` \approx `r perf.knn2$perc`\%$.
 :::
 
 ### Classification Trees
@@ -1402,41 +1355,68 @@ We grow a classification tree for the wine data using the default
 settings.
 
 ```{r, message=FALSE}
-library(rpart)
-wine.rp.1 <- rpart(Cultivar ~ . ,data=wine.train)
-wine.rp.1.prob <- predict(wine.rp.1, newdata=wine.test)
-head(wine.rp.1.prob)
-wine.rp.1.pred <- predict(wine.rp.1, newdata=wine.test, type="class")
-table(wine.rp.1.pred, wine.test$Cultivar)
+wine.rp.1 <- decision_tree(mode="classification") %>%
+  fit(Cultivar ~ . ,data=wine.train)
+wine.rp.1.pred <- wine.rp.1 %>%
+  augment(new_data=wine.test)
+wine.rp.1.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 ```{r, echo=FALSE}
-perf.rp1 <- get_perf(wine.rp.1.pred, wine.test$Cultivar)
+perf.rp1 <- wine.rp.1.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
-This R snippet should largely be self explanatory, although the
-behaviour of the `predict` command warrants a mention. When applied to a
-classification tree, the default action is to output a matrix of
-posterior probabilities. Hence the first observation in the validation
-dataset is assigned posterior probabilities of $`r paste(round(wine.rp.1.prob[1,],2), collapse=",")`$
-respectively for the three cultivars.
-
-If we wish to obtain single class predictions (based on maximal
-posterior probabilities) then we must specify the `type` argument to be
-`class`. With this option we obtain a confusion table, and see that the
-overall misclassification rate is $`r perf.rp1$wrong`/`r perf.rp1$total` \approx `r perf.rp1$perc`\%$.
+This R snippet should largely be self explanatory, as it largely follows
+the same pattern that should now be familiar. The overall misclassification rate is $`r perf.rp1$wrong`/`r perf.rp1$total` \approx `r perf.rp1$perc`\%$.
 
 ```{r winetree, echo=FALSE, fig.cap="Classification tree for the wine data."}
-plot(wine.rp.1, compress=TRUE, margin=0.1)
-text(wine.rp.1)
+plot(wine.rp.1 %>% extract_fit_engine(), compress=TRUE, margin=0.1)
+text(wine.rp.1 %>% extract_fit_engine())
 ```
 
 The tree employed is displayed in Figure \@ref(fig:winetree). It is
 very simple, being built on just the variables `Colour` and `Flav`.
 Nonetheless, it is difficult to improve on this. Changing the
-complexity parameter to `cp=0.0001` (output not shown) results in no
+complexity parameter to `cost_complexity=0.0001` (output not shown) results in no
 change to the model, for example.
 :::
 
+### Random Forests for Classification
+
+Random Forests may be adapted to the task of classification in the same
+way as decision trees are adapted: We change the trees to classification
+trees rather than regression trees, and assemble an ensemble of trees.
+Prediction is then done by each tree creating it's individual predited
+classes for each observation, and voting across all the trees, choosing
+the most frequently predicted class. Note that in some cases this choice
+may result in an even split (e.g. 200 trees might say class "A", 200 trees
+say class "B", and 100 trees class "C") where the assignment may then
+be implementation-specific, but typically decided through random allocation.
+
+::: {.example}
+**A Classification Forest for the Wine Data**
+
+Our classification forest is fit in the same way as we did for prediction,
+switching out the `mode` to be "classification". We'll utilise the
+`randomForest` package as before.
+
+```{r, message=FALSE}
+wine.rf <- rand_forest(mode="classification", engine="randomForest") %>%
+  fit(Cultivar ~ . ,data=wine.train)
+wine.rf.pred <- wine.rf %>%
+  augment(new_data=wine.test)
+wine.rf.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+```
+
+```{r, echo=FALSE}
+perf.rf <- wine.rf.pred %>% get_perf(Cultivar, .pred_class)
+```
+
+The misclassification error is $`r perf.rf$wrong`/`r perf.rf$total` \approx `r perf.rf$perc`\%$,
+similar to many of the other models. These data are not hard to classify!
+
+:::
 ### Neural Networks for Classification
 
 Neural networks for classification work much like neural networks for
@@ -1465,38 +1445,56 @@ was indicated in the chapter on prediction, the `nnet` function does not work we
 there is significant variation in the scales of the predictor variables.
 This is certainly the case with the wine data; for example, in the
 training set the variable `Proline` ranges from 290 to 1680, while
-`Non.Flav` ranges from 0.14 to 0.66. We therefore begin by transforming
-all the predictors on to the interval $[0,1]$..
+`Non.Flav` ranges from 0.14 to 0.66. We therefore use a `recipe` to scale
+the data first.
 
-```{r}
-library(nnet)
+```{r, message=FALSE}
+library(recipes)
+scaling <- recipe(Cultivar ~ ., data=wine.train) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  prep(wine.train)
+
 set.seed(1000)
-wine.train.scale <- wine.train
-wine.test.scale <- wine.test
-wine.train.max <- apply(wine.train[,2:14], 2, max)
-wine.train.scale[,2:14] <- sweep(wine.train[,2:14], 2, wine.train.max, FUN="/")
-wine.test.scale[,2:14] <- sweep(wine.test[,2:14], 2, wine.train.max, FUN="/")
-wine.nn.1 <- nnet(Cultivar ~ . , size=7, data=wine.train.scale)
-wine.nn.1.prob <- predict(wine.nn.1, newdata=wine.test.scale)
-head(wine.nn.1.prob)
-wine.nn.1.pred <- predict(wine.nn.1, newdata=wine.test.scale, type="class")
-table(wine.nn.1.pred, wine.test$Cultivar)
+wine.nn.1 <- mlp(mode="classification", hidden_units = 7) %>%
+  fit(Cultivar ~ ., data = bake(scaling, wine.train))
+wine.nn.1 %>% extract_fit_engine() %>% pluck("convergence")
+wine.nn.1.pred <- wine.nn.1 %>%
+  augment(new_data = bake(scaling, wine.test))
+wine.nn.1.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.nn1 <- get_perf(wine.nn.1.pred, wine.test$Cultivar)
+perf.nn1 <- wine.nn.1.pred %>% get_perf(Cultivar, .pred_class)
 ```
 
-As with prediction using `rpart`, the default action of the `predict`
-function is to produce posterior class probabilities. We can get most
-probable class predictions by setting the argument `type` to `class`
-when implementing `predict`. The overall misclassification rate is
-$`r perf.nn1$wrong`/`r perf.nn1$total` \approx `r perf.nn1$perc`\%$,
-although it should be remembered that results
-from `nnet` may vary a little depending on the (random) choice of
-initial conditions. It follows that running the above code with a
-different setting of `set.seed` may give a slightly different error
-rate.
+Some notes:
+
+-   Our `scaling` recipe is setup the usual way, adding a step to normalise all
+    the numeric predictors, and then preparing the recipe using the training data.
+    We then `bake()` the data prior to passing to `fit()` or `augment()/predict()`.
+
+-   The line with `pluck("convergence")` is checking whether the neural network has
+    converged: The fitted neural network object (extracted via `extract_fit_engine()`)
+    is a list (as are many R model objects) with a 'convergence' entry - you can see
+    this from the help for `nnet()`. The `pluck()` function is for pulling information
+    out of (possibly nested) lists. In this case we could have also used:
+    
+    ```{r, eval=FALSE}
+    wine.nn.1 %>% pluck("fit", "convergence")
+    ```
+    
+    as the `wine.nn.1` object returned from `parsnip` is itself a list, with the engine
+    fit object in the entry `fit`. Thus, the pluck here would traverse the first list
+    to find the `fit` entry, and then traverse within that list to find `convergence`.
+  
+-   The overall model fit here is pretty good, with misclassification rate
+    $`r perf.nn1$wrong`/`r perf.nn1$total` \approx `r perf.nn1$perc`\%$,
+    although it should be remembered that results
+    from `nnet` may vary a little depending on the (random) choice of
+    initial conditions. It follows that running the above code with a
+    different setting of `set.seed` may give a slightly different error
+    rate.
 :::
 
 ## High Class Classifiers
