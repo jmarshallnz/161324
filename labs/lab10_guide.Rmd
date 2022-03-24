@@ -1,0 +1,19 @@
+---
+title: 'Workshop 10: Clustering'
+output: html_document
+---
+
+We'll be looking at clustering today, including:
+
+- Hierarchical clustering
+- k-means clustering
+- Partitioning around Medioids
+- Silhouttes
+
+We'll utilise data from the New Zealand General Election in 2020 along with a synthetic dataset to demonstrate some key concepts with clustering.
+
+Start by downloading lab10.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab10.Rmd
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**

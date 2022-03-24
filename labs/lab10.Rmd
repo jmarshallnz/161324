@@ -1,0 +1,182 @@
+---
+title: 'Workshop 10: Clustering'
+output: html_document
+---
+
+In this workshop we'll be looking at clustering data. Clustering is an unsupervised
+learning technique - there is no known truth, and we're instead trying to group the
+observations into a fairly small number of clusters such that all observations in a
+clusters are closely related, while observations from different clusters differ.
+
+The techniques we'll cover include:
+
+- Hierarchical clustering
+- k-means clustering
+- Partitioning around Medioids
+- Silhouttes
+
+## The 2020 New Zealand General Election
+
+In this exercise we'll look at the results from the 2020 New Zealand general election,
+and look at how the 72 electorates (regions) cluster together based on the party
+and candidate votes, or both combined.
+
+In New Zealand general elections there are 65 'General' electorates (regions) and 7
+Maori electorates. Each voters is assigned to one of these electorates, and has two
+votes: they vote for the political party they wish to represent them in parliament,
+and in addition vote for the person (candidate) they wish to represent them in their
+electorate.
+
+Generally, the candidate they vote for in an electorate is also in a political party,
+but there is no need for an individual to vote for the same party across both their
+votes - indeed, vote splitting, where one votes for a person from a party other than
+the one you vote for is common and encouraged in some electorates.
+
+For more information about voting in New Zealand see here:
+
+https://elections.nz/democracy-in-nz/what-is-new-zealands-system-of-government/
+
+We'll be usig data from the 2020 general election, which we read in below.
+
+```{r, message=FALSE}
+library(tidyverse)
+library(broom)
+library(ggdendro)
+library(cluster)
+library(recipes)
+
+party  <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/nzelect/2020_party.csv")
+candidate <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/nzelect/2020_candidate.csv")
+```
+
+### Try yourself
+
+1. Take a look at the `party` data. You should notice you have the percentage vote for each party (in separate columns) by the electorate (in rows). Summarise how each party does on average across the electorates.
+
+2. Produce a long-form dataset `party_long` by pivoting the vote columns into `Party` and `PartyVote` columns. Use this to produce boxplots of the `PartyVote` by `Party` to show the variation across the electorates.
+
+3. Produce a long-form version of the `candidate` data, and combine both into a `all_long` dataset. Use this to do a scatterplot of the person vote versus the party vote, coloured by Party.
+
+
+We'll next look at clustering the `party` data using hierarchical clustering:
+
+```{r}
+party.hc1 <- party %>%
+  column_to_rownames("Electorate") %>%
+  dist() %>%
+  hclust(method='single')
+
+ggdendrogram(party.hc1)
+```
+
+### Try yourself
+
+1. Try performing hierarchical clustering with average or complete linkage.
+
+2. Which electorates tend to cluster together?
+
+Let's now look into the clustering a little more, by using `cutree` to break things down into (say) 5
+clusters:
+
+```{r}
+party.cl1 <- party %>% 
+  mutate(Cluster = party.hc1 %>% cutree(k=5))
+
+party.cl1 %>%
+  group_by(Cluster) %>%
+  summarise(across(-Electorate, mean), size=n())
+```
+
+We can see that cluster 5 (The Maori electorates) all teend to have a much higher vote for the Maori and Other parties and a lower vote for National, while cluster 1 tends to vote more for National. Cluster 3 are South Auckland electorates that vote very strongly for Labour, while Cluster 2 and 4 vote more strongly for the Greens (two Wellington electorates and Dunedin).
+
+### Try yourself
+
+1. Do the other linkage methods result in the same clustering?
+
+2. Do the same analysis of the `candidate` vote. How do the electorates cluster? Choose a suitable number of clusters based on the dendogram and then look into which electorates fall in each cluster.
+
+We'll now combine the two datasets so we can look at them together:
+
+```{r}
+all <- party %>% rename_with(~ paste("Party", ., sep=":"), .cols=-Electorate) %>%
+  left_join(
+    candidate %>% rename_with(~ paste("Cand", ., sep=":"), .cols=-Electorate),
+    by = 'Electorate'
+  )
+```
+
+### Try yourself
+
+Using the combined voting data `all`, perform hierarchical clustering and investigate which
+electorates tend to vote similarly when both party and candidate votes are considered.
+
+
+## Clustering synthetic data
+
+In this exercise we have 9 numerical measurements (labelled A through I)
+from a synthetic data set. Our goal is to group the observations with
+common characteristics together.
+
+```{r, message=FALSE}
+synth <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/syn-cluster.csv")
+```
+
+### Try yourself
+
+1. Start by using hierarchical clustering to look at this data. How many clusters look sensible?
+
+
+We'll next try using k-means clustering, with the following code fitting k-means for k=1 through 10:
+
+```{r}
+set.seed(1234)
+km_all <- tibble(k = 1:10) %>%
+  mutate(
+    model = map(k, ~ kmeans(synth, centers = ., nstart = 20)),
+    tidied = map(model, glance)
+  ) %>%
+  unnest(tidied)
+km_all
+```
+
+### Try yourself
+
+1. Produce a plot of the within sum of squares against k. How many are clusters do you think
+are optimal?
+
+2. Check the scales on each of the variables in `synth`. You should notice they are different!
+
+We can rescale the data using a `recipe` as usual:
+
+```{r}
+scaling <- recipe(synth) %>%
+  step_normalize(everything()) %>%
+  prep(synth)
+
+synth.scale <- bake(scaling, synth)
+```
+
+### Try yourself
+
+1. Repeat the clustering procedure. How many clusters make sense now?
+
+
+You should notice that 6 clusters seems sensible. We can confirm this by looking at the silhouettes of 6 and 7 clusters. If 6 clusters is best, then by asking for 7 clusters we will likely split one of the clusters artificially, which should result in at least two clusters with poor silhouette widths.
+
+We can extract the silhouette information by re-fitting using `pam`:
+
+```{r}
+clust6 <- pam(synth, k=6)
+clust6.sil <- clust6 %>% pluck('silinfo', 'widths') %>% as_tibble()
+```
+
+### Try yourself
+
+1. Create boxplots of the silhouette width by cluster using `clust6.sil`.
+
+2. Repeat this for k=7. You might wish to combine the plots into one by using `bind_rows()` to 
+produce a single plot.
+
+3. Look at the results of your preferred clustering by using `augment()` from `broom`
+to append the cluster number to the data. With these data, just doing boxplots for each variable
+by the cluster will be enough to see how clear things are!
