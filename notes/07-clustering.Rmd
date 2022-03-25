@@ -504,71 +504,177 @@ class contains components
 
 -   `size`: the size of each cluster.
 
-::: {.example #iris}
-**$K$-means to Fisher's Iris data**
+The information can be extracted into tidy data frames using `tidy()`,
+`augment()` and `glance()` from the `broom` package in a similar way
+as we can extract information for linear models.
 
-Fisher's Iris data is a dataset collected by Edgar Anderson in order to
-quantify the morphological variance of three related species of Iris.
-The data consist of 50 samples of each species, with 4 measurements on
-each flower (sepal and petal length and widths). We'll use the first 3
-of these in this example: Sepal length, Sepal width, and Petal length.
-We use the `kmeans` function to analyse the data, under the assumption
-that we don't know the actual species, and see whether the $K$-means
-algorithm is useful at distinguishing these species. We'll use the `rgl`
-library in order to plot scatterplots in 3d.
+::: {.example #penguins}
+**$K$-means of Penguins from the Palmer Archipelago**
 
-```{r iris1, echo=FALSE, fig.cap="The actual species (left) and clusters found using $K$-means with 3 clusters (right) for Example \\@ref(exm:iris)."}
-library(rgl)
-data(iris)
-set.seed(23)
-k <- kmeans(iris[,1:3], 3, nstart=10);
-mfrow3d(nr = 1, nc = 2, sharedMouse = TRUE)
-plot3d(iris[,1:3], col=as.numeric(iris$Species), pch=19, box=FALSE)
-rgl.viewpoint(theta = 35, phi = 15)
-plot3d(iris[,1:3], col=as.numeric(k$cluster), pch=19, box=FALSE)
-rgl.viewpoint(theta = 35, phi = 15)
-rglwidget()
+These data consiste of measurements of size, clutch observations and blood
+isotope ratios for adult foraging Adélie, Chinstrap, and Gentoo penguins
+observed on islands in the Palmer Archipelago near Palmer Station, Antartica.
+Data were collected and made available by Dr Kristen Gorman and the Palmer
+Station Long Term Ecological Research (LTER) Program.
+
+We'll use the measurements `flipper_length_mm`, `bill_length_mm` and `body_mass_g`
+in order to cluster the penguins, under the assumption that we don't know what the
+underlying species is, and see whether the $K$-means algorithm allows us to
+distinguish the species.
+
+```{r peng1, echo=FALSE, message=FALSE, fig.cap="The actual species (left) and clusters found using $K$-means with 3 clusters (right) for Example \\@ref(exm:penguins)."}
+library(palmerpenguins)
+library(patchwork)
+set.seed(32)
+penguins <- penguins %>% filter(complete.cases(.))
+k <- penguins %>% select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
+  mutate(across(everything(), scale)) %>%
+  kmeans(centers=3, nstart=20)
+
+g1 <- ggplot(penguins) +
+  geom_point(mapping=aes(x=flipper_length_mm,
+                         y=body_mass_g,
+                         col=species)) +
+  guides(col='none')
+
+g2 <- ggplot(k %>% augment(penguins)) +
+  geom_point(mapping=aes(x=flipper_length_mm,
+                         y=body_mass_g,
+                         col=.cluster)) +
+  guides(col='none')
+g1 + g2
 ```
 
-Figure \@ref(fig:iris1)
+Figure \@ref(fig:peng1)
 compares the actual species (on the left) with the clusters found by the
-$K$-means algorithm on the right. From this angle (you can rotate the
-plot with the mouse) it appears the $K$-means algorithm is
-recovering the individual species relatively well. The plots were
-produced using the following R code.
+$K$-means algorithm on the right. We can see that the $K$-means algorithm does
+reasonably well, though there is some incorrect allocation fo moderate flipper
+lengths and body masses. The code used is below:
 
 ```{r, eval=FALSE}
-library(rgl)
-plot3d(iris[,1:3], col=as.numeric(iris$Species), pch=19, box=FALSE)
-k <- kmeans(iris[,1:3], 3, nstart=10)
-plot3d(iris[,1:3], col=k$cluster, pch=19, box=FALSE)
+ggplot(penguins) +
+  geom_point(mapping=aes(x=flipper_length_mm,
+                         y=body_mass_g,
+                         col=species))
+
+km <- penguins %>%
+  select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
+  mutate(across(everything(), scale)) %>%
+  kmeans(centers=3, nstart=20)
+
+km %>% augment(penguins) %>%
+  ggplot() +
+  geom_point(mapping=aes(x=flipper_length_mm,
+                       y=body_mass_g,
+                       col=.cluster))
 ```
 
-Notice that we're specifying `nstart=10` when using `kmeans`. This
-requests that the $K$-means algorithm is run using 10 separate starting
+Notice that we're specifying `nstart=20` when using `kmeans`. This
+requests that the $K$-means algorithm is run using 20 separate starting
 cluster positions, helping to minimise the chance of us being left with
-a local minima rather than the global minimum.
+a local minima rather than the global minimum. We're also scaling each
+predictor (via the `mutate` function) to a common scale to ensure that
+all the variables were on the same scale. If we don't do that, we'd end
+up with `body_mass_g` dominating, as shown in Figure \@ref(fig:peng2)
 
-```{r iris2, echo=FALSE, fig.cap="The actual species (left) and clusters found using $K$-means with 3 clusters (right) for Example \\@ref(exm:iris)."}
-mfrow3d(nr = 1, nc = 2, sharedMouse = TRUE)
-plot3d(iris[,1:3], col=as.numeric(iris$Species), pch=19, box=FALSE)
-rgl.viewpoint(theta = -30, phi = 60)
-plot3d(iris[,1:3], col=as.numeric(k$cluster), pch=19, box=FALSE)
-rgl.viewpoint(theta = -30, phi = 60)
-rglwidget()
+```{r peng2, echo=FALSE, fig.cap="The actual species (left) and clusters found using $K$-means with 3 clusters (right) for Example \\@ref(exm:penguins) without scaling."}
+set.seed(22)
+k <- penguins %>% select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
+  kmeans(centers=3, nstart=20)
+
+g1 <- ggplot(penguins) +
+  geom_point(mapping=aes(x=flipper_length_mm,
+                         y=body_mass_g,
+                         col=species)) +
+  guides(col='none')
+
+g2 <- ggplot(k %>% augment(penguins)) +
+  geom_point(mapping=aes(x=flipper_length_mm,
+                         y=body_mass_g,
+                         col=.cluster)) +
+  guides(col='none')
+g1 + g2
 ```
 
-Figure \@ref(fig:iris2) shows
-a different angle of the same plot, where it is clear that the $K$-means
-algorithm has a harder time differentiating between *Iris versicolor*
-and *Iris virginia*. Figure \@ref(fig:iris3) highlights this, in that while the $K$-means
-algorithm distinguishes two clusters well, the three cluster does not
-improve things all that much: Without knowing that we had three species,
-we may have concluded there were two.
+Figure \@ref(fig:peng2) shows that without scaling, the division into clusters happens
+almost exclusively along the `body_mass_g` axis, as this contributes the most to the
+distance between observations. This clearly gives a clustering that does not align
+well at all to the actual species.
 
-```{r iris3, echo=FALSE, fig.cap="Cluster size versus within cluster variation for Example \\@ref(exm:iris)."}
-plot_ss(iris[,1:3])
+Figure \@ref(fig:peng3) compares the total within cluster sum of squares for a
+range of $k$ for scaled (left) and unscaled (right) data. We see in either case
+that the data suggest that two clusters may be best, though the scaled data does
+show a very slightly larger kink at 3 clusters.
+
+```{r peng3, echo=FALSE, fig.cap="Cluster size versus within cluster variation for Example \\@ref(exm:penguins). Scaled data left, unscaled data right"}
+peng_ss <- tibble(k=1:6) %>%
+  mutate(km = map(k, ~ kmeans(penguins %>%
+                                select(flipper_length_mm, bill_length_mm, body_mass_g),
+                              centers=., nstart=20)),
+         tidied = map(km, glance)) %>%
+  unnest(tidied)
+peng_ss_scaled <- tibble(k=1:6) %>%
+  mutate(km = map(k, ~ kmeans(penguins %>%
+                                select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
+                                mutate(across(everything(), scale)),
+                              centers=., nstart=20)),
+         tidied = map(km, glance)) %>%
+  unnest(tidied)
+
+g1 <- ggplot(peng_ss_scaled) +
+  geom_line(mapping=aes(x=k, y=tot.withinss))
+g2 <- ggplot(peng_ss) +
+  geom_line(mapping=aes(x=k, y=tot.withinss))
+g1+g2
 ```
+
+The code to produce the datasets for these charts is below:
+
+```{r, eval=FALSE}
+peng.scale <- penguins %>%
+  select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
+  mutate(across(everything(), scale))
+
+peng_ss <- tibble(k=1:6) %>%
+  mutate(
+    km = map(k, ~ kmeans(peng.scale, centers=., nstart=20)),
+    tidied = map(km, glance)
+  ) %>%
+  unnest(tidied)
+peng_ss
+```
+
+-   We scale the penguin data before applying `kmeans`.
+
+-   To run `kmeans` across a range of k, we utilise the `purrr` package's `map`
+    function for applying a function across the list of k. This takes in a list
+    (or vector) and operates a function on each entry in turn, returning a list.
+
+-   The `tibble(k=1:6)` sets up a `data.frame` with a single column `k` ranging from
+    one to six.
+
+-   The `mutate()` command first uses `map()` to run the function `kmeans()` for
+    each `k` on the scaled penguin data. Note that the varying parameter (`k`)
+    in the `map()` is being passed in using the `.` argument - i.e. it is being
+    mapped to the `centers` argument. The result of this
+    will be a list column `km`, where each entry is an R object (in this case one of
+    class `kmeans`).
+
+-   The second line in `mutate()` then operates on the `km` list column,
+    running the `glance()` command from `broom` which will return a tidy `data.frame`
+    containing summary model fit information such as the sum of squares. this is
+    then stored in the list column `tidied`.
+
+-   Finally, we use `unnest()` from `tidyr` to expand the `data.frame`s stored
+    in the list column `tidied`, flattening them out so that each of the columns
+    within `tidied` becomes a column in the main data frame.
+
+-   In the end, we have columns for `k`, a list column `km` (storing the `kmeans`
+    output), then the columns that result from the `glance()` function (`totss`
+    the total sum of squares; `tot.withinss`, the total within-cluster sum of
+    squares; `betweenss`, the between-cluster sum of squares; and `iter`, the number
+    of iterations to convergence). As this is a tidy data.frame, it can be
+    fed into `ggplot()` for plotting.
 
 :::
 
