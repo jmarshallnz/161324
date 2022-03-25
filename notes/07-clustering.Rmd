@@ -205,9 +205,10 @@ Republican voting). Notice the somewhat strange voting pattern in
 Mississippi, where the Republican vote is usually poor but there are
 some exceptional years (in comparison to other states).
 
-```{r repubstars, echo=FALSE, fig.cap="Stars plot for republican voting data.",fig.height=3}
-repub <- read.table("data/repub.txt")
-stars(repub, nrow=2, ncol=7, flip.labels = FALSE)
+```{r repubstars, echo=FALSE, message=FALSE, fig.cap="Stars plot for republican voting data.",fig.height=3}
+repub <- read_csv("../data/repub.csv") %>%
+  column_to_rownames("State") 
+repub %>% stars(nrow=2, ncol=7, flip.labels = FALSE)
 ```
 
 Applying the `hclust` command, R code for producing a dendrogram to
