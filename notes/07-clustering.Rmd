@@ -215,14 +215,23 @@ Applying the `hclust` command, R code for producing a dendrogram to
 display hierarchical clustering is given below.
 
 ```{r, eval=FALSE}
-repub.dist <- dist(repub,"euclidean")
-repub.clust.single <- hclust(repub.dist,method="single")
-repub.clust.complete <- hclust(repub.dist,method="complete")
-plot(repub.clust.single)
-plot(repub.clust.complete) 
+repub <- read_csv("../data/repub.csv") %>%
+  column_to_rownames("State")
+repub.dist <- repub %>% dist(method = "euclidean")
+repub.clust.single <- repub.dist %>% hclust(method = "single")
+repub.clust.complete <- repub.dist %>% hclust(method="complete")
+library(ggdendro)
+ggdendrogram(repub.clust.single)
+ggdendrogram(repub.clust.complete)
 ```
 
-The dendrograms are produced are displayed in Figures \@ref(fig:repubsingle) and
+Note that we use `column_to_rownames()` here to move the `State` column
+to the rownames. This is so that when we apply `dist()` to produce the
+distance matrix, the rows and columns are labelled. These labels are
+then kept through the `hclust()` functions. The `ggdendrogram()` function
+from the `ggdendro` package gives us `ggplot2` consistent plotting.
+
+The dendrograms produced are displayed in Figures \@ref(fig:repubsingle) and
 \@ref(fig:repubcomplete). Note
 that the dissimilarity between two groups can be read off from the
 height at which they join. So, for example, with single linkage (in
@@ -232,16 +241,15 @@ the group $\{ \textsf{Arkansas}, \textsf{Florida},
 figure is $37.79937$ which can be obtained by inspecting
 `repub.clust.single$height`).
 
-```{r repubsingle, echo=FALSE, fig.cap="Dendrogram for Republican voting data, obtained using single linkage."}
+```{r repubsingle, echo=FALSE, message=FALSE, fig.cap="Dendrogram for Republican voting data, obtained using single linkage."}
+library(ggdendro)
 repub.dist <- dist(repub,"euclidean")
 repub.clust.single <- hclust(repub.dist,method="single")
-repub.clust.complete <- hclust(repub.dist,method="complete")
-par(mar=c(1,4,1,1))
-plot(repub.clust.single, xlab="", main="", sub="")
+ggdendrogram(repub.clust.single)
 ```
 ```{r repubcomplete, echo=FALSE, fig.cap="Dendrogram for Republican voting data, obtained using complete linkage."}
-par(mar=c(1,4,1,1))
-plot(repub.clust.complete, xlab="", main="", sub="") 
+repub.clust.complete <- hclust(repub.dist,method="complete")
+ggdendrogram(repub.clust.complete)
 ```
 
 Note that a dendrogram does not define a unique set of clusters. If the
@@ -254,9 +262,9 @@ three clusters emerge:
 -   *Cluster 1*: New York, New Mexico, Washington, California, Oregon,
     Michigan, Kansas, Wyoming.
 
--   *Cluster 2*: Alabama, Georgia, Arkansas, Florida, Texas.
+-   *Cluster 2*: Mississippi.
 
--   *Cluster 3*: Mississippi.
+-   *Cluster 3*: Alabama, Georgia, Arkansas, Florida, Texas.
 
 These groupings were obtained by inspection of the dendrogram. Such a
 process would clearly have been laborious had all 50 states been present
@@ -264,7 +272,7 @@ in the data. Fortunately the R command `cutree` generates group
 membership automatically.
 
 ```{r}
-repub.groups.complete <- cutree(repub.clust.complete, h=75)
+repub.groups.complete <- repub.clust.complete %>% cutree(h=75)
 repub.groups.complete
 ```
 :::
@@ -283,7 +291,7 @@ repub.groups.complete
     knitr::include_graphics('graphics/linkage_single.png')
     ```
 
-    The left hand cluster in Figure \@ref(fig:repubsingle) in
+    The central cluster in Figure \@ref(fig:repubsingle) in
     Example \@ref(exm:repubclust) shows an instance of chaining with real data.
 
 -   The growth of large clusters at small heights is very unlikely under
@@ -651,7 +659,7 @@ instead of the data frame.
 
 ```{r}
 repub.dist <- dist(repub, method="manhattan")
-pam(repub.dist, 3, TRUE)
+pam(repub.dist, k=3)
 ```
 :::
 
@@ -726,8 +734,8 @@ data we have the following.
 ```{r silhouetterepub, fig.show='hold', out.width='50%', fig.cap='Silhouette plots of the republican voting data'}
 library(cluster)
 repub.dist <- dist(repub, method="manhattan")
-repub.pam.1 <- pam(repub.dist, 3)
-repub.pam.2 <- pam(repub.dist, 4)
+repub.pam.1 <- pam(repub.dist, k=3)
+repub.pam.2 <- pam(repub.dist, k=4)
 plot(silhouette(repub.pam.1), border=NA, do.clus.stat=FALSE, do.n.k=FALSE,
      main="3 clusters")
 plot(silhouette(repub.pam.2), border=NA, do.clus.stat=FALSE, do.n.k=FALSE,
@@ -756,10 +764,10 @@ Figure \@ref(fig:silhouetterepub) shows the resulting plots. Points to note:
     and some evidence in the 4 cluster silhouette plot that at least one
     of the clusters is not well grouped, with Arkansas having a low
     silhouette. Further information about this may be found by printing
-    the output from silhouette.
+    the silhouette output from the `pam` object:
 
     ```{r}
-    head(silhouette(repub.pam.2), n=10)
+    repub.pam.2 %>% pluck('silinfo', 'widths')
     ```
 
     We can see that Arkansas lies between cluster 1 and cluster 3,
