@@ -77,6 +77,17 @@ variables. In that situation, 0-0 matches provide almost no useful
 information about the similarity between individuals. We therefore omit
 these matches.
 
+**Gower's dissimilarity**
+
+Gower's dissimilarity was the metric used to identify nearest neighbours
+in the `kNN()` function from `VIM`, which we discussed in \@ref(sec:imputation).
+To compute Gower's dissimilarity we first divide any numeric variable by
+it's range (to ensure all variables have range 1), and then use Manhattan
+dissimilarity. For categorical variables we use simple matching. Gower's
+distance is then the combination of these:
+$$\gamma_{st} = \frac{1}{p_n}\sum_{j=1}^{p_n} \frac{|x_{sj} - x_{tj}|}{r_j} + \frac{1}{p_c} \sum_{j=1}^{p_c} {\bf 1}[x_{sj} = x_{tj}].$$ where $p_n$ is the number of numeric predictors,
+$r_j$ the range of the $j$-th numeric variable, and $p_c$ the number of categorical predictors.
+
 The R command for computing a dissimilarity matrix is
 
 ```{r, eval=FALSE}
