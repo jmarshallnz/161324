@@ -904,28 +904,55 @@ as `clusters` returned from `kmeans` or the output of `cutree`, and
 `dist` is a dissimilarity matrix, normally computed using `dist`. Note
 that you need not use the same dissimilarity measure as was used to
 generate the clustering. (e.g. the squared Euclidean measure used in
-`kmeans`). For the `iris` data this may be done as follows.
+`kmeans`). For the `penguins` data this may be done as follows.
 
-```{r silhouetteiris, fig.show='hold', out.width="50%", fig.cap="Silhouette plots of the iris data set"}
-iris.kmeans.1 <- kmeans(iris[,1:4], 3)
-iris.kmeans.2 <- kmeans(iris[,1:4], 4)
-iris.dist <- dist(iris[,1:4])
-plot(silhouette(iris.kmeans.1$cluster, dist=iris.dist), border=NA, do.clus.stat=FALSE, do.n.k=FALSE)
-plot(silhouette(iris.kmeans.2$cluster, dist=iris.dist), border=NA, do.clus.stat=FALSE, do.n.k=FALSE)
+```{r silhouettepeng, fig.cap="Silhouette plots of the Palmer Penguins data set"}
+set.seed(27)
+peng.scaled <- penguins %>%
+  select(flipper_length_mm, bill_length_mm, bill_depth_mm, body_mass_g) %>%
+  mutate(across(everything(), scale))
+peng.km.1 <- peng.scaled %>% kmeans(centers=3, nstart=20)
+peng.km.2 <- peng.scaled %>% kmeans(centers=4, nstart=20)
+peng.dist <- peng.scaled %>% dist(method='euclidean')
+peng.sil.1 <- peng.km.1 %>% pluck('cluster') %>% silhouette(dist=peng.dist)
+peng.sil.2 <- peng.km.2 %>% pluck('cluster') %>% silhouette(dist=peng.dist)
+peng.sil <- bind_rows(
+    peng.sil.1[] %>% as.data.frame() %>% mutate(k='k=3'),
+    peng.sil.2[] %>% as.data.frame() %>% mutate(k='k=4')
+  ) %>%
+  mutate(cluster = as.factor(cluster))
+
+ggplot(peng.sil) +
+  geom_boxplot(mapping = aes(x=cluster, y=sil_width)) +
+  facet_wrap(vars(k), scales='free_x')
 ```
 
-Plots are given in Figure \@ref(fig:silhouetteiris). Points to note:
+Plots are given in Figure \@ref(fig:silhouettepeng). Points to note:
 
--   It is clear that the first cluster in the 3-cluster case has been
-    split in two in the 4-cluster case, each of which has lower average
-    silhouette, suggesting this split is artificial.
+-   We've scaled the penguins data prior to fitting k-means or computing distances.
 
--   Notice in the 4-cluster plot there is a point with negative
-    silhouette towards the bottom of the plot. This suggests that this
-    point may be better suited in one of the other clusters. Whilst the
-    $k$-means algorithm has assigned this point to the closest cluster
-    based on the cluster centroid, that doesn't necessarily mean that it
-    is closest to all the points in that cluster. The different ways of
+-   The `silhouette` command utilises the `cluster` vector from the `peng.km.1` object,
+    so we've used `pluck()` to pull it out.
+
+-   Unfortunately, `silhouette()` returns a matrix with class `silhouette`. This cannot
+    be coerced directly into a `data.frame` as there is no `data.frame.silhouette()`
+    method provided by the `cluster` package. So we do a trick by using `[]` to return
+    a plain `matrix`, which can then be coerced into a `data.frame` for plotting.
+
+-   We bind the two datasets together so we can plot them side by side with facetting.
+
+-   We've used boxplots here rather than a standard silhouette plot, just
+    by way of demonstration.
+
+-   It is clear that the third cluster in the 3-cluster case has been
+    split in two (clusters 3 and 4) in the 4-cluster case, each of which has
+    lower average silhouette, suggesting this split is artificial.
+
+-   Notice in both plots there are points with negative silhouettes.
+    This suggests that these penguins may be better suited in one of the other
+    clusters. Whilst the $k$-means algorithm has assigned these observations
+    to the closest cluster based on the cluster centroid, that doesn't necessarily
+    mean that it is closest to all the points in that cluster. The different ways of
     measuring how close a point is to each cluster (e.g. cluster
     centroid versus average dissimilarity to other points in the
     cluster) may give different results, in the same way that single and
