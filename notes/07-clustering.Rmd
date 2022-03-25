@@ -385,11 +385,11 @@ set.seed(2)
 x <- cbind(rnorm(20, 0.3, 0.1), rnorm(20, 0.3, 0.1))
 x <- rbind(x, cbind(rnorm(20, 0.3,0.15), rnorm(20, 0.7,0.15)))
 x <- rbind(x, cbind(rnorm(20, 0.8,0.08), rnorm(20, 0.2,0.05)))
-clust <- data.frame(x=x[,1],y=x[,2],col=rep(c(1,2,3),each=20))
-par(mar = c(1,1,1,1))
-plot(clust$x, clust$y, col=clust$col, main="", xlab="", ylab="", pch=19, asp=1,
-     axes=FALSE)
-box()
+clust <- data.frame(x=x[,1],y=x[,2],col=factor(rep(c(1,2,3),each=20)))
+ggplot(clust) +
+  geom_point(mapping=aes(x=x, y=y, col=col)) +
+  guides(x='none', y='none', col='none') +
+  labs(x=NULL, y=NULL)
 ```
 
 We'd expect that $K=3$ is reasonable, so let's explore how the $K$-means
@@ -432,26 +432,30 @@ compute_centroids <- function(xy, c) {
   return(centers)
 }
 
-run_iterations <- function(xy, centers, iters) {
-  max_iters = max(iters$num)
+run_iterations <- function(xy, centers, max_iters) {
+  out <- list()
   for (i in 1:max_iters) {
     c <- assign_to_cluster(xy, centers)
-    if (length(which(iters$num == i)) > 0) {
-      plot(xy[,1], xy[,2], col=c, main=iters$name[which(iters$num==i)], xlab="", ylab="", pch=19, asp=1,
-     axes=FALSE)
-      points(centers, col=1:3, pch=8)
-      box()
-    }
+    out[[i]] <- bind_rows(data.frame(x=xy[,1], y=xy[,2], col=c, iter=i, type="point"),
+                          data.frame(x=centers[,1], y=centers[,2], col=1:3, iter=i, type="center"))
     centers <- compute_centroids(xy, c);
   }
+  bind_rows(out)
 }
 
-par(mfrow=c(2,3))
-par(omi=c(0,0,0,0), mar=c(1,1,1,1))
 xy <- clust[,1:2]
 centers <- xy[c(4,59,55),]
-iters <- data.frame(num=c(1,2,3,5,9,17),name=c("Initial means", "Iteration 1", "Iteration 2", "Iteration 4", "Iteration 8", "Iteration 16"));
-run_iterations(xy, centers, iters)
+df <- run_iterations(xy, centers, max_iters=17)
+df %>% filter(iter %in% c(1,2,3,5,9,17)) %>%
+  mutate(name = case_when(iter == 1 ~ "Initial means",
+                          TRUE ~ paste("Iteration", iter-1))) %>%
+  ggplot() +
+  geom_point(mapping = aes(x=x, y=y, col=as.factor(col), shape=type, size=type)) +
+  facet_wrap(vars(name)) +
+  guides(x='none', y='none', col='none', shape='none', size='none') +
+  scale_shape_manual(values = c(center='asterisk', point='circle')) +
+  scale_size_manual(values = c(center=2, point=1)) +
+  labs(x=NULL, y=NULL)
 ```
 
 In order to find an appropriate value for $K$, one method is to apply
@@ -467,25 +471,15 @@ variance occurs by $K=3$, and while things continue to improve, the
 relative improvement is minor.
 
 ```{r kmeans3, echo=FALSE, fig.cap="The within cluster variance for one to six clusters for Example \\@ref(exm:kmeans)"}
-ss_clusters <- function(data, c=rep(1,nrow(data))) {
-  d <- 0;
-  for (k in 1:max(c)) {
-    dat <- data[c==k,]
-    center=colMeans(dat)
-    for (i in 1:nrow(dat)) {
-      d <- d + sum((dat[i,] - center)^2)
-    }
-  }
-  return(d)
-}
-plot_ss <- function(dat) {
-  ss <- rep(0,6)
-  ss[1] <- ss_clusters(dat)
-  for (k in 2:6)
-    ss[k] <- ss_clusters(dat, kmeans(dat, k, nstart=10)$cluster)
-  plot(1:6,ss, type="l", xlab="Number of clusters", ylab="Within cluster variation")
-}
-plot_ss(xy)
+library(broom)
+tibble(k=1:6) %>%
+  mutate(km = map(k, ~kmeans(xy, centers=., nstart=20)),
+         tidied = map(km, glance)) %>%
+  unnest(tidied) %>%
+  ggplot() +
+  geom_line(mapping = aes(x=k, y=tot.withinss)) +
+  labs(x = "k, number of clusters",
+       y = "Total within cluster sum of squares")
 ```
 :::
 
