@@ -175,7 +175,7 @@ Points to note:
     husbands' ages (`W.Age` and `H.Age`).
 :::
 
-## Missing Data Imputation
+## Missing Data Imputation{#sec:imputation}
 
 In the previous example, deletion of the incomplete cases led to a
 relatively small reduction in the sample size: $n=199$ down to $n=169$.
