@@ -1,4 +1,4 @@
-# Classification Methods
+# Classification
 
 ```{r, include=FALSE}
 library(MASS)
