@@ -196,6 +196,17 @@ data("Income")
 itemFrequencyPlot(Income, support=0.05, cex.names=0.8)
 ```
 
+We can re-do this plot using `ggplot` instead which will make it a little nicer. We first use `enframe()` to convert the named vector returned by `itemFrequency()` to a `tibble`:
+
+```{r}
+Income %>%
+  itemFrequency() %>%
+  enframe(name="item", value="support") %>%
+  filter(support >= 0.05) %>%
+  ggplot() +
+  geom_col(mapping = aes(x=support, y=item))
+```
+
 There are several other variables with support less than 5% - all
 variables can be seen using `labels(Income)$items`. The next step is to
 generate association rules using the `apriori` function. We specify a
@@ -203,7 +214,7 @@ support of 0.01 and confidence of 0.6, yielding just over a million
 rules.
 
 ```{r}
-rules <- apriori(Income, parameter=list(support=0.01, confidence=0.6))
+rules <- Income %>% apriori(parameter=list(support=0.01, confidence=0.6))
 rules
 summary(rules)
 ```
@@ -213,7 +224,10 @@ first based on confidence or lift is useful to obtain the most
 interesting (objectively!) relationships first:
 
 ```{r}
-inspect(head(sort(rules, by="confidence"), n=5))
+rules %>%
+  sort(by="confidence") %>%
+  head(n = 5) %>%
+  inspect()
 ```
 
 As you can see, there are rules with confidence=1, indicating that all
@@ -223,15 +237,28 @@ clearly giving the same information. We can filter out all such rules
 using the `subset` command[^subset]:
 
 ```{r}
-rules <- subset(rules, subset = confidence < 1);
-inspect(head(sort(rules, by="confidence"), n=2))
+rules <- rules %>%
+  subset(confidence < 1)
+
+rules %>% sort(by="confidence") %>%
+  head(n=2) %>%
+  inspect()
 ```
 
 These are a little more interesting, but hardly surprising - if you're a
 student living with your parents/family, then you're very likely to be
 less than 35 years of age.
 
-The subset command is useful for filtering things down somewhat. We can
+We can also inspect things interactively via the `inspectDT` function in `arulesViz`, though you'll want to make sure you don't have too many rules first:
+
+```{r, message=FALSE}
+library(arulesViz)
+rules %>% 
+  head(n=100) %>%
+  inspectDT()
+```
+
+The `subset()` command is useful for filtering things down somewhat. We can
 use the `%in%`, `%ain%`, and `%pin%` operators to filter what appears on
 the lhs or rhs of the rules. The `%in%` operator matches any of the
 following complete strings, the `%ain%` operator matches all of the
@@ -240,8 +267,12 @@ us start by finding rules that associate with high income, with moderate
 lift.
 
 ```{r}
-high_income <- subset(rules, subset=rhs %in% "income=$40,000+" & lift > 1.2)
-inspect(head(sort(high_income, by="confidence"), n=3))
+high_income <- rules %>%
+  subset(rhs %in% "income=$40,000+" & lift > 1.2)
+high_income %>%
+  sort(by="confidence") %>%
+  head(n=3) %>%
+  inspect()
 ```
 
 This suggests that a college graduate in a household with two incomes
@@ -253,9 +284,14 @@ but what about home ownership by those that aren't earning a high annual
 income?
 
 ```{r}
-home_own <- subset(rules, subset=lhs %in% "income=$0-$40,000" & 
-                                 rhs %in% "householder status=own" & lift > 1.2)
-inspect(head(sort(home_own, by="confidence"), n=2))
+home_own <- rules %>%
+  subset(lhs %in% "income=$0-$40,000" & 
+         rhs %in% "householder status=own" &
+         lift > 1.2)
+home_own %>%
+  sort(by="confidence") %>%
+  head(n=2) %>%
+  inspect()
 ```
 
 The recurring theme in these rules are older people in a single-income
@@ -265,8 +301,13 @@ dataset: whether the person had answered the question regarding how long
 they'd resided in the San Francisco bay area.
 
 ```{r}
-new_to_bay <- subset(rules, subset=rhs %in% "years in bay area=1-9" & lift > 1.2)
-inspect(head(sort(new_to_bay, by="lift"), n=5))
+new_to_bay <- rules %>%
+  subset(rhs %in% "years in bay area=1-9" &
+         lift > 1.2)
+new_to_bay %>%
+  sort(by="lift") %>%
+  head(n=5) %>%
+  inspect()
 ```
 
 With small numbers, one shouldn't read too much into this, but it is
