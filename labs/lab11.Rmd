@@ -1,0 +1,126 @@
+---
+title: 'Workshop 11: Association rule mining'
+output: html_document
+---
+
+In this workshop we'll be looking at association rule mining, or market basket analysis.
+
+## Going grocery shopping
+
+In this exercise we look at association rule mining of grocery data which comes with the `arules` package.
+
+```{r, message=FALSE}
+library(tidyverse)
+library(arules)
+library(arulesViz)
+
+data("Groceries")
+Groceries
+```
+
+Notice that this is a `transactions` data set which comes with 9,835 transactions (rows) of 169 possible items (columns). We can look at the first few transactions by first using `head()` to limit the number of transactions, then utilising `inspect()`:
+
+```{r}
+Groceries %>% head(n=15) %>% inspect()
+```
+
+A slightly more compact option is utilising `DATAFRAME()`:
+
+```{r}
+Groceries %>% head(n=15) %>% DATAFRAME()
+```
+
+The `itemFrequency` function summarises the frequencies of each item across transactions:
+
+```{r}
+Groceries %>% itemFrequency()
+```
+
+### Try yourself
+
+1. `itemFrequencyPlot()` can be used to produce a plot of the above frequencies. Explore this function, e.g. you may wish to play with the `support` parameter to
+limit which items are on the plot.
+
+2. Try producing this plot in `ggplot` instead. The `enframe()` function is useful for coercing the output from `itemFrequency()` into a `tibble()` for plotting.
+
+
+Let's now mine the association rules using `apriori`:
+
+```{r}
+groc <- apriori(Groceries, parameter=list(support=0.001, confidence=0.5))
+```
+
+### Try yourself
+
+1. How many rules are produced?
+
+2. Try using `inspectDT()` on `groc` to inspect the rules interactively.
+
+
+We can sort the rules via `sort()`, which can then be inspected by limiting the results with `head()` and then utilising `inspect()`. e.g. to find the top 5 rules by support, we could use:
+
+```{r}
+groc %>% sort(by="support") %>% head(n=5) %>% inspect()
+```
+
+### Try yourself
+
+1. Considering the top 5 rules by support above, what are your interpretations of their confidence and lift?
+
+2. Find the top 5 rules by confidence or by lift. Again, what are your interpretation of the confidence and lift in each case?
+
+
+We can use the `subset` command to filter rules. e.g. to find rules where the left hand side contains "mustard" we could use:
+
+```{r}
+groc %>% subset(lhs %in% "mustard") %>% inspect()
+```
+
+### Try yourself
+
+1. Take a look at the rule with mustard in the left hand side that has highest lift. You should notice it has the lowest confidence. Considering the formulas for confidence and lift, explain how this happens.
+
+
+Both red and white wine are included as separate items in the database. To find all types of wine we could use `%pin%` to partially match items on the left hand side:
+
+```{r}
+groc %>% subset(lhs %pin% "wine") %>% inspect()
+```
+
+### Try yourself
+
+We will investigate itemsets that contain `beer` and `liquor`. Note that some of these will be on the `lhs` and some may be on the `rhs` of the rules.
+
+1. Start by just finding out how many rules contain `beer` on either the left hand side or the right hand side, then repeat this for `liquor`.
+
+2. If we want both `beer` and `liquor` in the same rule, at most how many do we need to consider based on your ansewr to number 1?
+
+3. Consider how you might find these rules directly by combining multiple logical expressions in `subset()`.
+
+
+To find rules that contain multiple items, we can use the `%ain%` operator:
+
+```{r}
+groc %>% subset(lhs %ain% c("whole milk", "white bread")) %>% inspect()
+```
+
+### Try yourself
+
+1. Which items are also likely to be purchased if the transaction contains both waffles and candy? Start by finding rules where both waffles and candy are on the left hand side.
+
+2. Are waffles or candy ever on the right hand side?
+
+
+## Rule mining of bank accounts
+
+These data contain information on 8,000 bank customers (`ACCOUNT`) along with which services (`SERVICE`) they have taken out. There are 13 different services available,
+and each customer may utilise one or more services. The bank is interested on looking at rules that establish which service types are associated with each other so they can advise customers (or upsell!)
+
+We read the data into R and convert to a transactions database as follows:
+
+```{r}
+bank <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/bank-rules.csv") %>%
+  transactions(format='long', cols=c("ACCOUNT", "SERVICE"))
+```
+
+<TODO: RAY TO WRITE SOME QUESTIONS HERE...>

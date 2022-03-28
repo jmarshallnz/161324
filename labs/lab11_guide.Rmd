@@ -1,0 +1,14 @@
+---
+title: 'Workshop 11: Association rule mining'
+output: html_document
+---
+
+We'll be looking at association rule mining or market basket analysis today.
+
+We'll utilise some data on grocery purchases and data on which bank customers use various services to demonstrate some key concepts with association rules mining.
+
+Start by downloading lab11.Rmd and load it into RStudio:
+
+https://www.massey.ac.nz/~jcmarsha/161324/labs/lab11.Rmd
+
+**Ensure the document knits correctly, then work your way through the R Markdown worksheet.**
