@@ -203,17 +203,17 @@ ggplot() +
 
 ## Basic idea of back propagation:
 
-0.  We generate random initial starting weights.
+1.  We generate random initial starting weights.
 
-1.  We 'feed-forward' the training data through the layers to give a prediction $\hat{y}$.
+2.  We 'feed-forward' the training data through the layers to give a prediction $\hat{y}$.
 
-2.  We compute the residual sum of squares RSS. This is our *loss function* that we want to minimise.
+3.  We compute the residual sum of squares RSS. This is our *loss function* that we want to minimise.
 
-3.  RSS is a complicated function of the weights, but it's construction means we can compute the partial derivatives with respect to each weight quite easily (i.e. the direction and amount each weight needs to move to decrease RSS).
+4.  RSS is a complicated function of the weights, but it's construction means we can compute the partial derivatives with respect to each weight quite easily (i.e. the direction and amount each weight needs to move to decrease RSS).
 
-4.  We use *batch gradient descent* to move all the weights $w$ a step in the right direction. The step size is known as the *decay* - it's basically to ensure we don't overshoot the minimum RSS.
+5.  We use *batch gradient descent* to move all the weights $w$ a step in the right direction. The step size is known as the *decay* - it's basically to ensure we don't overshoot the minimum RSS.
 
-5.  We take the step, update the weights, then loop back to step 1.
+6.  We take the step, update the weights, then loop back to step 2.
 
 ---
 
@@ -233,7 +233,7 @@ ggplot() +
     derived features is linear or not.
 
     -   The default setting for `linout` is `FALSE`, when `nnet` produces
-        output constrained to the internal $[0,1]$ by applying an additional
+        output constrained to the interval $[0,1]$ by applying an additional
         sigmoid activation function.
 
     -   For prediction problems we must set `linout=TRUE`.
@@ -300,11 +300,11 @@ wage.nn.1 <- nnet(WAGE ~ .,size=8,
 
 This first model has 8 hidden nodes. How many weights?
 
-    -   $p+1 = 17$ weights per hidden node (number of $\alpha$s);
+-   $p+1 = 17$ weights per hidden node (number of $\alpha$s);
 
-    -   $8+1=9$ weights for output node (number of $\beta$s);
+-   $8+1=9$ weights for output node (number of $\beta$s);
 
-    -   So $17\times 8 + 9 = 145$ weights to be determined.
+-   So $17\times 8 + 9 = 145$ weights to be determined.
 
 The neural network has stopped learning
 after 100 iterations - it has not converged.
@@ -529,7 +529,7 @@ We will look at just part of the `tidymodels` framework, focusing on four packag
 - `parsnip` for model fitting.
 - `yardstick` for measuring model performance.
 
-The [tidymodels website](https://tidymodels.org) has a number of excellent tutorials and an overview of some of the additional packages available (e.g. `tune`, `workshop`).
+The [tidymodels website](https://tidymodels.org) has a number of excellent tutorials and an overview of some of the additional packages available (e.g. `tune`, `workflows`).
 
 We'll demonstrate these via an example.
 
@@ -682,9 +682,9 @@ We'll now start modelling. Our process will be:
     - But also we might like to do a transformation. e.g. the `DistanceToVacc` variable might warrant
     a log transformation.
 
-3. Model training using the prepared training data.
+3. Model training using the processed training data.
 
-4. Prediction on the prepared validation data.
+4. Prediction on the processed validation data.
 
 5. Select the best model.
 
@@ -715,7 +715,7 @@ vacc.validation <- testing(split)
 
 ## Step 2: Prepare the data
 
-We'll utilise the `recipes` package in `tidymodels` to codify the operations we wish to perform on the data. This ensures our operations are consistent when applied to multiple dataset.
+We'll utilise the `recipes` package in `tidymodels` to codify the operations we wish to perform on the data. This ensures our operations are consistent when applied to multiple datasets.
 
 - If we're scaling data, then the amount we scale in both datasets must be exactly the same.
 
