@@ -40,7 +40,7 @@ We have used `set.seed` here as the weights in the neural network are assigned r
 
 ### Try yourself
 
-1. Get predictions from `model1.nn` for `comp_test` into a data frame and use this to compute the MSE (or RMSE - your choice).
+1. Get predictions from `model1.nn` for `comp_test` into a data frame and use this to compute the MSE (or RMSE - your choice). *NOTE: The `predict.nnet()` function returns a matrix of predictions (with just one column) so you'll have to convert it to numeric before binding columns.*
 
 2. Try adding `decay=0.01` to the `nnet` function to get a new model `model2.nn`. This tunes the decay rate of weights during the back-propogation algorithm. Check how well this does. Remember to use the same `set.seed` to ensure the weights are initialised the same way.
 
