@@ -172,10 +172,10 @@ the late 1980s. For each worker the following attributes are recorded.
   `UNION`     Union member? ($1=$yes, $0=$no)
   `WAGE`      Hourly wage (in dollars)
   `AGE`       Age in years
-  `RACE`      Ethnicity (Other, Hispanic, or White)
-  `OCCUP`     Occupation category (Management, Sales, Clerical, Service, Professional, Other)
-  `SECTOR`    Employment sector (Other, Manufacturing, or Construction)
-  `MARRIED`   Married? (yes or no)
+  `RACE`      Ethnicity (Hispanic, Other, or White)
+  `OCCUP`     Occupation category (Clerical, Management, Other, Sales, Professional, Service)
+  `SECTOR`    Employment sector (Construction, Manufacturing, or Other)
+  `MARRIED`   Married? (no or yes)
 
 The target variable (predictand) is `WAGE` (i.e. this is the variable
 that we generically denote $y$). The other attributes are the predictors
@@ -1080,9 +1080,9 @@ Some points to note:
 
     With these comments in mind, we see that the first node (at the root
     of the tree) was formed by splitting on the variable `OCCUP`.
-    Observations at levels 1, 3, 5 and 6 (i.e. `Management`, `Clerical`,
-    `Professional` and `Other`) are sent down the left-hand branch at
-    the split; those at levels 2 and 4 (i.e. `Sales` and `Service`) are
+    Observations at levels 1, 3, 5 and 6 (i.e. `Clerical`, `Other`,
+    `Sales` and `Service`) are sent down the left-hand branch at
+    the split; those at levels 2 and 4 (i.e. `Management` and `Professional`) are
     sent down the right-hand branch. Splitting in this way results in a
     17.2% reduction in the residual sum of squares. (The next best
     option would have been to split according to `EDU < 13.5`, which
