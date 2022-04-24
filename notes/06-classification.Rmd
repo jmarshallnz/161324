@@ -402,9 +402,8 @@ perf.lda1 <- wine.lda1.pred %>% get_perf(Cultivar, .pred_class)
 
 Note the following:
 
--   We have first loaded the `parsnip` library, in order to access the
-    `discrim_linear` function. The model wrappers are actually in the
-    `discrim` package, so you may need to install that first.
+-   We have first loaded the `discrim` library, an add-on package for
+    `parsnip`, in order to access the `discrim_linear` function.
 
 -   The dot on the right-hand side of a model formula has the usual
     meaning (of all variables in the data frame barring the response on
