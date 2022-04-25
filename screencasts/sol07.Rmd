@@ -1,0 +1,309 @@
+---
+title: 'Workshop 7: Generative classifiers'
+output: html_document
+---
+
+In this workshop we'll be looking at the classifiers that are generated from Bayes' Theorem:
+
+ - Linear discriminant analysis
+ - Kernel discriminant analysis
+ - Naive Bayes
+
+We'll look at these first using some synthetic data where we can clearly see the effect of the modelling assumptions of these models, and then look at a real dataset.
+
+## Classification for synthetic datasets
+
+In this exercise we will:
+
+-   gain experience using LDA, KDA and Naive Bayes for classification;
+
+-   apply this technique to some synthetic datasets;
+
+-   examine the practical impact of modelling assumptions on
+    classification techniques.
+
+We use synthetic datasets to illustrate the effect of
+modelling assumptions on these model types.
+
+Let's start by loading the required packages and training and artificial test sets
+for the three data sets. In each case we ask for the `group` variable to be a factor:
+
+**NOTE** The `tidykda` dataset is not on CRAN - you can install it using the `remotes` package by running:
+
+```
+remotes::install_github("jmarshallnz/tidykda")
+```
+
+in the console.
+
+```{r, include=FALSE}
+library(tidyverse)
+library(skimr)
+library(discrim)
+library(tidykda)
+library(yardstick)
+
+col_spec <- cols(group = col_factor(levels=c('A', 'B', 'C')))
+syn1.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/syn-class1-train.csv", col_types = col_spec)
+syn2.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/syn-class2-train.csv", col_types = col_spec)
+syn3.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/syn-class3-train.csv", col_types = col_spec)
+
+syn1.test  <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/syn-class1-test.csv", col_types = col_spec)
+syn2.test  <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/syn-class2-test.csv", col_types = col_spec)
+syn3.test  <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/syn-class3-test.csv", col_types = col_spec)
+```
+
+Each dataset has 3 predictor columns `x1`, `x2`, `x3` and a class column `group`.
+
+### Try yourself
+
+1. Explore the training set data using data summaries (e.g. using `skim()`) or tables.
+
+```{r}
+skim(syn1.train)
+skim(syn1.test)
+skim(syn2.train)
+skim(syn2.test)
+skim(syn3.train)
+skim(syn3.test)
+```
+
+2. Explore further using graphics. e.g. what are the relationships between the numeric predictors
+when you colour or facet by `group`?
+
+```{r}
+ggplot(syn1.train) +
+  geom_point(mapping=aes(x=x1, y=x3, col=group))
+ggplot(syn2.train) +
+  geom_point(mapping=aes(x=x1, y=x2, col=group))
+ggplot(syn3.train) +
+  geom_point(mapping=aes(x=x1, y=x2, col=group))
+```
+
+We can implement linear discriminant analysis on the first dataset using:
+
+```{r}
+spec_lda <- discrim_linear()
+fit_lda1 <- spec_lda %>%
+  fit(group ~ ., data=syn1.train)
+fit_lda1
+```
+
+We can then perform prediction and produce a confusion matrix via:
+
+```{r}
+pred_lda1 <- fit_lda1 %>% augment(new_data=syn1.test)
+pred_lda1 %>% conf_mat(truth=group, estimate=.pred_class)
+```
+
+And can compute accuracy (i.e. classification rate) using:
+
+```{r}
+pred_lda1 %>% accuracy(truth=group, estimate=.pred_class)
+```
+
+### Try yourself
+
+1. Fit LDA models to the `syn2.train` and `syn3.train` datasets.
+
+```{r}
+fit_lda2 <- spec_lda %>%
+  fit(group ~ ., data=syn2.train)
+fit_lda2
+fit_lda3 <- spec_lda %>%
+  fit(group ~ ., data=syn3.train)
+fit_lda3
+```
+
+2. Obtains predictions for the `syn2.test` and `syn3.test` datasets.
+
+```{r}
+pred_lda2 <- fit_lda2 %>% augment(new_data=syn2.test)
+pred_lda3 <- fit_lda3 %>% augment(new_data=syn3.test)
+```
+
+3. Evaluate the predictive accuracy of LDA on these datasets.
+
+```{r}
+pred_lda2 %>% conf_mat(truth=group, estimate=.pred_class)
+pred_lda3 %>% conf_mat(truth=group, estimate=.pred_class)
+pred_lda2 %>% accuracy(truth=group, estimate=.pred_class)
+pred_lda3 %>% accuracy(truth=group, estimate=.pred_class)
+pred_lda3
+```
+
+4. Based on what you know about the assumptions of linear discriminant analysis, and your exploratory data analysis of these datasets, does the classification performance make sense?
+
+Yes, it makes sense. The assumptions that LDA makes are that the distribution within each class is a multivariate normal with common covariance, and differing centers. This works for `syn1` as that is what we see. It doesn't work for `syn2` or `syn3` as the covariance within each class are clearly not the same (differing scales in `syn2` and differing amounts of correlation in `syn3`). Where the LDA assumption fit (i.e. `syn1`) the classification is reasonably good. Where the assumptions do not fit, we're basically doing no better than guessing (i.e. 1/3 classification accuracy).
+
+We'll now implement two other models (Naive Bayes and KDA) for the syn1 dataset:
+
+```{r}
+spec_nb <- naive_Bayes(engine="naivebayes")
+fit_nb1 <- spec_nb %>%
+  fit(group ~ ., data=syn1.train)
+fit_nb1
+
+fit_nb11 <- spec_nb %>% set_engine(engine="naivebayes", usekernel=FALSE) %>%
+  fit(group ~ ., data=syn1.train)
+fit_nb11
+
+spec_kda <- discrim_kernel()
+fit_kda1 <- spec_kda %>%
+  fit(group ~ ., data=syn1.train)
+#fit_kda1
+```
+
+We can then do prediction and combine this across all models:
+
+```{r}
+pred_nb1 <- fit_nb1 %>% augment(new_data=syn1.test)
+pred_kda1 <- fit_kda1 %>% augment(new_data=syn1.test)
+pred1 <- bind_rows(list(lda=pred_lda1,
+                        nb=pred_nb1,
+                        kda=pred_kda1), .id='model')
+```
+
+And then evaluate our predictive accuracy:
+
+```{r}
+pred1 %>% group_by(model) %>% accuracy(truth=group, estimate=.pred_class)
+```
+
+These all make sense - we'd expect LDA to do best on these data. Naive Bayes still does OK - while it will be biased (as the predictors are not independent - they're correlated) they're not strongly correlated, so the amount of bias introduced by assuming independence is not too much when we consider the reduction in variance that is likely as it's much easier to estimate univariate distributions within each class.
+
+### Try yourself
+
+1. Fit naive Bayes and KDA models to the `syn2.train` and `syn3.train` datasets.
+2. Perform predictions for each model on the respective test datasets.
+3. Compute the accuracies of each model on each dataset.
+
+```{r}
+fit_nb2 <- spec_nb %>%
+  fit(group ~ ., data=syn2.train)
+fit_kda2 <- spec_kda %>%
+  fit(group ~ ., data=syn2.train)
+pred_nb2 <- fit_nb2 %>% augment(new_data=syn2.test)
+pred_kda2 <- fit_kda2 %>% augment(new_data=syn2.test)
+pred2 <- bind_rows(list(lda=pred_lda2,
+                        nb=pred_nb2,
+                        kda=pred_kda2), .id='model')
+pred2 %>% group_by(model) %>% accuracy(truth=group, estimate=.pred_class)
+```
+
+```{r}
+fit_nb3 <- spec_nb %>%
+  fit(group ~ ., data=syn3.train)
+fit_kda3 <- spec_kda %>%
+  fit(group ~ ., data=syn3.train)
+pred_nb3 <- fit_nb3 %>% augment(new_data=syn3.test)
+pred_kda3 <- fit_kda3 %>% augment(new_data=syn3.test)
+pred3 <- bind_rows(list(lda=pred_lda3,
+                        nb=pred_nb3,
+                        kda=pred_kda3), .id='model')
+pred3 %>% group_by(model) %>% accuracy(truth=group, estimate=.pred_class)
+```
+
+4. You should find a different winner for each dataset. The winner in each case should make sense when you consider the assumptions of the models and your exploratory analysis of each dataset!
+
+For `syn1`, LDA works as the strong assumptions it makes (MVN, constant covariance, differing means) hold.
+For `syn2`, NB works best as the strong assumptions it makes (independence) hold.
+For `syn3`, KDA works best as the strong assumptions of the other two models do not hold, so the more flexible model works best.
+
+## Smashing the Case Wide Open
+
+This exercise is based on some forensic data for glass, originally from
+the Home Office Forensic Science Service in the United Kingdom. There
+are 214 samples of glass, each classified by type (e.g. building
+windows, car headlamps) and described by 9 features - the refractive
+index `RI` along with the proportions by weight of 8 different oxides
+contained in the glass.
+
+The study of the classification of types of glass was driven by
+criminological investigation. At the scene of the crime the glass may be
+used as evidence... if it is correctly identified!
+
+We read the data in and split into training and test sets as follows:
+
+```{r}
+library(rsample)
+set.seed(1234)
+glass <- read_csv(file="https://www.massey.ac.nz/~jcmarsha/data/glass.csv") %>%
+  mutate(Type = as_factor(Type))
+split <- initial_split(glass, prop=0.75)
+glass.train <- training(split)
+glass.test  <- testing(split)
+```
+
+We'll start by assessing how the training data looks by assessing the shape of each predictor (e.g do they look normal, which is the assumption for LDA and QDA?)
+
+```{r}
+glass.train %>% pivot_longer(where(is.numeric)) %>%
+  ggplot() +
+  geom_density(aes(x=value)) +
+  facet_wrap(vars(name), scales='free')
+```
+
+A few of these look decidely non-normal! We could also assess the balance in the data by just tabling up the number of each window type:
+
+```{r}
+glass.test %>% count(Type)
+```
+
+We see it is dominated by building windows, so one could make a pretty accurate classifier just by saying "every bit of glass is a building window"! This would have a training accuracy of 116/160=72.5%, so is a useful baseline.
+
+### Try yourself
+
+1. Try altering the above density plots to fill using `Type` - it may be that some of the skew is due to the different window types.
+
+```{r}
+glass.train %>% pivot_longer(where(is.numeric)) %>%
+  ggplot() +
+  geom_density(aes(x=value, col=Type)) +
+  facet_wrap(vars(name), scales='free')
+```
+
+2. Investigate the `ggpairs()` function from the `GGally` package for producing pair-wise scatterplots to assess relationships. Note that you can colour by Type by specifying `aes(col=Type)` to the `mapping` argument in the usual way.
+
+```{r}
+library(GGally)
+ggpairs(glass.train, mapping=aes(col=Type))
+```
+
+We'll start by fitting an LDA model to these data, and perform prediction:
+
+```{r}
+glass.lda <- discrim_linear() %>% fit(Type ~ ., data=glass.train)
+glass.pred.lda <- glass.lda %>% augment(new_data=glass.test)
+glass.pred.lda %>% accuracy(truth=Type, estimate=.pred_class)
+```
+
+The accuracy here isn't too bad, but if you look at the confusion matrix, you can see that it's getting every single vehicle window wrong:
+
+```{r}
+glass.pred.lda %>% conf_mat(truth=Type, estimate=.pred_class)
+```
+
+### Try yourself
+
+1. Try fitting KDA and naive bayes models to this data.
+2. Assess their accuracy and compute confusion matrices.
+3. Which model do you think is best here?
+
+```{r}
+glass.nb <- naive_Bayes(engine='naivebayes') %>% fit(Type ~ ., data=glass.train)
+glass.pred.nb <- glass.nb %>% augment(new_data=glass.test)
+glass.pred.nb %>% accuracy(truth=Type, estimate=.pred_class)
+glass.pred.nb %>% conf_mat(truth=Type, estimate=.pred_class)
+
+# KDA requires at most 3 numeric predictors. So we'll have to choose them!
+glass.kda <- discrim_kernel() %>% fit(Type ~ Al + Na + Si, data=glass.train)
+glass.pred.kda <- glass.kda %>% augment(new_data=glass.test)
+glass.pred.kda %>% accuracy(truth=Type, estimate=.pred_class)
+glass.pred.kda %>% conf_mat(truth=Type, estimate=.pred_class)
+```
+
+LDA seems to do reasonably well here. KDA did about the same when we chose `Al`, `Na` and `Ca` as the predictors. This is a hard problem to classify as it's quite hard to tell the difference between some
+of the glass types, plus we have very little data. The class imbalance is also a problem - just saying
+everything is a building window gives a pretty good classifier!
+
