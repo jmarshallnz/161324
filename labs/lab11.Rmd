@@ -38,8 +38,7 @@ Groceries %>% itemFrequency()
 
 ### Try yourself
 
-1. `itemFrequencyPlot()` can be used to produce a plot of the above frequencies. Explore this function, e.g. you may wish to play with the `support` parameter to
-limit which items are on the plot.
+1. `itemFrequencyPlot()` can be used to produce a plot of the above frequencies. Explore this function, e.g. you may wish to play with the `support` parameter to limit which items are on the plot.
 
 2. Try producing this plot in `ggplot` instead. The `enframe()` function is useful for coercing the output from `itemFrequency()` into a `tibble()` for plotting.
 
@@ -113,14 +112,54 @@ groc %>% subset(lhs %ain% c("whole milk", "white bread")) %>% inspect()
 
 ## Rule mining of bank accounts
 
-These data contain information on 8,000 bank customers (`ACCOUNT`) along with which services (`SERVICE`) they have taken out. There are 13 different services available,
-and each customer may utilise one or more services. The bank is interested on looking at rules that establish which service types are associated with each other so they can advise customers (or upsell!)
+This example demonstrates association rule mining in a dataset on bank accounts. The bank data set has over 32,000 rows. Each row of the data set represents a customer-service combination. Therefore, a single customer can have multiple rows in the data set, each row representing one of the services they utilise. The median number of products per customer is three. There are three variables in the data set including `ACCOUNT`(Account Number), `SERVICE`(Type of Service) and `VISIT` (Order of Product Purchase). These data contain information on 7,991 bank customers. There are 13 different services available, and each customer may utilise one or more services. The 13 products (described by the `SERVICE` variable) are represented in the data set using the following abbreviations:
 
-We read the data into R and convert to a transactions database as follows:
+1. `ATM`: automated teller machine debit card,
+2. `AUTO`: automobile installment loan,
+3. `CCRD`: credit card,
+4. `CD`: certificate of deposit,
+5. `CKCRD`: check/debit card,
+6. `CKING`: checking account,
+7. `HMEQLC`: home equity line of credit,
+8. `IRA`: individual retirement account,
+9. `MMDA`: money market deposit account,
+10. `MTG`: mortgage,
+11. `PLOAN`: personal/consumer installment loan,
+12. `SVG`: saving account,
+13. `TRUST`: personal trust account.
+
+The bank is interested on looking at rules that establish which service types are associated with each other so they can advise customers (or upsell!).
+
+We read in the data and convert to a transactions database as follows:
 
 ```{r}
 bank <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/bank-rules.csv") %>%
   transactions(format='long', cols=c("ACCOUNT", "SERVICE"))
 ```
 
-<TODO: RAY TO WRITE SOME QUESTIONS HERE...>
+There are 7,991 bank accounts representing by row and 13 services representing by columns:
+
+```{r}
+bank %>% head(n=10) %>% DATAFRAME()
+bank
+```
+
+Let's now mine the association rules from the bank data set.
+
+```{r}
+bank_rules <- apriori(bank, parameter=list(support=0.001, confidence=0.5))
+```
+
+### Try yourself
+
+1. How many rules are produced?
+
+2. Try using `inspectDT()` sorting by `lift` to assess which rules are important. Which services are utilised?
+
+3. The bank is interested in identifying customers that they can upsell credit cards (`CCRD`) to. Find rules with this on the right hand side, to identify which other services those with credit cards use.
+
+4. The home equity line of credit (`HMEQLC`) is an emergency source of funds that mortgage customers (`MTG`) can borrow at anytime, e.g. if they lose their job or need it for home improvement. The bank is interested in which other services that mortgage customers that take out the home equity line of credit use. Find rules containing both `MTG` and `HMEQLC` to identify these other services.
+
+5. Find rules identifying the services that customers that take out an automobile service (`AUTO`) utilise.
+
+6. Now, try yourself, investigate this dataset further. For example, investigate retirement accounts or trust accounts. What rules can you find out? What are the implication of the rules?
