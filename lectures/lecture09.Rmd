@@ -1,6 +1,6 @@
 ---
 title: 'Lecture 9'
-subtitle: 'Classification'
+subtitle: 'K-nearest neighbours, Trees, Forests and Neural Nets'
 output:
   xaringan::moon_reader:
     css: [default, default-fonts, "custom.css"]
@@ -21,8 +21,21 @@ editor_options:
   chunk_output_type: console
 ---
 
-::: {.frame}
-$k$-Nearest neighbour classification
+```{r setup, include=FALSE}
+library(tidyverse)
+library(patchwork)
+library(skimr)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
+theme_set(theme_minimal())
+
+swiss.train <- read_csv("../data/swiss-train.csv") %>%
+  mutate(type = factor(type))
+swiss.test <- read_csv("../data/swiss-test.csv") %>%
+  mutate(type = factor(type))
+```
+
+## K-Nearest neighbour classification
 
 -   Find $k$ data points in the training set that are most similar to
     the test observation at hand.
@@ -31,11 +44,12 @@ $k$-Nearest neighbour classification
     training data.
 
 -   Similar to missing value imputation.
-:::
 
-::: {.frame}
-$k$-Nearest neighbour classification There are two main things to
-consider:
+---
+
+## K-Nearest neighbour classification
+
+There are two main things to consider:
 
 -   Scale. We use the Euclidean distance between observations to
     determine the $k$ most similar items.
@@ -46,10 +60,12 @@ consider:
     observations from the training data. However, larger $k$ will have
     bias as we will be comparing the test data to observations that have
     greater disparity in the pattern of predictors.
-:::
 
-::: {.frame}
-Breaking ties There are two ways a tie can occur in $k$-nearest
+---
+
+## Breaking ties
+
+There are two ways a tie can occur in $k$-nearest
 neighbour classification.
 
 -   Ties between the distances (i.e. more than $k$ observations in the
@@ -61,10 +77,12 @@ neighbour classification.
 -   A tie in the majority vote of the $k$ nearest observations for
     class. In this case we normally assign the class randomly out of the
     top voted classes.
-:::
 
-::: {.frame}
-$k$-Nearest neighbours in R `knn` from the `class` library takes the
+---
+
+## K-Nearest neighbours in R
+
+`knn` from the `class` library takes the
 form
 
     knn(x.pred, y.pred, x.group, k)
@@ -78,55 +96,53 @@ where
 -   `x.group` is the class variable from the training data.
 
 -   `k` is the number of neighbours to use.
-:::
 
-::: {.frame}
-$k$-Nearest neighbours for the Swiss data
+---
 
-    > library(class)
-    > swiss.knn <- knn(swiss.train[,1:2], swiss.test[,1:2],
-    + swiss.train$type, k=5)
-    > table(swiss.knn, swiss.test$type)
-             
-    swiss.knn forged genuine
-      forged      36       1
-      genuine      0      43
-:::
+## K-Nearest neighbours for the Swiss data
 
-::: {.frame}
-Example : $k$-Nearest neighbours for the Swiss data
+```{r}
+library(class)
+swiss.knn <- knn(swiss.train[,1:2], swiss.test[,1:2],swiss.train$type, k=5)
+table(swiss.knn, swiss.test$type)
+```
 
-    > swiss.train.scale <- swiss.train[,1:2]
-    > swiss.test.scale  <- swiss.test[,1:2]
-    > swiss.means <- apply(swiss.train.scale, 2, mean)
-    > swiss.sds   <- apply(swiss.train.scale, 2, sd)
-    > swiss.train.scale <- scale(swiss.train.scale, center=swiss.means,
-    + scale=swiss.sds)
-    > swiss.test.scale <- scale(swiss.test.scale, center=swiss.means,
-    + scale=swiss.sds)
-    > swiss.knn.2 <- knn(swiss.train.scale, swiss.test.scale,
-    + swiss.train$type, k=5)
-    > table(swiss.knn.2, swiss.test$type)
-               
-    swiss.knn.2 forged genuine
-        forged      36       1
-        genuine      0      43
-:::
+---
 
-::: {.frame}
-Classification Trees
+## Example : K-Nearest neighbours for the Swiss data
 
--   The same as regression trees.
+```{r}
+swiss.train.scale <- swiss.train[,1:2]
+swiss.test.scale  <- swiss.test[,1:2]
+swiss.means <- apply(swiss.train.scale, 2, mean)
+swiss.sds   <- apply(swiss.train.scale, 2, sd)
+swiss.train.scale <- scale(swiss.train.scale, center=swiss.means, scale=swiss.sds)
+swiss.test.scale <- scale(swiss.test.scale, center=swiss.means, scale=swiss.sds)
+swiss.knn.2 <- knn(swiss.train.scale, swiss.test.scale, swiss.train$type, k=5)
+table(swiss.knn.2, swiss.test$type)
+```
+
+---
+
+class: middle, inverse
+
+# Classification Trees
+
+---
+
+## Classification Trees
+
+-   Similar to regression trees.
 
 -   Instead of the mean prediction at each node, we use the majority
     vote of class at each node.
 
 -   Instead of minimising RSS to find the next optimal split, we instead
     minimise a measure of node .
-:::
 
-::: {.frame}
-Node purity
+---
+
+## Node purity
 
 -   Purity measures how close a node is to being observations of just
     one class.
@@ -137,21 +153,24 @@ Node purity
 -   We can measure impurity using the which measures the chance an
     observation from the node would be misclassified if all the class
     labels were randomly reallocated within that node.
-:::
 
-::: {.frame}
-Gini splitting index Let $\hat{p}_j$ be the proportion of observations
+---
+
+## Gini splitting index
+
+Let $\hat{p}_j$ be the proportion of observations
 at a node in class $j$, and let $x$ be an observation at that node. If
 we randomly reallocate observations to classes within the node,
-$$\begin{aligned}
-P(x \textsf{ misclassified}) &= \sum_{j=1}^C P(x \textsf{ misclassified}|x \in j)P(x \in j)\\
-&= \sum_{j=1}^C (1-\hat{p}_j)\hat{p}_j\\
-&= 1 - \sum_{j=1}^C \hat{p}_j^2.\end{aligned}$$ We try to find splits
-that minimise the Gini index.
-:::
+$$\begin{aligned} P(x \textsf{ misclassified}) &= \sum_{j=1}^C P(x \textsf{ misclassified}|x \in j)P(x \in j)\\ &= \sum_{j=1}^C (1-\hat{p}_j)\hat{p}_j\\
+&= 1 - \sum_{j=1}^C \hat{p}_j^2.\end{aligned}$$
 
-::: {.frame}
-Gini splitting index
+We try to find splits
+that minimise the Gini index.
+
+---
+
+## Gini splitting index
+
 $$P(x \textsf{ misclassified}) = 1 - \sum_{j=1}^C \hat{p}_j^2.$$
 
 -   This is smallest when $\hat{p}_c = 1$ for some $c\in C$ and
@@ -163,10 +182,12 @@ $$P(x \textsf{ misclassified}) = 1 - \sum_{j=1}^C \hat{p}_j^2.$$
     nodes $l,r$ formed by each split and then minimise their sum,
     weighted by the proportion $p$ of observations going to each node,
     $$p(l)g(l) + p(r)g(r).$$
-:::
 
-::: {.frame}
-Finding the best split Consider the data
+---
+
+## Finding the best split
+
+Consider the data
 
 ::: {.center}
     x    class
@@ -183,65 +204,82 @@ Finding the best split Consider the data
 -   Find the Gini index of the nodes formed by these splits.
 
 -   What is the best split?
-:::
 
-::: {.frame}
-Classification trees in R We use the familiar `rpart` function.
+---
 
-    > library(rpart)
-    > swiss.rp <- rpart(type ~ ., data=swiss.train)
-    > plot(swiss.rp)
-    > text(swiss.rp)
-    > swiss.rp.pred <- predict(swiss.rp, swiss.test, type="class")
-    > table(swiss.rp.pred, swiss.test$type)
-                 
-    swiss.rp.pred forged genuine
-          forged      33       1
-          genuine      3      43
-:::
+.left-code[
+## Classification trees in R
 
-::: {.frame}
-Swiss classification tree
+We use the familiar `rpart` function.
 
-::: {.center}
-![image](rpart){width="4in"}
-:::
-:::
+```{r, message=FALSE, results='hide'}
+library(rpart)
+swiss.rp <- rpart(type ~ ., data=swiss.train)
+```
 
-::: {.frame}
-Classification tree 2 We use the familiar `rpart` function.
+```{r swiss1, eval=FALSE}
+plot(swiss.rp)
+text(swiss.rp)
+```
 
-    > swiss.rp.2 <- rpart(type ~ ., data=swiss.train, minsplit=7)
-    > plot(swiss.rp.2)
-    > text(swiss.rp.2)
-    > swiss.rp.pred.2 <- predict(swiss.rp.2, swiss.test, type="class")
-    > table(swiss.rp.pred.2, swiss.test$type)
-                   
-    swiss.rp.pred.2 forged genuine
-            forged      36       1
-            genuine      0      43
-:::
+```{r}
+swiss.rp.pred <- predict(swiss.rp, swiss.test, type="class")
+table(swiss.rp.pred, swiss.test$type)
+```
+]
 
-::: {.frame}
-Swiss classification tree
+.right-plot[
+```{r, ref.label='swiss1', echo=FALSE, message=FALSE}
+```
+]
 
-::: {.center}
-![image](rpart2){width="4in"}
-:::
-:::
+---
 
-::: {.frame}
-Alternate measures of impurity A number of other measures of impurity
+.left-code[
+## Classification tree 2
+
+```{r, message=FALSE, results='hide'}
+library(rpart)
+swiss.rp.2 <- rpart(type ~ ., data=swiss.train, minsplit=7)
+```
+
+```{r swiss2, eval=FALSE}
+plot(swiss.rp.2)
+text(swiss.rp.2)
+```
+
+```{r}
+swiss.rp.pred.2 <- predict(swiss.rp.2, swiss.test, type="class")
+table(swiss.rp.pred.2, swiss.test$type)
+```
+]
+
+.right-plot[
+```{r, ref.label='swiss2', echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+## Alternate measures of impurity
+
+A number of other measures of impurity
 can be used.
 
 -   Cross-entropy information criterion.
     $$I_E = -\sum_{j=1}^C \hat{p}_j\log(\hat{p}_j)$$
 
 -   Misclassification rate. $$M = 1 - \max_j p_j$$
-:::
 
-::: {.frame}
-Neural networks for classification
+---
+
+class: middle, inverse
+
+# Neural networks for classification
+
+---
+
+## Neural networks for classification
 
 -   Neural networks attempt to model the brain by assembling a large
     number of interconnected nodes (neurons) which 'fire' or output only
@@ -255,18 +293,19 @@ Neural networks for classification
     -   These feed into one or more hidden layers or .
 
     -   The derived features feed into the output node(s).
-:::
 
-::: {.frame}
-Neural networks for classification
+---
 
-::: {.center}
-![image](nnetdiag){width="8cm"}
-:::
-:::
+## Neural networks for classification
 
-::: {.frame}
-Neural networks for classification
+```{r, echo=FALSE}
+source("../common/plots.R")
+nnet_plot()
+```
+
+---
+
+## Neural networks for classification
 
 -   A linear combination of nodes at the previous layer feed through an
     $\phi$ to nodes in the current layer.
@@ -277,10 +316,10 @@ Neural networks for classification
 
 -   This gives the 'firing' style behaviour as $\theta$ moves through
     zero.
-:::
 
-::: {.frame}
-Neural networks for classification
+---
+
+## Neural networks for classification
 
 -   We need to define
 
@@ -299,10 +338,10 @@ Neural networks for classification
         effective number of predictors.
 
     -   The sigmoid activation function is usually used.
-:::
 
-::: {.frame}
-Neural networks for classification
+---
+
+## Neural networks for classification
 
 -   The derived features $z_k$ are defined in terms of the predictors
     $x_p$ by
@@ -314,10 +353,12 @@ Neural networks for classification
 
 -   The $\alpha$ and $\beta$ terms (the ) are then estimated from
     training data.
-:::
 
-::: {.frame}
-Neural networks for classification in R The actual network used for
+---
+
+## Neural networks for classification in R
+
+The actual network used for
 classification and the method of fitting the weights $\alpha$ and
 $\beta$ terms differs based on the number of classes.
 
@@ -327,10 +368,12 @@ $\beta$ terms differs based on the number of classes.
 
 -   With 3 or more classes, an output node per class is used, and
     maximum likelihood is used to estimate the weights.
-:::
 
-::: {.frame}
-Fitting neural networks for classification in R Use the `nnet` command
+---
+
+## Fitting neural networks for classification in R
+
+Use the `nnet` command
 from the `nnet` library. It takes the form
 
     nnet(y ~ x1 + x2 + x3, data=mydata, size=2, linout=F)
@@ -341,44 +384,34 @@ from the `nnet` library. It takes the form
     ensures the outcome is restricted to $[0,1]$ (a probability).
 
 -   Remember to scale the (numerical) inputs to between 0 and 1.
-:::
 
-::: {.frame}
-Neural network classification of Iris data
+---
 
-    > library(nnet)
-    > set.seed(2001)
-    > swiss.train.scale <- swiss.train
-    > swiss.test.scale <- swiss.test
-    > swiss.train.max <- apply(swiss.train[,1:2],2,max)
-    > swiss.train.scale[,1:2] <- sweep(swiss.train[,1:2],2,
-    + swiss.train.max,FUN="/")
-    > swiss.test.scale[,1:2] <- sweep(swiss.test[,1:2],2,
-    + swiss.train.max,FUN="/")
-    > swiss.nn <- nnet(type ~ ., size=2, data=swiss.train.scale,
-    + maxit=500)
-    # weights:  9
-    initial  value 83.209571 
-    iter  10 value 41.173935
-    ....
-    iter 320 value 3.611320
-    final  value 3.611306 
-    converged
-:::
+## Neural network classification of Swiss data
 
-::: {.frame}
-Neural networks for classification cont.
+```{r}
+library(nnet)
+set.seed(2001)
+swiss.train.scale <- swiss.train
+swiss.test.scale <- swiss.test
+swiss.train.max <- apply(swiss.train[,1:2],2,max)
+swiss.train.scale[,1:2] <- sweep(swiss.train[,1:2],2,swiss.train.max,FUN="/")
+swiss.test.scale[,1:2] <- sweep(swiss.test[,1:2],2,swiss.train.max,FUN="/")
+swiss.nn <- nnet(type ~ ., size=2, data=swiss.train.scale, maxit=500)
+```
 
-    > swiss.nn.pred<-predict(swiss.nn,swiss.test.scale,type="class")
-    > table(swiss.nn.pred, swiss.test$type)
-                 
-    swiss.nn.pred forged genuine
-          forged      36       1
-          genuine      0      43
-:::
+---
 
-::: {.frame}
-Classification summary
+## Neural networks for classification cont.
+
+```{r}
+swiss.nn.pred<-predict(swiss.nn,swiss.test.scale,type="class")
+table(swiss.nn.pred, swiss.test$type)
+```
+
+---
+
+## Classification summary
 
 -   Some methods require quantitative predictors:
 
@@ -398,10 +431,10 @@ Classification summary
 -   Some have strong assumptions.
 
     -   LDA, Naive Bayes, Logistic or Multinomial regression.
-:::
 
-::: {.frame}
-Classification summary
+---
+
+## Classification summary
 
 -   Methods with the greatest number of assumptions will do well when
     those assumptions hold.
@@ -415,11 +448,9 @@ Classification summary
 -   There are often competitions on the Internet for searching for the
     best classification for a particular problem.
 
--   
-:::
+---
 
-::: {.frame}
-Which classification technique works best?
+## Which classification technique works best?
 
 ::: {.center}
 ![image](syn_class2){width="3.3in"}
@@ -427,64 +458,9 @@ Which classification technique works best?
 
     http://www.massey.ac.nz/~jcmarsha/161223/data/syn1-train.csv
     http://www.massey.ac.nz/~jcmarsha/161223/data/syn1-test.csv
-:::
 
-```{r}
+---
 
-# read in swiss data
-
-swiss.train <- read.table("http://www.massey.ac.nz/~mhazelto/161223/data/swiss-train.txt", header=T)
-swiss.test <- read.table("http://www.massey.ac.nz/~mhazelto/161223/data/swiss-test.txt", header=T)
-
-library(class)
-swiss.knn <- knn(swiss.train[,1:2], swiss.test[,1:2], swiss.train$type, k=5)
-table(swiss.knn, swiss.test$type)
-
-swiss.train.scale <- swiss.train[,1:2]
-swiss.test.scale  <- swiss.test[,1:2]
-swiss.means <- apply(swiss.train.scale, 2, mean)
-swiss.sds   <- apply(swiss.train.scale, 2, sd)
-swiss.train.scale <- scale(swiss.train.scale, center=swiss.means, scale=swiss.sds)
-swiss.test.scale <- scale(swiss.test.scale, center=swiss.means, scale=swiss.sds)
-swiss.knn.2 <- knn(swiss.train.scale, swiss.test.scale, swiss.train$type, k=5)
-table(swiss.knn.2, swiss.test$type)
-
-library(rpart)
-swiss.rp <- rpart(type ~ ., data=swiss.train)
-plot(swiss.rp)
-text(swiss.rp)
-swiss.rp.pred <- predict(swiss.rp, swiss.test, type="class")
-table(swiss.rp.pred, swiss.test$type)
-
-pdf("graphics/rpart.pdf", width=5, height=5)
-plot(swiss.rp, compress=TRUE, margin=0.5)
-text(swiss.rp)
-dev.off()
-
-swiss.rp.2 <- rpart(type ~ ., data=swiss.train, minsplit=7)
-plot(swiss.rp.2)
-text(swiss.rp.2)
-swiss.rp.pred.2 <- predict(swiss.rp.2, swiss.test, type="class")
-table(swiss.rp.pred.2, swiss.test$type)
-
-pdf("graphics/rpart2.pdf", width=6, height=6)
-plot(swiss.rp.2, compress=FALSE, margin=0.5)
-text(swiss.rp.2)
-dev.off()
-
-library(nnet)
-set.seed(1000)
-swiss.train.scale <- swiss.train
-swiss.test.scale <- swiss.test
-swiss.train.max <- apply(swiss.train[,1:2],2,max)
-swiss.train.scale[,1:2] <- sweep(swiss.train[,1:2],2,swiss.train.max,FUN="/")
-swiss.test.scale[,1:2] <- sweep(swiss.test[,1:2],2,swiss.train.max,FUN="/")
-
-swiss.nn <- nnet(Species ~ ., size=2, data=swiss.train.scale)
-
-swiss.nn.pred <- predict(swiss.nn,swiss.test.scale,type="class")
-
-```
 ## Swiss banknotes
 
 ```{r, warning=FALSE, message=FALSE}
