@@ -300,17 +300,16 @@ Points to note:
     named `<column_name>_imp` which states whether the values in that column
     were imputed.
 
-Finally, Figure \@ref(fig:impute2) displays scatterplots of wife's age against
-husband's age using the imputed data set just created. As before, the
-imputed values are coloured red. It is clear that k nearest neighbour
-imputation does a far better job than mean imputation for this dataset.
-
-```{r impute2, echo=FALSE, fig.cap="Scatterplot of wife's age against husband's age for the k nearest neighbout imputed dataset using $k=5$. Imputed values are coloured red."}
+```{r imputeknn, echo=FALSE, fig.cap="Scatterplot of wife's age against husband's age for the k nearest neighbour imputed dataset using $k=5$. Imputed values are coloured red."}
 ggplot(husbands.imp) +
   geom_point(mapping=aes(x=H.Age, y=W.Age, col=W.Age_imp)) +
   scale_colour_manual(values = c("black", "red"), guide = "none")
 ```
 
+Finally, Figure \@ref(fig:imputeknn) displays scatterplots of wife's age against
+husband's age using the imputed data set just created. As before, the
+imputed values are coloured red. It is clear that k nearest neighbour
+imputation does a far better job than mean imputation for this dataset.
 :::
 
 ## Alternative Methods of Imputation
