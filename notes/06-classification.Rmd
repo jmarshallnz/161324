@@ -1005,7 +1005,7 @@ swiss.glm.2.logit <- swiss.glm.2 %>% augment(newdata=swiss.test) %>% pull(.fitte
 ```
 
 The `.fitted` entry contains the predicted logits for the
-validation cases. Hence for validation case 1 (the predictors for which
+test cases. Hence for test case 1 (the predictors for which
 we denote by the vector $\boldsymbol{x}_0$),
 $$\theta(\boldsymbol{x}_0) = \log \left ( \frac{p(\boldsymbol{x}_0)}{1 - p(\boldsymbol{x}_0)} \right ) = `r round(swiss.glm.2.logit[1], 2)` .$$
 It follows that
@@ -1141,7 +1141,7 @@ perf.mn <- wine.mn.pred %>% get_perf(Cultivar, .pred_class)
 Some comments:
 
 -   The summary for `multinom` objects gives the values of the
-    coefficients for classes 2 and 3 but not for class 1, as that is
+    coefficients for classes B and C but not for class A, as that is
     then determined as the probabilities sum to 1.
 
 -   A misclassification rate of $`r perf.mn$wrong`/`r perf.mn$total` \approx `r perf.mn$perc`\%$ is
