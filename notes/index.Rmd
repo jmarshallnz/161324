@@ -11,6 +11,7 @@ description: |
   Data mining notes
 link-citations: yes
 github-repo: jmarshallnz/161324
+always_allow_html: true
 ---
 
 ```{r setup}

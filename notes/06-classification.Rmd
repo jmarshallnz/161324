@@ -261,7 +261,7 @@ mean zero in group 1, and let both features have mean 1 in group 2. In
 other words, if $\mu_{ij}$ is the mean for feature $i$ in group $j$ then
 $\mu_{11} = \mu_{21} = 0$, and $\mu_{12} = \mu_{22} = 1$. Now, using
 standard results for the multivariate normal distribution[^theorypaper], we have
-$$\begin{align}
+$$\begin{aligned}
 f_j(\boldsymbol{x}) &= \frac{1}{2 \pi} \exp \left \{ -\frac {(x_1 - \mu_{1j})^2}{2} \right \}  \exp \left \{ -\frac{(x_2 - \mu_{2j})^2}{2} \right \}\\
          &= 
 \left \{
@@ -269,17 +269,17 @@ f_j(\boldsymbol{x}) &= \frac{1}{2 \pi} \exp \left \{ -\frac {(x_1 - \mu_{1j})^2}
 \frac{1}{2 \pi} \exp \left \{ -\frac{x_1^2}{2} - \frac{x_2^2}{2} \right \}         & \mbox{for class $j=1$}\\
 \frac{1}{2 \pi} \exp \left \{ -\frac{(x_1-1)^2}{2} - \frac{(x_2-1)^2}{2} \right \} & \mbox{for class $j=2$}
 \end{array} 
-\right .\end{align}$$
+\right .\end{aligned}$$
 If the prior class probabilities are equal
 (i.e. $\pi_1 = \pi_2 = 0.5$) then we will assign an observation
 $\boldsymbol{x}= (x_1, x_2)$ to class $1$ if and only if
-$$\begin{align}
+$$\begin{aligned}
                  f_1(\boldsymbol{x}) &> f_2(\boldsymbol{x}) \\
 \Rightarrow\quad      \exp\{ (-x_1^2/2 - x_2^2/2)\}  &> \exp\{ (-(x_1-1)^2/2 - (x_2-1)^2/2)\} \\
 \Rightarrow\quad      -x_1^2/2 - x_2^2/2  &> -(x_1-1)^2/2 - (x_2-1)^2/2 \\
 \Rightarrow\quad      x_1^2 + x_2^2   &<  x_1^2 - 2 x_1 + 1 + x_2^2 - 2 x_2 +1 \\
 \Rightarrow\quad      0  &< - 2 x_1 + 1 - 2 x_2 +1 \\
-\Rightarrow\quad      x_1 + x_2 &<  1\\\end{align}$$
+\Rightarrow\quad      x_1 + x_2 &<  1\\\end{aligned}$$
 Time to take stock.
 We have just shown that given an observation $(x_1,x_2)$, we should
 assign it to class 1 if $x_1 + x_2 <  1$, and to class 2 if

@@ -1,3 +1,6 @@
+---
+always_allow_html: true
+---
 # Association rule mining
 
 ```{r, include=FALSE}

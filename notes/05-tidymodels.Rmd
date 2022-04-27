@@ -130,7 +130,7 @@ skimr::skim(wage.train.baked)
 ```
 Note that the baked validation set will not have mean zero and standard deviation one, as it was normalised using the same transformation as used for the training set (i.e. subtract the mean and divide by the standard deviation from the training set). Nonetheless they should be expected to be close to zero and one:
 
-```{r}
+```{r, render = knitr::normal_print}
 skimr::skim(wage.valid.baked)
 ```
 
