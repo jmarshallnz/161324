@@ -1,0 +1,746 @@
+---
+title: 'Lecture 8'
+subtitle: 'Logistic Regression'
+output:
+  xaringan::moon_reader:
+    css: [default, default-fonts, "custom.css"]
+    mathjax: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
+    nature:
+      navigation:
+        scroll: false
+      highlightStyle: tomorrow
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+      slideNumberFormat: |
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
+          </div>
+        </div>
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(patchwork)
+library(ggbeeswarm)
+library(skimr)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
+theme_set(theme_minimal())
+
+swiss.train <- read_csv("../data/swiss-train.csv") %>%
+  mutate(type = factor(type))
+swiss.test <- read_csv("../data/swiss-test.csv") %>%
+  mutate(type = factor(type))
+```
+
+## Logistic Regression
+
+-   LDA, KDA and Naive Bayes classifiers are all generative.
+
+    -   They model $\mathsf{P}(j|\mathbf{x})$ by first learning $f_j(\mathbf{x})$ and $\pi_j$.
+
+-   Alternative is to attempt to learn posterior probabilities
+    $\mathsf{P}(j | \mathbf{x})$ directly.
+
+    -   Gives **discriminatory** classifiers.
+
+-   One approach is to assume that $\mathsf{P}(j | \mathbf{x})$ takes a particular
+    parametric form, then estimate parameters from training data.
+
+-   **Logistic regression** is one such technique.
+
+---
+
+## Introduction to Logistic Regression
+
+-   Logistic regression is one of a class of methods known as
+    **generalised linear models** (GLMs).
+
+-   It is closely related to linear regression.
+
+-   A critical difference is that the response (target) variable $y$
+    need not be distributed according to a normal distribution.
+
+-   Logistic regression models a **binary** response variable (i.e. two
+    classes), values written as 0 and 1.
+
+    -   These can code for classes 1 and 2 respectively in two class
+        problems.
+
+-   Model usually described in terms of $p(\mathbf{x}) = \mathsf{P}(y=1 | \mathbf{x})$
+
+-   Extensions to more than two classes will come later.
+
+---
+
+## Introduction to Logistic Regressiond
+
+-   Want to estimate posterior probability
+    $p(\mathbf{x}) =  \mathsf{P}(y=1 | \mathbf{x}) = \mathsf{P}(j=2 | \mathbf{x})$.
+
+-   Given that this is a number, why not use linear regression?
+
+-   That would give
+    $p(\mathbf{x}) = \beta_0 + \beta_1 x_1 + \cdots + \beta_p x_p$
+
+    -   Aside: beware notational confusion for $p$ between
+        $p(\mathbf{x}) = \mathsf{P}(y=1 | \mathbf{x}) = \mathsf{P}(j=2 | \mathbf{x})$, and $p$ as the number
+        of predictors.
+
+-   Problem: linear regression does not respect $[0,1]$ range for
+    probability.
+
+-   E.g. suppose we have single predictor variable, and fitted model is
+    $\hat p(x) = 0.3 + 0.1 x$.
+
+    -   We run into trouble if $x < -3$ or $x > 7$.
+
+---
+
+## Introduction to Logistic Regression
+
+-   Solution is to use type of sigmoid function that you met when
+    looking at neural networks.
+
+-   Model probability $p(\mathbf{x})$ via the **logistic** (or sigmoid)
+    function: $$p(\mathbf{x}) = \frac{1}{1 + e^{-\theta(\mathbf{x})}}$$ where
+    $\theta(\mathbf{x})$ is called the **linear predictor**, given by
+    $$\theta(\mathbf{x}) = \beta_0 + \beta_1 x_1 + \cdots + \beta_p x_p.$$
+
+-   The inverse of the logistic function is the **logit** or log-odds
+    function
+    $$\theta(\mathbf{x}) = \mathsf{logit}(p(\mathbf{x})) = \log\left(\frac{p(\mathbf{x})}{1-p(\mathbf{x})}\right).$$
+
+---
+
+## Logistic and logit curves
+
+```{r logistic, message=FALSE, echo=FALSE, fig.dim=c(7, 3)}
+g1 <- ggplot() +
+  geom_function(fun = ~1/(1+exp(-.x)), xlim=c(-5, 5)) +
+  labs(x = expression(theta),
+       y = expression(p),
+       title = "logistic function")
+
+g2 <- ggplot() +
+  geom_function(fun = ~log(.x/(1-.x)), xlim=c(0.00001, 0.99999)) +
+  labs(x = expression(p),
+       y = expression(theta),
+       title = "logit function")
+
+g1+g2
+```
+
+-   Any value of linear predictor $-\infty \le \theta \le \infty$
+    corresponds to a feasible probability $0 < p < 1$.
+
+---
+
+## Summary Formulation of Logistic Regression
+
+$$\begin{aligned}
+y_i &\sim \mathsf{Bernoulli}(p(\mathbf{x}_i))\\
+\mathsf{logit}(p(\mathbf{x}_i)) &= \beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}.\end{aligned}$$
+where
+
+-   $y_i$ is the response (target) variable for $i$th observation (record).
+
+-   $p(\mathbf{x}_i) =\mathsf{P}(y_i = 1 | \mathbf{x}_i)$, where $\mathbf{x}_i$ is vector of
+    predictors (features) for $i$th observation.
+
+-   Predictors may be quantitative, or factors coded as 0/1 indicator variables.
+
+    -   Just like for linear regression models.
+
+-   $\beta_1, \ldots, \beta_p$ are unknown regression parameters.
+
+    -   Need estimating from training data.
+
+---
+
+## Fitting Logistic Regression Models
+
+-   Minimizing sum of squared errors is not a natural way of estimating
+    coefficients $\beta_1, \ldots, \beta_p$.
+
+-   Instead, we estimate them by maximising the **likelihood** function.
+
+-   The likelihood is just the probability of the data viewed as a
+    function of $\beta_1, \ldots, \beta_p$, with data fixed.
+
+-   The likelihood for logistic regression is therefore
+    $$\begin{aligned}L(\beta_1, \ldots, \beta_p) &= \prod_{i=1}^n \mathsf{P}(y_i | \mathbf{x}_i, \beta_1, \ldots, \beta_p) \\ &= \prod_{i=1}^n p(\mathbf{x}_i, \mathbf{\beta})^{y_i} (1 - p(\mathbf{x}_i, \mathbf{\beta}))^{1-y_i}\end{aligned}$$
+    where $p(\mathbf{x}_i, \mathbf{\beta})$ emphasises dependence of $p(\mathbf{x}_i)$ of
+    $\mathbf{\beta} = (\beta_1, \ldots, \beta_p)^\mathsf{T}$.
+
+---
+
+## Fitting Logistic Regression Models
+
+-   In practice, we maximise the **log-likelihood**
+    $$\ell(\mathbf{\beta}) = \log L(\mathbf{\beta}) = \sum_{i=1}^n y_i \log(p(\mathbf{x}_i, \mathbf{\beta})) + (1-y_i) \log(1 - p(\mathbf{x}_i, \mathbf{\beta})).$$
+
+-   The maximiser $\hat{\mathbf{\beta}}$ of $\ell(\mathbf{\beta})$ is called the
+    **maximum likelihood estimate** (MLE).
+
+-   There is no closed form solution; it is found via numerical techniques.
+
+-   More on GLMs in 161.327.
+
+---
+
+## Fitting Logistic Regression Models in R
+
+-   Function `glm` used for fitting logistic (and other generalised
+    linear) models.
+
+-   Syntax is
+
+        glm(formula, family, data)
+
+-   Here `formula` is the model formula, e.g. `y ~ x1 + x2`.
+
+    -   Make sure `y` is binary 1/0 variable or two-level factor.
+
+-   `family` describes the response distribution.
+
+    -   Specify `family=binomial` for logistic regression.
+
+-   `data` is the data frame to use (optional).
+
+---
+
+.left-code[
+## Logistic Regression for the Swiss Banknotes
+
+```{r swissglm, eval=FALSE}
+swiss.glm.1 <-
+  glm(type ~ margin,
+      family=binomial,
+      data=swiss.train)
+summary(swiss.glm.1)
+```
+
+-   `type` is a factor with two levels. `forged` is the first level
+    so represents $y=0$. `genuine` represents $y=1$.
+
+-   Coefficient of `margin` is negative, so $\mathsf{P}(\mathsf{genuine} | \mathsf{margin})$
+    decreases as `margin` increases.
+
+-   **Deviance** is logistic regression analogue of sum of squares in
+    linear regression.
+]
+
+.right-plot[
+```{r, ref.label='swissglm', echo=FALSE}
+```
+]
+
+```{r, echo=FALSE}
+beta0 = round(coef(swiss.glm.1)[1], 4)
+beta1 = round(coef(swiss.glm.1)[2], 4)
+```
+
+---
+
+.left-code[
+## Logistic Regression for the Swiss Banknotes
+
+```{r, ref.label='swissglm', eval=FALSE}
+```
+
+-   Probability of being genuine falls below $0.5$ when
+    $\mathsf{margin} > 9.25$mm.
+]
+
+.right-plot[
+```{r, echo=FALSE}
+new_data <- tibble(margin = seq(6,12.5,length=400))
+swiss.pred <- swiss.glm.1 %>% broom::augment(newdata=new_data,
+                        type.predict='response')
+xint <- swiss.pred %>% mutate(lt = .fitted-0.5) %>%
+  slice_min(abs(lt), n=2) %>% lm(margin ~ lt, data=.) %>%
+  predict(newdata=data.frame(lt=0))
+
+ggplot(swiss.pred) +
+  geom_hline(yintercept=0.5, col='gray60', linetype='dashed') +
+  geom_vline(xintercept=xint, col='gray60', linetype='dashed') +
+  geom_line(mapping=aes(x=margin, y=.fitted)) +
+  labs(y = "P(genuine | margin)")
+```
+]
+
+---
+
+## Selection of Predictor Variables
+
+-   If we have $p$ predictors available, we do not necessarily want to
+    use all of them.
+
+-   We may get a much better bias-variance trade off by only using some.
+
+-   One option is to compare variety of logistic regressions on
+    validation data.
+
+-   Computationally cheap alternative is to do backwards variable
+    selection based on AIC.
+
+-   Ideas mirror those you met in linear regression for prediction.
+
+---
+
+.left-code[
+## More Logistic Regression for Banknotes
+
+```{r swissstep, eval=FALSE}
+swiss.glm.2 <- glm(type ~.,
+                   family=binomial,
+                   data=swiss.train)
+step(swiss.glm.2)
+```
+
+-   `swiss.glm.2` is logistic regression based on $p=2$ predictor
+    variables: `margin` and `diagonal`.
+
+-   Would model be better just using one of those variables?
+
+-   According to AIC criterion, model with both variables has lowest AIC
+    (13.260).
+
+-   Dropping either `margin` or `diagonal` makes the model worse.
+]
+
+.right-plot[
+```{r, ref.label="swissstep", echo=FALSE}
+```
+]
+
+---
+
+class: middle, inverse
+
+# Classification with Logistic Regression
+
+---
+
+## Logistic Regression for Classification
+
+-   Logistic regression provides a means of estimating the probability
+    of a 1 outcome in a binary response based on predictor variables.
+
+-   Can hence be used for two group classification.
+
+-   Let $\mathbf{x}_0 = (x_{01}, \ldots, x_{0p})^\mathsf{T}$ be feature vector for test
+    case.
+
+-   Logistic regression provides estimate of
+    $p(\mathbf{x}_0) = \mathsf{P}(y=1 | \mathbf{x}_0)$.
+
+-   Suppose (as usual) that we assign test case to class with highest
+    posterior probability.
+
+-   Then assign to class indicated by $y=1$ if and only if
+    $\mathsf{P}(y=1 | \mathbf{x}_0) \ge \tfrac12$.
+
+---
+
+## Logistic Regression and Classification Rules
+
+-   Recall that $$p(\mathbf{x}_0) = \frac{1}{1 + e^{-\theta(\mathbf{x}_0)}}$$ where
+    $\theta(\mathbf{x}_0) = \mathsf{logit}(p(\mathbf{x}_0)) = \beta_0 + \beta_1 x_{01} + \cdots + \beta_p x_{0p}$.
+
+-   Classification to class $y=1$ occurs if and only if
+    $$\begin{aligned}\mathsf{P}(y=1 | \mathbf{x}_0) \ge \tfrac12 &\Leftrightarrow& \tfrac{1}{1 + e^{-\theta(\mathbf{x}_0)}} \ge \tfrac12 \\ &\Leftrightarrow& e^{-\theta(\mathbf{x}_0)} \le 1 \\ &\Leftrightarrow& \theta(\mathbf{x}_0) \ge 0 \\ &\Leftrightarrow& \beta_0 + \beta_1 x_{01} + \cdots + \beta_p x_{0p} \ge 0 \end{aligned}$$
+
+-   In practice parameters $\beta_0, \ldots, \beta_p$ replaced by
+    maximum likelihood estimates thereof.
+
+---
+
+.left-code[
+## Another Look at the Swiss Banknotes
+
+```{r swiss1summary, eval=FALSE}
+summary(swiss.glm.1)
+```
+
+-   For this model, linear predictor is
+    $\theta(\mathsf{margin}) = \beta_0 + \beta_1 \mathsf{margin}$.
+
+-   MLEs are $\hat \beta_0 = `r beta0`$ and $\hat \beta_1 = `r beta1`$.
+
+-   Hence fitted model has linear predictor
+    $`r beta0` `r beta1` \times \mathsf{margin}$
+]
+
+.right-plot[
+```{r, ref.label='swiss1summary', echo=FALSE}
+```
+]
+
+---
+
+.left-code-wide[
+## Another Look at the Swiss Banknotes
+
+-   Classify to class coded by $y=1$ (genuine notes) if and only if
+    $$\begin{aligned}`r beta0` `r beta1` \times \mathsf{margin} \ge 0 &\Leftrightarrow \mathsf{margin} \le \frac{`r beta0`}{`r -beta1`} \\ &\Leftrightarrow \mathsf{margin} \le `r round(-beta0/beta1,3)`.\end{aligned}$$
+
+-   This is a pretty sensible place to split the training data.
+]
+
+.right-plot-narrow[
+```{r, echo=FALSE, fig.dim=c(3.2,4.5), message=FALSE}
+swiss.glm.1 %>% broom::augment() %>%
+  mutate(.pred = if_else(.fitted > 0, 'genuine', 'forged'),
+         correct = .pred == type) %>%
+  ggplot() +
+  geom_quasirandom(mapping=aes(x=type, y=margin, col=type, alpha=correct)) +
+  scale_alpha_manual(values = c(`TRUE` = 1, `FALSE`=0.4)) +
+  geom_hline(yintercept = -beta0/beta1) +
+  guides(col='none', alpha='none')
+```
+]
+
+---
+
+.left-code[
+## Logistic regression with both predictors
+
+```{r, echo=FALSE}
+beta2 = signif(coef(swiss.glm.2), 5)
+```
+
+```{r swiss2summary, eval=FALSE}
+summary(swiss.glm.2)
+```
+
+The classification rule for $y=1$ (`genuine`) for `swiss.glm.2` is:
+
+$$\hat\beta_0 + \hat\beta_1 \times \mathsf{margin} + \hat\beta_2 \times \mathsf{diagonal} > 0$$
+
+where:
+
+ - $\hat\beta_0 = `r beta2[1]`$,
+ - $\hat\beta_1 = `r beta2[2]`$,
+ - $\hat\beta_2 = `r beta2[3]`$.
+]
+
+.right-plot[
+```{r, ref.label='swiss2summary', echo=FALSE}
+```
+]
+
+---
+
+.left-code[
+## Logistic regression with both predictors
+
+The classification rule for $y=1$ (`genuine`) for `swiss.glm.2` is:
+
+$$\hat\beta_0 + \hat\beta_1 \times \mathsf{margin} + \hat\beta_2 \times \mathsf{diagonal} > 0$$
+
+where:
+
+ - $\hat\beta_0 = `r beta2[1]`$,
+ - $\hat\beta_1 = `r beta2[2]`$,
+ - $\hat\beta_2 = `r beta2[3]`$.
+]
+
+.right-plot[
+```{r swiss2plot, echo=FALSE}
+swiss.glm.2 %>% broom::augment() %>%
+  mutate(.pred = if_else(.fitted > 0, 'genuine', 'forged'),
+         correct = .pred == type) %>%
+  ggplot() +
+  geom_point(
+    mapping=aes(x=margin, y=diagonal,
+                col=type, alpha=correct)) +
+  scale_alpha_manual(values = c(`TRUE` = 1, `FALSE`=0.4)) +
+  guides(alpha='none') +
+  geom_abline(intercept=-beta2[1]/beta2[3],
+              slope=-beta2[2]/beta2[3])
+```
+]
+
+---
+
+## Classifying by Logistic Regression in R
+
+-   Assume we classify to class coded by $y=1$ if and only if
+    $\mathsf{P}(y=1 | \mathbf{x}_0) \ge \tfrac12$.
+
+-   Recall that this is equivalent to
+    $\theta(\mathbf{x}_0) = \mathsf{logit}(p(\mathbf{x}_0)) \ge 0$.
+
+-   Can use `predict()` or `broom::augment()` to get estimated posterior probabilities.
+
+-   But beware, prediction for logistic regression can be on one of
+    two scales.
+
+    -   Predictions on **response scale** are estimated probabilities.
+
+    -   Predictions on scale of linear predictor -- i.e. logit.
+
+-   Default in R is prediction on logit scale.
+
+-   Can specify predictions on response scale through `type` argument to
+    `predict()`, or `type.predict` to `augment()`:
+
+-   E.g. `augment(my.glm, newdata=test.data, type.predict="response")`.
+
+---
+
+.left-code[
+## Probabilities for the Swiss Banknotes
+
+```{r swisspred, eval=FALSE}
+library(broom)
+swiss.glm.2 %>%
+  augment(newdata = swiss.test) %>%
+  slice_head(n=3)
+
+swiss.glm.2 %>%
+  augment(newdata = swiss.test,
+          type.predict = 'response') %>%
+  slice_head(n=3)
+```
+
+-   For test case 1, $\hat \theta(\mathbf{x}_0) = -18.77$.
+
+-   Hence
+    $\mathsf{P}(y=1 | \mathbf{x}_0) = 1/(1+e^{-\hat \theta(\mathbf{x}_0)}) = 1/(1+e^{18.77}) \approx 0$.
+]
+
+.right-plot[
+```{r, ref.label='swisspred', echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+.left-code[
+## Classifying the Swiss banknotes
+
+```{r swisspred2, eval=FALSE}
+swiss.glm.pred <-
+  swiss.glm.2 %>%
+  augment(newdata = swiss.test) %>%
+  mutate(
+    .pred_class = factor(
+      .fitted > 0,
+      levels=c(TRUE, FALSE),
+      labels=c('genuine','forged')
+      )
+  )
+swiss.glm.pred
+```
+
+We can use the predictions on the logit scale
+to classify by creating a factor from
+whether it's greater than zero or not.
+
+Need to be careful to get the levels the right
+way around.
+]
+
+.right-plot[
+```{r, ref.label='swisspred2', echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+.left-code-wide[
+## Classifying the Swiss banknotes
+
+```{r swisstidy, eval=FALSE}
+library(parsnip)
+library(yardstick)
+swiss.glm.pred <-
+  logistic_reg() %>%
+  fit(type ~ ., data=swiss.train) %>%
+  augment(new_data=swiss.test)
+
+swiss.glm.pred %>%
+  slice_head(n=3)
+
+swiss.glm.pred %>%
+  conf_mat(truth=type,
+           estimate=.pred_class)
+```
+
+- Much easier to use the `tidymodels` framework.
+
+- No need to worry about order of the factor.
+
+- Works the same as LDA, KDA etc.
+]
+
+.right-plot-narrow[
+```{r, ref.label='swisstidy', echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+class: middle, inverse
+
+# More than two classes
+
+## Multinomial Regression
+
+---
+
+## More than Two Classes
+
+-   In logistic regression, probability $\mathsf{P}(y = 1|\mathbf{x})$ related to the
+    predictors via the linear predictor,
+    $\theta(\mathbf{x}) = \beta_0 + \beta_1 x_{1} + \cdots + \beta_p x_{p}$.
+
+-   Can extend to $C$ classes by defining $C-1$ linear predictors,
+    $\theta_1(\mathbf{x}), \ldots, \theta_{C-1}(\mathbf{x})$.
+
+-   Probability of class $j$, $p_j(\mathbf{x}) = \mathsf{P}(j | \mathbf{x})$, an increasing
+    function of $\theta_j(\mathbf{x})$.
+
+-   Probabilities appropriately scaled to ensure that all in interval
+    $[0,1]$, and that $\sum_{j=1}^{C-1} p_{j}(\mathbf{x}) \le 1$.
+
+-   Final class probability given by
+    $p_C(\mathbf{x}) = 1 - \sum_{j=1}^{C-1} p_j(\mathbf{x})$.
+
+-   Model referred to as a **multinomial** regression because there are
+    multiple classes for the response (target variable).
+
+---
+
+## Implementation of Multinomial Model in R
+
+-   Lots of parameters to estimate. There are $C-1$ linear predictors, each with $p+1$ parameters.
+
+-   Multinomial regression is equivalent to a (classification) neural network with no hidden layers, and a
+sigmoid transformation on the output.
+
+-   This is what is done by the `multinom` function in the `nnet` package.
+
+-   We'll use the `tidymodels` framework via the `multinom_reg()` specification.
+
+-   As we use `nnet()` under the hood, we need to beware of numerical problems.
+
+    -   Best to scale predidctors that are large in magnitude.
+
+---
+
+.left-code[
+## Computerized Wine Tasting
+
+- We consider some data on Italian wines.
+
+- We have 100 records in the training set.
+
+- 78 records in an artificial test set.
+
+- Aim is to classify the wine `Cultivar` based on $p=13$ chemical measurements.
+
+- `Cultivar` has three classes, `A`, `B` and `C`.
+]
+
+.right-plot[
+```{r, echo=FALSE}
+knitr::include_graphics('graphics/chianti.jpg')
+```
+]
+
+---
+
+## Computerized Wine Tasting
+
+```{r, message=FALSE}
+wine.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-train.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+wine.test <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-test.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+wine.train
+```
+
+---
+
+.left-code[
+## Computerized Wine Tasting
+
+```{r winemn, results='hide'}
+wine.mn <- multinom_reg() %>%
+  fit(Cultivar ~ ., data=wine.train)
+wine.mn
+wine.mn %>%
+  augment(new_data=wine.test) %>%
+  conf_mat(
+    truth=Cultivar,
+    estimate=.pred_class
+  )
+```
+
+```{r, echo=FALSE}
+get_perf <- function(data, true, pred) {
+  data %>% summarise(wrong = sum({{pred}} != {{true}}), total = n(),
+                      perc = round(wrong/total*100,1))
+}
+perf.mn <- wine.mn %>%
+  augment(new_data=wine.test) %>%
+  get_perf(Cultivar, .pred_class)
+```
+
+Coefficients are shown only for cultivars `B` and `C`,
+as the `A` cultivar is determined as probabilities must
+sum to 1.
+
+The misclassification rate is $`r perf.mn$wrong`/`r perf.mn$total` \approx `r perf.mn$perc`\%$.
+]
+
+.right-plot[
+```{r, ref.label='winemn', echo=FALSE}
+```
+]
+---
+
+## Computerized Wine Tasting
+
+```{r, results='hide'}
+library(nnet)
+wine.mn2 <- multinom(Cultivar ~ .,
+                     data=wine.train)
+wine.mn2.step <- step(wine.mn2)
+wine.mn2.step
+```
+```{r, echo=FALSE}
+wine.mn2.step
+```
+
+Can perform step-wise regression, but not
+within the `tidymodels` framework, so need
+to do this directly with `multinom`.
+
+---
+
+## Computerized Wine Tasting
+
+Once we know which variables to use from the step wise procedure, we can re-fit using `tidymodels`.
+
+```{r winerefit}
+wine.mn2.refit <- multinom_reg() %>%
+  fit(Cultivar ~ Alcohol + Flav + Hue + Proline, data=wine.train)
+wine.mn2.pred <- wine.mn2.refit %>%
+  augment(new_data = wine.test)
+wine.mn2.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+```
+
+```{r, echo=FALSE}
+perf.mn2 <- wine.mn2.pred %>% get_perf(Cultivar, .pred_class)
+```
+
+The misclassification rate of the simpler model is $`r perf.mn2$wrong`/`r perf.mn2$total` \approx `r perf.mn2$perc`\%$.
