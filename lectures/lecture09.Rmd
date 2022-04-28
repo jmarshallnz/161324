@@ -51,7 +51,7 @@ swiss.test <- read_csv("../data/swiss-test.csv") %>%
 
 There are two main things to consider:
 
--   Scale. We use the Euclidean distance between observations to
+-   Scale. Euclidean distance is often used between observations to
     determine the $k$ most similar items.
 
 -   $k$. Small $k$ will give larger variation as few observations in the
@@ -82,44 +82,41 @@ neighbour classification.
 
 ## K-Nearest neighbours in R
 
-`knn` from the `class` library takes the
-form
+We will use the `tidymodels` framework, utilising the specification
 
-    knn(x.pred, y.pred, x.group, k)
+    nearest_neighbor(mode = 'classification', neighours = 5)
 
-where
+By default this uses the `kknn` package, which automatically scales
+the predictor variables to have common variance.
 
--   `x.pred` are the predictors from the training data.
+Thus, we need only concern ourselves with determining `k`.
 
--   `y.pred` are the predictors from the test data.
+---
 
--   `x.group` is the class variable from the training data.
+## K-Nearest neighbours for the Swiss data
 
--   `k` is the number of neighbours to use.
+```{r, message=FALSE}
+library(parsnip)
+library(yardstick)
+swiss.knn1 <- nearest_neighbor(mode="classification", neighbors = 1) %>%
+  fit(type ~ ., data=swiss.train)
+swiss.knn1.pred <- swiss.knn1 %>%
+  augment(new_data = swiss.test)
+swiss.knn1.pred %>%
+  conf_mat(truth=type, estimate=.pred_class)
+```
 
 ---
 
 ## K-Nearest neighbours for the Swiss data
 
 ```{r}
-library(class)
-swiss.knn <- knn(swiss.train[,1:2], swiss.test[,1:2],swiss.train$type, k=5)
-table(swiss.knn, swiss.test$type)
-```
-
----
-
-## Example : K-Nearest neighbours for the Swiss data
-
-```{r}
-swiss.train.scale <- swiss.train[,1:2]
-swiss.test.scale  <- swiss.test[,1:2]
-swiss.means <- apply(swiss.train.scale, 2, mean)
-swiss.sds   <- apply(swiss.train.scale, 2, sd)
-swiss.train.scale <- scale(swiss.train.scale, center=swiss.means, scale=swiss.sds)
-swiss.test.scale <- scale(swiss.test.scale, center=swiss.means, scale=swiss.sds)
-swiss.knn.2 <- knn(swiss.train.scale, swiss.test.scale, swiss.train$type, k=5)
-table(swiss.knn.2, swiss.test$type)
+swiss.knn2 <- nearest_neighbor(mode="classification", neighbors = 20) %>%
+  fit(type ~ ., data=swiss.train)
+swiss.knn2.pred <- swiss.knn2 %>%
+  augment(new_data = swiss.test)
+swiss.knn2.pred %>%
+  conf_mat(truth=type, estimate=.pred_class)
 ```
 
 ---
@@ -164,8 +161,7 @@ we randomly reallocate observations to classes within the node,
 $$\begin{aligned} P(x \textsf{ misclassified}) &= \sum_{j=1}^C P(x \textsf{ misclassified}|x \in j)P(x \in j)\\ &= \sum_{j=1}^C (1-\hat{p}_j)\hat{p}_j\\
 &= 1 - \sum_{j=1}^C \hat{p}_j^2.\end{aligned}$$
 
-We try to find splits
-that minimise the Gini index.
+We try to find splits that minimise the Gini index.
 
 ---
 
@@ -189,15 +185,13 @@ $$P(x \textsf{ misclassified}) = 1 - \sum_{j=1}^C \hat{p}_j^2.$$
 
 Consider the data
 
-::: {.center}
-    x    class
-  ----- -------
-   2.8     a
-   3.0     b
-   3.2     a
-   3.4     b
-   3.6     b
-:::
+| x | class |
+| --: | --- |
+| 2.8 |  a  |
+| 3.0 |  b  |
+| 3.2 |  a  |
+| 3.4 |  b  |
+| 3.6 |  b  |
 
 -   What possibilities are there for the first split?
 
@@ -210,26 +204,29 @@ Consider the data
 .left-code[
 ## Classification trees in R
 
-We use the familiar `rpart` function.
-
-```{r, message=FALSE, results='hide'}
-library(rpart)
-swiss.rp <- rpart(type ~ ., data=swiss.train)
-```
-
-```{r swiss1, eval=FALSE}
-plot(swiss.rp)
-text(swiss.rp)
-```
-
 ```{r}
-swiss.rp.pred <- predict(swiss.rp, swiss.test, type="class")
-table(swiss.rp.pred, swiss.test$type)
+swiss.rp <- decision_tree(
+  mode = 'classification'
+  ) %>%
+  fit(type ~ ., data=swiss.train)
+
+swiss.rp.pred <- swiss.rp %>%
+  augment(swiss.test)
+
+swiss.rp.pred %>%
+  conf_mat(truth=type,
+           estimate=.pred_class)
 ```
 ]
 
 .right-plot[
-```{r, ref.label='swiss1', echo=FALSE, message=FALSE}
+```{r, echo=FALSE, message=FALSE}
+swiss.rp %>%
+  extract_fit_engine() %>%
+  plot(margin=0.5)
+swiss.rp %>%
+  extract_fit_engine() %>%
+  text()
 ```
 ]
 
@@ -238,24 +235,26 @@ table(swiss.rp.pred, swiss.test$type)
 .left-code[
 ## Classification tree 2
 
-```{r, message=FALSE, results='hide'}
-library(rpart)
-swiss.rp.2 <- rpart(type ~ ., data=swiss.train, minsplit=7)
-```
-
-```{r swiss2, eval=FALSE}
-plot(swiss.rp.2)
-text(swiss.rp.2)
-```
-
 ```{r}
-swiss.rp.pred.2 <- predict(swiss.rp.2, swiss.test, type="class")
-table(swiss.rp.pred.2, swiss.test$type)
+swiss.rp2 <- decision_tree(
+  mode='classification',
+  min_n=7
+  ) %>%
+  fit(type ~ ., data=swiss.train)
+
+swiss.rp2.pred <- swiss.rp2 %>%
+  augment(swiss.test)
+
+swiss.rp2.pred %>%
+  conf_mat(truth=type,
+           estimate=.pred_class)
 ```
 ]
 
 .right-plot[
-```{r, ref.label='swiss2', echo=FALSE, message=FALSE}
+```{r, echo=FALSE, message=FALSE}
+swiss.rp2 %>% extract_fit_engine() %>% plot(margin=0.1)
+swiss.rp2 %>% extract_fit_engine() %>% text()
 ```
 ]
 
@@ -273,12 +272,41 @@ can be used.
 
 ---
 
+## Random forests for classification
+
+- Forests for classification are just collections of classification trees.
+
+- Classification is done by passing each test observation through each tree.
+
+- This gives the most likely class from each tree.
+
+- These are treated as votes for the most likely class for the forest.
+
+    - Can result in ties, which are usually resolved at random.
+
+---
+
+## Random forests for Swiss banknotes
+
+```{r}
+set.seed(2000)
+swiss.rf <- rand_forest(mode="classification", engine="randomForest") %>%
+  fit(type ~ . ,data=swiss.train)
+swiss.rf.pred <- swiss.rf %>%
+  augment(new_data=swiss.test)
+swiss.rf.pred %>%
+  conf_mat(truth=type, estimate=.pred_class)
+```
+  
+---
+
 class: middle, inverse
 
 # Neural networks for classification
 
 ---
 
+.left-code[
 ## Neural networks for classification
 
 -   Neural networks attempt to model the brain by assembling a large
@@ -293,15 +321,14 @@ class: middle, inverse
     -   These feed into one or more hidden layers or .
 
     -   The derived features feed into the output node(s).
+]
 
----
-
-## Neural networks for classification
-
+.right-plot[
 ```{r, echo=FALSE}
 source("../common/plots.R")
 nnet_plot()
 ```
+]
 
 ---
 
@@ -373,40 +400,35 @@ $\beta$ terms differs based on the number of classes.
 
 ## Fitting neural networks for classification in R
 
-Use the `nnet` command
-from the `nnet` library. It takes the form
+We'll utilise the `mlp()` specification from the `tidymodels` framework:
 
-    nnet(y ~ x1 + x2 + x3, data=mydata, size=2, linout=F)
+    mlp(mode='classification', hidden_units=2, penalty=0.1, epochs=1000)
 
--   The `size` is the number of hidden nodes.
+-   The `hidden_units` is the number of hidden nodes.
 
--   The `linout=F` term is the default, so you need not specify it. It
-    ensures the outcome is restricted to $[0,1]$ (a probability).
+-   `penalty` is the decay rate for the back propagation algorithm.
 
--   Remember to scale the (numerical) inputs to between 0 and 1.
+-   `epochs` is the number of iterations.
+
+-   Remember that large numeric inputs should be scaled first.
 
 ---
 
 ## Neural network classification of Swiss data
 
-```{r}
-library(nnet)
+```{r, message=FALSE}
+library(recipes)
+swiss.rec <- recipe(type ~ ., data=swiss.train) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  prep(swiss.train)
+
 set.seed(2001)
-swiss.train.scale <- swiss.train
-swiss.test.scale <- swiss.test
-swiss.train.max <- apply(swiss.train[,1:2],2,max)
-swiss.train.scale[,1:2] <- sweep(swiss.train[,1:2],2,swiss.train.max,FUN="/")
-swiss.test.scale[,1:2] <- sweep(swiss.test[,1:2],2,swiss.train.max,FUN="/")
-swiss.nn <- nnet(type ~ ., size=2, data=swiss.train.scale, maxit=500)
-```
+swiss.nn <- mlp(mode='classification', hidden_units=2, epochs=500) %>%
+  fit(type ~ ., data=bake(swiss.rec, swiss.train))
 
----
+swiss.nn.pred <- swiss.nn %>% augment(new_data=bake(swiss.rec, swiss.test))
 
-## Neural networks for classification cont.
-
-```{r}
-swiss.nn.pred<-predict(swiss.nn,swiss.test.scale,type="class")
-table(swiss.nn.pred, swiss.test$type)
+swiss.nn.pred %>% conf_mat(truth=type, estimate=.pred_class)
 ```
 
 ---
@@ -420,9 +442,9 @@ table(swiss.nn.pred, swiss.test$type)
 
 -   Some require all predictors on the same scale.
 
-    -   $k$-nearest neighbours. Normalise first.
+    -   $k$-nearest neighbours. This is handled automatically by `nearest_neighbour` specification.
 
-    -   Neural networks. Scale to \[0,1\] first.
+    -   Neural networks. Scale large predictors first.
 
 -   Some use a linear combination of predictors.
 
