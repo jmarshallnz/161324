@@ -1281,7 +1281,7 @@ observations with greater disparity in the pattern of predictor values).
 
 The method of k-nearest neighbour classification is implemented in R by
 several packages. We'll be utilising the `kknn` package for this via
-the `parship` wrapper `nearest_neighbour()`.
+the `parsnip` wrapper `nearest_neighbour()`.
 
 ::: {.example}
 **k-Nearest Neighbour Classification for the Wine Data**
