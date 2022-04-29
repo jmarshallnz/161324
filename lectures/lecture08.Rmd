@@ -589,6 +589,290 @@ swiss.glm.pred %>%
 
 class: middle, inverse
 
+# A more interesting example
+
+## Symptoms of COVID-19 cases in New Zealand
+
+---
+
+## Symptoms of COVID-19 cases in New Zealand
+
+We have data on from both confirmed cases and those tested but confirmed negative,
+along with a wide variety of symptoms, age and sex.
+
+These data were analysed in this paper:
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8556148/
+
+where they used decision trees and random forests, among other things, to identify symptoms
+that are more likely in confirmed cases than those not a case.
+
+We read the data into R and process it a little using:
+
+```{r, message=FALSE}
+covid_all <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/covid19/symptoms.csv") %>%
+  mutate(across(everything(), as.factor), Status = fct_relevel(Status, "Not_a_case"))
+```
+
+---
+
+## Symptoms of COVID-19 cases in New Zealand
+
+We'll split the data into training and testing sets
+
+```{r}
+library(rsample)
+set.seed(3)
+split <- initial_split(covid_all, prop=3/4)
+
+covid.train <- training(split)
+covid.test  <- testing(split)
+```
+
+Our goal will be to predict the `Status` of an individual, given their symptoms.
+
+---
+
+.left-code[
+## Symptoms of COVID-19 cases in New Zealand
+
+```{r symptoms_plot, eval=FALSE}
+covid.train %>%
+  select(-AgeGrp, -Month, -Sex) %>%
+  pivot_longer(-Status) %>%
+  group_by(Status, name, value) %>%
+  summarise(n=n()) %>%
+  mutate(p=n/sum(n)) %>%
+  filter(value != "No") %>%
+  ggplot() +
+  geom_col(
+    mapping=aes(
+      y=name,
+      x=p
+      )
+    ) +
+  facet_wrap(vars(Status)) +
+  labs(x=NULL, y=NULL) +
+  scale_x_continuous(
+    labels=scales::label_percent()
+  )
+```
+]
+
+.right-plot[
+```{r, ref.label='symptoms_plot', echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+.left-code[
+## Symptoms of COVID-19 cases in New Zealand
+
+```{r covid_lr, eval=FALSE}
+covid.lr <- logistic_reg() %>%
+  fit(Status ~ ., data=covid.train)
+
+covid.lr %>%
+  tidy() %>%
+  print(n=100)
+```
+
+Anosmia (lack of smell) is important,
+as is Ageusia (lack of taste).
+
+Being male is a risk factor, while
+having a sore throat is protective.
+
+**NOTE: This is with OG Covid. Omicron is
+associated with Gastro symptoms.**
+]
+
+.small-font.right-plot[
+```{r, ref.label='covid_lr', echo=FALSE}
+```
+]
+
+---
+
+## Symptoms of COVID-19 cases in New Zealand
+
+```{r}
+covid.pred <- covid.lr %>% augment(covid.test)
+covid.pred %>%
+  conf_mat(truth=Status, estimate=.pred_class)
+```
+
+We're getting "Not a case" correct, but are doing very badly at predicting cases!
+
+This may be in part due to the data being **imbalanced**: There are far more 'Not a case' than cases.
+
+While the overall performance is good, if we put this into practice we would be telling over half
+of the cases that they're all good. **This is bad in a pandemic!**
+
+---
+
+## The classification threshold
+
+- By default, the logistic regression classifier (and most classifiers) classify a case as being in the second class if $\mathsf{P}(y=1 | \mathbf{x}) > 0.5$.
+
+- By using 0.5 as the threshold, we're assuming that each class is equally important.
+
+- In a pandemic, it is much more important to tell a case of COVID-19 that they are a case than it is to tell someone that doesn't have COVID-19 that they don't have it.
+
+- We don't really mind if we classify people who aren't cases as being cases
+
+    - worst case they isolate unnecessarily.
+
+- We *do* mind if we classify people who are cases as being not cases though
+
+    - the consequence is that they don't isolate and may go on to infect others.
+
+- In that case we'd want to use a lower threshold than 0.5, so that we classify more people as cases than as not cases.
+
+---
+
+## ROC curves
+
+- By moving the threshold we're trading off *sensitivity* and *specificity*.
+
+    - Sensitivity: $\mathsf{P}(\mbox{predicted case} | \mbox{true case})$
+    - Specificity: $\mathsf{P}(\mbox{predicted not a case} | \mbox{truly not a case})$
+
+- Lowering the threshold means we predict more cases (more $y=1$).
+
+- Increasing the threshold means we predict more non-cases (more $y=0$).
+
+- The **receiver operating characteristic** (ROC) curve describes how the sensitivity
+and specificity change as the threshold changes.
+
+    - Plots sensitivity against 1-specificity.
+
+    - Use `roc_curve()` in `yardstick()`
+
+---
+
+.left-code[
+## ROC curve for COVID-19 Symptoms
+
+```{r roc, eval=FALSE}
+covid.roc <-
+  covid.pred %>%
+  roc_curve(Status,
+            .pred_Confirmed,
+            event_level='second')
+ggplot(covid.roc) +
+  geom_line(aes(x=1-specificity,
+                y=sensitivity)) +
+  geom_abline(linetype='dotted') +
+  guides(col='none') +
+  coord_equal()
+```
+
+Choosing a lower threshold will increase
+the sensitivity.
+
+i.e. correctly identify more cases.
+]
+
+.right-plot[
+```{r, echo=FALSE}
+covid.roc <-
+  covid.pred %>%
+  roc_curve(Status,
+            .pred_Confirmed,
+            event_level='second')
+ggplot(covid.roc,
+       mapping = aes(x=1-specificity, y=sensitivity)) +
+  geom_line() +
+  geom_abline(linetype='dotted') +
+  geom_point(data=covid.roc %>% slice_min(abs(.threshold-.5)), size=3) +
+  geom_text(data=covid.roc %>% slice_min(abs(.threshold-.5)),
+            mapping=aes(label=0.5),
+            hjust=0, nudge_x=0.03) +
+  guides(col='none') +
+  coord_equal()
+```
+]
+
+---
+
+.left-code[
+## Using a different threshold
+
+There's no 'correct' threshold, but one simple criteria is to
+maximise the sum of the sensitivity and specificities.
+
+```{r}
+covid.roc %>%
+  slice_max(sensitivity+specificity,
+            n=1)
+```
+
+This results in being as close as possible to the top right of
+the plot (100% sensitive and specific).
+]
+
+.right-plot[
+```{r, echo=FALSE}
+ggplot(covid.roc, mapping=aes(x=1-specificity,
+                y=sensitivity)) +
+  geom_line() +
+  geom_point(data=covid.roc %>% slice_max(sensitivity+specificity, n=1),
+             size=3) +
+  geom_text(data=covid.roc %>% slice_max(sensitivity+specificity, n=1),
+          mapping=aes(label=round(.threshold, 3)),
+          hjust=1, nudge_x=-0.03) +
+  geom_abline(linetype='dotted') +
+  coord_equal()
+```
+]
+
+---
+
+## Results with the alternate threshold
+
+```{r, warning=FALSE}
+covid.pred2 <- covid.pred %>%
+  mutate(.pred_class_alt = 
+           factor(.pred_Confirmed > 0.185,
+                  levels = c(FALSE, TRUE),
+                  labels = c("Not_a_case", "Confirmed")))
+covid.pred2 %>%
+  conf_mat(truth=Status, estimate=.pred_class_alt)
+```
+
+This gives us much better performance on the confirmed cases, but much worse performance overall.
+
+The misclassification rate is not a fair measure of what is important to us.
+
+---
+
+## Assigning misclassification costs
+
+We could instead assign costs to the two errors and compute total costs.
+
+ - assign a cost of 1 to getting not a case wrong.
+ - assign a cost of 10 to getting a confirmed case wrong.
+
+```{r}
+cost_fun <- function(truth, prediction) {
+  case_when(truth == "Not_a_case" & prediction == "Confirmed" ~ 1,
+            truth == "Confirmed" & prediction == "Not_a_case" ~ 10,
+            TRUE ~ 0)
+}
+
+covid.pred2 %>% mutate(lr = cost_fun(Status, .pred_class),
+                       lr_alt = cost_fun(Status, .pred_class_alt)) %>%
+  summarise(across(starts_with('lr'), sum))
+```
+
+By this measure, the alternate threshold is much better.
+
+---
+
+class: middle, inverse
+
 # More than two classes
 
 ## Multinomial Regression
