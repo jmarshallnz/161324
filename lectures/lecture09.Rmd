@@ -25,6 +25,8 @@ editor_options:
 library(tidyverse)
 library(patchwork)
 library(skimr)
+library(rsample)
+
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
 theme_set(theme_minimal())
@@ -33,6 +35,23 @@ swiss.train <- read_csv("../data/swiss-train.csv") %>%
   mutate(type = factor(type))
 swiss.test <- read_csv("../data/swiss-test.csv") %>%
   mutate(type = factor(type))
+
+wine.train <- read_csv("../data/wine-train.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+wine.test <- read_csv("../data/wine-test.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+
+donut.train <- read_csv("../data/donut-train.csv") %>%
+  mutate(Class = factor(Class))
+
+covid_all <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/covid19/symptoms.csv") %>%
+  mutate(across(everything(), as.factor), Status = fct_relevel(Status, "Not_a_case"))
+
+set.seed(3)
+split <- initial_split(covid_all, prop=3/4)
+
+covid.train <- training(split)
+covid.test  <- testing(split)
 ```
 
 ## K-Nearest neighbour classification
@@ -54,8 +73,13 @@ There are two main things to consider:
 -   Scale. Euclidean distance is often used between observations to
     determine the $k$ most similar items.
 
--   $k$. Small $k$ will give larger variation as few observations in the
-    training data are used to predict. Larger $k$ will give less
+-   What $k$ should be.
+
+    - Small $k$ will give larger variation as few observations in the
+    training data are used to predict. But, those observations will
+    be relative close to the test data so will likely have lower bias.
+
+    - Larger $k$ will give less
     variation based on the majority vote of a large number of
     observations from the training data. However, larger $k$ will have
     bias as we will be comparing the test data to observations that have
@@ -72,7 +96,7 @@ neighbour classification.
     training set have the same distance as the nearest $k$ points from
     the test observation. In this case we normally use all observations
     within the same distance as the first $k$. An alternate would be to
-    pick the $k$ at random.
+    pick the $k$ neighbours at random.
 
 -   A tie in the majority vote of the $k$ nearest observations for
     class. In this case we normally assign the class randomly out of the
@@ -84,40 +108,46 @@ neighbour classification.
 
 We will use the `tidymodels` framework, utilising the specification
 
-    nearest_neighbor(mode = 'classification', neighours = 5)
+```{r, eval=FALSE}
+nearest_neighbor(mode = 'classification', neighbors = 5)
+```
 
 By default this uses the `kknn` package, which automatically scales
 the predictor variables to have common variance.
 
-Thus, we need only concern ourselves with determining `k`.
+Thus, we need only concern ourselves with determining $k$.
 
 ---
 
-## K-Nearest neighbours for the Swiss data
+## K-Nearest neighbours for the Wine data
 
 ```{r, message=FALSE}
 library(parsnip)
 library(yardstick)
-swiss.knn1 <- nearest_neighbor(mode="classification", neighbors = 1) %>%
-  fit(type ~ ., data=swiss.train)
-swiss.knn1.pred <- swiss.knn1 %>%
-  augment(new_data = swiss.test)
-swiss.knn1.pred %>%
-  conf_mat(truth=type, estimate=.pred_class)
+wine.knn1 <- nearest_neighbor(mode="classification", neighbors = 1) %>%
+  fit(Cultivar ~ ., data=wine.train)
+wine.knn1.pred <- wine.knn1 %>%
+  augment(new_data = wine.test)
+wine.knn1.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
+
+With $k=1$ we find 9 wines get misclassified - all of Cultivar B.
 
 ---
 
-## K-Nearest neighbours for the Swiss data
+## K-Nearest neighbours for the Wine data
 
 ```{r}
-swiss.knn2 <- nearest_neighbor(mode="classification", neighbors = 20) %>%
-  fit(type ~ ., data=swiss.train)
-swiss.knn2.pred <- swiss.knn2 %>%
-  augment(new_data = swiss.test)
-swiss.knn2.pred %>%
-  conf_mat(truth=type, estimate=.pred_class)
+wine.knn2 <- nearest_neighbor(mode="classification", neighbors = 20) %>%
+  fit(Cultivar ~ ., data=wine.train)
+wine.knn2.pred <- wine.knn2 %>%
+  augment(new_data = wine.test)
+wine.knn2.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
+
+With $k=20$ it is quite a bit better - now just 4 wines get misclassified, again Cultivar B.
 
 ---
 
@@ -172,7 +202,7 @@ $$P(x \textsf{ misclassified}) = 1 - \sum_{j=1}^C \hat{p}_j^2.$$
 -   This is smallest when $\hat{p}_c = 1$ for some $c\in C$ and
     $\hat{p}_j = 0$ for $j \neq c$.
 
--   This is largest when $\hat{p}_j = \frac{1}{C}$ for all $j$. .
+-   This is largest when $\hat{p}_j = \frac{1}{C}$ for all $j$.
 
 -   To find the best split, work out the Gini index $g$ at the pair of
     nodes $l,r$ formed by each split and then minimise their sum,
@@ -182,7 +212,7 @@ $$P(x \textsf{ misclassified}) = 1 - \sum_{j=1}^C \hat{p}_j^2.$$
 ---
 
 ## Finding the best split
-
+.left-code[
 Consider the data
 
 | x | class |
@@ -193,16 +223,30 @@ Consider the data
 | 3.4 |  b  |
 | 3.6 |  b  |
 
--   What possibilities are there for the first split?
+There are 4 possibilities for the first split.
 
--   Find the Gini index of the nodes formed by these splits.
+Which is best?
+]
 
--   What is the best split?
+--
+
+.right-plot[
+
+- $x=2.9$ gives a pure left node, and a right node with impurity $1-\left[\frac{1}{4}\right]^2-\left[\frac{3}{4}\right]^2 = \frac{3}{8}$. Total impurity is $\frac{1}{5}\times 0 + \frac{4}{5}\times\frac{3}{8} = \frac{3}{10}$.
+
+- $x=3.1$ gives a left node with impurity $\frac{1}{2}$ and a right node with impurity $\frac{4}{9}$, giving total impurity $\frac{2}{5}\times\frac{1}{2} + \frac{3}{5}\times\frac{4}{9} = \frac{7}{15}.$
+
+- $x=3.3$ gives left node impurity $\frac{4}{9}$ and a pure right node, giving total impurity $\frac{3}{5}\times\frac{4}{9} + \frac{2}{5}\times0 = \frac{4}{15}.$
+
+- $x=3.5$ gives left node impurity $\frac{1}{2}$ and a pure right node, giving total impurity $\frac{4}{5}\times\frac{1}{2} + \frac{1}{5}\times0 = \frac{2}{5}.$
+
+So $x=3.3$ is the best split.
+]
 
 ---
 
 .left-code[
-## Classification trees in R
+## Classification trees for Swiss bank notes
 
 ```{r}
 swiss.rp <- decision_tree(
@@ -223,7 +267,7 @@ swiss.rp.pred %>%
 ```{r, echo=FALSE, message=FALSE}
 swiss.rp %>%
   extract_fit_engine() %>%
-  plot(margin=0.5)
+  plot(margin=0.1)
 swiss.rp %>%
   extract_fit_engine() %>%
   text()
@@ -233,7 +277,7 @@ swiss.rp %>%
 ---
 
 .left-code[
-## Classification tree 2
+## Classification tree for Swiss bank notes
 
 ```{r}
 swiss.rp2 <- decision_tree(
@@ -260,18 +304,6 @@ swiss.rp2 %>% extract_fit_engine() %>% text()
 
 ---
 
-## Alternate measures of impurity
-
-A number of other measures of impurity
-can be used.
-
--   Cross-entropy information criterion.
-    $$I_E = -\sum_{j=1}^C \hat{p}_j\log(\hat{p}_j)$$
-
--   Misclassification rate. $$M = 1 - \max_j p_j$$
-
----
-
 ## Random forests for classification
 
 - Forests for classification are just collections of classification trees.
@@ -284,20 +316,6 @@ can be used.
 
     - Can result in ties, which are usually resolved at random.
 
----
-
-## Random forests for Swiss banknotes
-
-```{r}
-set.seed(2000)
-swiss.rf <- rand_forest(mode="classification", engine="randomForest") %>%
-  fit(type ~ . ,data=swiss.train)
-swiss.rf.pred <- swiss.rf %>%
-  augment(new_data=swiss.test)
-swiss.rf.pred %>%
-  conf_mat(truth=type, estimate=.pred_class)
-```
-  
 ---
 
 class: middle, inverse
@@ -383,7 +401,7 @@ nnet_plot()
 
 ---
 
-## Neural networks for classification in R
+## Neural networks for classification
 
 The actual network used for
 classification and the method of fitting the weights $\alpha$ and
@@ -402,7 +420,9 @@ $\beta$ terms differs based on the number of classes.
 
 We'll utilise the `mlp()` specification from the `tidymodels` framework:
 
-    mlp(mode='classification', hidden_units=2, penalty=0.1, epochs=1000)
+```{r, eval=FALSE}
+mlp(mode='classification', hidden_units=2, penalty=0.1, epochs=1000)
+```
 
 -   The `hidden_units` is the number of hidden nodes.
 
@@ -433,6 +453,263 @@ swiss.nn.pred %>% conf_mat(truth=type, estimate=.pred_class)
 
 ---
 
+class: middle, inverse
+
+# COVID-19 Symptoms
+
+## Trees, forests and Neural nets
+
+---
+
+.left-code[
+## Symptoms of COVID-19 cases in New Zealand
+
+```{r symptoms_plot, eval=FALSE}
+covid.train %>%
+  select(-AgeGrp, -Month, -Sex) %>%
+  pivot_longer(-Status) %>%
+  group_by(Status, name, value) %>%
+  summarise(n=n()) %>%
+  mutate(p=n/sum(n)) %>%
+  filter(value != "No") %>%
+  ggplot() +
+  geom_col(
+    mapping=aes(
+      y=name,
+      x=p
+      )
+    ) +
+  facet_wrap(vars(Status)) +
+  labs(x=NULL, y=NULL) +
+  scale_x_continuous(
+    labels=scales::label_percent()
+  )
+```
+]
+
+.right-plot[
+```{r, ref.label='symptoms_plot', echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+.left-code[
+## Symptoms of COVID-19: Tree
+
+```{r}
+covid.rp <- decision_tree(
+  mode='classification',
+  cost_complexity=0.001
+) %>%
+  fit(Status ~ ., data=covid.train)
+
+covid.rp.pred <- 
+  covid.rp %>%
+  augment(covid.test)
+
+covid.rp.pred %>%
+  conf_mat(truth=Status,
+           estimate=.pred_class)
+```
+]
+
+.right-plot[
+```{r, echo=FALSE, message=FALSE}
+par(mar=c(0,0,0,0))
+covid.rp %>%
+  extract_fit_engine() %>%
+  plot(margin=0.1)
+covid.rp %>%
+  extract_fit_engine() %>%
+  text(cex=0.4)
+```
+]
+
+---
+
+## Symptoms of COVID-19: Forest
+
+```{r}
+set.seed(1234)
+covid.rf <- rand_forest(mode='classification', mtry=2) %>%
+  fit(Status ~ ., data=covid.train)
+
+covid.rf.pred <- covid.rf %>%
+  augment(covid.test)
+
+covid.rf.pred %>%
+  conf_mat(truth=Status,
+           estimate=.pred_class)
+```
+
+---
+
+## Symptoms of COVID-19: Neural net
+
+```{r}
+set.seed(1234)
+covid.nn <- mlp(mode='classification', hidden_units=7, penalty = 0.001, epochs=1000) %>%
+  fit(Status ~ ., data=covid.train)
+covid.nn %>% pluck('fit', 'convergence')
+
+covid.nn.pred <- covid.nn %>%
+  augment(covid.test)
+
+covid.nn.pred %>%
+  conf_mat(truth=Status,
+           estimate=.pred_class)
+```
+
+---
+
+```{r, echo=FALSE}
+covid.lr <- logistic_reg() %>%
+  fit(Status ~ ., data=covid.train)
+covid.lr.pred <- covid.lr %>% augment(covid.test)
+```
+
+.left-code[
+## Symptoms of COVID-19: ROC curves
+
+```{r roc_curves, eval=FALSE}
+all <- bind_rows(
+  list(forest=covid.rf.pred,
+       logistic=covid.lr.pred,
+       tree=covid.rp.pred,
+       nnet=covid.nn.pred),
+  .id="Model")
+all %>%
+  group_by(Model) %>%
+  roc_curve(
+    truth=Status,
+    estimate=.pred_Confirmed,
+    event_level='second'
+    ) %>%
+  autoplot() +
+  theme(legend.position='top')
+```
+
+The logistic regression is almost uniformly best.
+]
+
+.right-plot[
+```{r, ref.label="roc_curves", echo=FALSE, message=FALSE}
+```
+]
+
+---
+
+## Dealing with class imbalance
+
+- None of the models are any good at predicting confirmed cases of COVID-19.
+
+- We could use a different threshold (like we did with the logistic) to move along
+the ROC curve. But the ROC curve as it is shows logistic regression best.
+
+- Another way to deal with class imbalance is to re-balance the classes prior to
+training.
+
+- We could *downsample* the 'not a case' group, and/or *upsample* the 'Confirmed' group.
+
+- One method is to use SMOTE: Synthetic minority over-sampling technique.
+
+---
+
+## SMOTE: Over-sampling
+
+- The idea is to generate some more observations in the under-sampled class using
+$k$-nearest neighbour sampling.
+
+- We can optionally also downsample the over-sampled class.
+
+- This then gives better balance, which may help performance on the under-sampled class.
+
+- The undersampled class is often the interesting one!
+
+    - See here for more: https://jair.org/index.php/jair/article/view/10302/24590
+
+---
+
+## Implementing SMOTE in R
+
+.left-code-wide[
+We use `step_smotenc()` from the `themis` package which handles categorical predictors.
+
+```{r, message=FALSE}
+library(themis)
+set.seed(1234)
+rec <- recipe(Status ~ ., data=covid.train) %>%
+  step_smotenc(Status,
+               over_ratio = 1,
+               skip=TRUE) %>%
+  prep(covid.train)
+
+covid.balanced <- rec %>% bake(new_data=NULL)
+covid.balanced %>% count(Status)
+```
+]
+
+.right-plot-narrow[
+- The `over_ratio` parameter specifies the majority to minority class ratio.
+
+- We use `skip=TRUE` so that this step applies only to the data we `prep()` with (training data).
+
+- If we apply `bake()` with new data, the step will be skipped.
+
+    - `new_data=NULL` ensures we get the prep'd training data back.
+]
+---
+
+.left-code[
+## Refitting the Forest
+
+```{r}
+set.seed(1234)
+covid.rf2 <-
+  rand_forest(
+    mode='classification',
+    mtry=2) %>%
+  fit(Status ~ .,
+      data=covid.balanced)
+
+covid.rf2.pred <- covid.rf2 %>%
+  augment(rec %>% bake(covid.test))
+
+covid.rf2.pred %>%
+  conf_mat(truth=Status,
+           estimate=.pred_class)
+```
+]
+
+.right-plot[
+```{r, echo=FALSE}
+both <- bind_rows(
+  list(balanced=covid.rf2.pred,
+       logistic=covid.lr.pred,
+       unbalanced=covid.rf.pred),
+  .id="Model")
+
+both %>%
+  group_by(Model) %>%
+  roc_curve(
+    truth=Status,
+    estimate=.pred_Confirmed,
+    event_level='second'
+    ) %>%
+  autoplot() +
+  theme(legend.position='top')
+```
+]
+
+---
+
+class: middle, inverse
+
+# Summary
+
+---
+
 ## Classification summary
 
 -   Some methods require quantitative predictors:
@@ -448,7 +725,7 @@ swiss.nn.pred %>% conf_mat(truth=type, estimate=.pred_class)
 
 -   Some use a linear combination of predictors.
 
-    -   LDA, Logistic or Multinomial regression.
+    -   Logistic or Multinomial regression.
 
 -   Some have strong assumptions.
 
@@ -465,20 +742,9 @@ swiss.nn.pred %>% conf_mat(truth=type, estimate=.pred_class)
 
 -   In practice we don't know for certain whether the assumptions hold,
     so many data miners prefer to use more flexible tools such as
-    classification trees and neural networks.
+    trees, forests or neural networks.
 
--   There are often competitions on the Internet for searching for the
-    best classification for a particular problem.
+-   If classes are imbalanced, then your 'baseline' level for predictive
+    accuracy is "assign everything to the biggest group".
 
----
-
-## Which classification technique works best?
-
-::: {.center}
-![image](syn_class2){width="3.3in"}
-:::
-
-    http://www.massey.ac.nz/~jcmarsha/161223/data/syn1-train.csv
-    http://www.massey.ac.nz/~jcmarsha/161223/data/syn1-test.csv
-
----
+-   Rebalancing the classes might help in some cases, either through under or over-sampling, or a combination.
