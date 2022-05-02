@@ -304,6 +304,44 @@ swiss.rp2 %>% extract_fit_engine() %>% text()
 
 ---
 
+.left-code[
+## Classification tree for Swiss bank notes
+
+```{r}
+swiss.rp2 <- decision_tree(
+  mode='classification',
+  min_n=7
+  ) %>%
+  fit(type ~ ., data=swiss.train)
+
+swiss.rp2.pred <- swiss.rp2 %>%
+  augment(swiss.test)
+
+swiss.rp2.pred %>%
+  conf_mat(truth=type,
+           estimate=.pred_class)
+```
+]
+
+.right-plot[
+```{r, echo=FALSE, message=FALSE}
+swiss.all <- bind_rows(list(test=swiss.test, train=swiss.train), .id='data')
+swiss.grid <- expand_grid(margin=seq(7.1,12.8,by=0.05),
+                          diagonal=seq(137.5, 142.5, by=0.05))
+
+ggplot(swiss.all) +
+  geom_tile(data=swiss.rp2 %>% augment(swiss.grid),
+            mapping=aes(x=margin, y=diagonal, fill=.pred_class), alpha=0.3) +
+  geom_point(mapping=aes(x=margin, y=diagonal, col=type, alpha=data)) +
+  scale_alpha_manual(values = c(test=1, train=0.3)) +
+  scale_x_continuous(expand=c(0,0)) +
+  scale_y_continuous(expand=c(0,0)) +
+  guides(fill='none')
+```
+]
+
+---
+
 ## Random forests for classification
 
 - Forests for classification are just collections of classification trees.
