@@ -76,7 +76,7 @@ swiss.test <- read_csv("../data/swiss-test.csv") %>%
 
 ---
 
-## Introduction to Logistic Regressiond
+## Introduction to Logistic Regression
 
 -   Want to estimate posterior probability
     $p(\mathbf{x}) =  \mathsf{P}(y=1 | \mathbf{x}) = \mathsf{P}(j=2 | \mathbf{x})$.
@@ -597,7 +597,7 @@ class: middle, inverse
 
 ## Symptoms of COVID-19 cases in New Zealand
 
-We have data on from both confirmed cases and those tested but confirmed negative,
+We have data on both confirmed cases and those tested but confirmed negative,
 along with a wide variety of symptoms, age and sex.
 
 These data were analysed in this paper:
@@ -685,7 +685,7 @@ Being male is a risk factor, while
 having a sore throat is protective.
 
 **NOTE: This is with OG Covid. Omicron is
-associated with Gastro symptoms.**
+also associated with Gastro symptoms.**
 ]
 
 .small-font.right-plot[
@@ -739,9 +739,9 @@ of the cases that they're all good. **This is bad in a pandemic!**
     - Sensitivity: $\mathsf{P}(\mbox{predicted case} | \mbox{true case})$
     - Specificity: $\mathsf{P}(\mbox{predicted not a case} | \mbox{truly not a case})$
 
-- Lowering the threshold means we predict more cases (more $y=1$).
+- Lowering the threshold means we predict more cases (more $y=1$), increasing sensitivity,but decreasing specificity.
 
-- Increasing the threshold means we predict more non-cases (more $y=0$).
+- Increasing the threshold means we predict more non-cases (more $y=0$), increasing specificity, but decreasing sensitivity.
 
 - The **receiver operating characteristic** (ROC) curve describes how the sensitivity
 and specificity change as the threshold changes.
@@ -770,9 +770,9 @@ ggplot(covid.roc) +
 ```
 
 Choosing a lower threshold will increase
-the sensitivity.
+the sensitivity, but decrease specificity.
 
-i.e. correctly identify more cases.
+i.e. correctly identify more cases, but misclassify more non-cases.
 ]
 
 .right-plot[
