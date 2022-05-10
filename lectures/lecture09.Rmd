@@ -94,7 +94,7 @@ neighbour classification.
 
 -   Ties between the distances (i.e. more than $k$ observations in the
     training set have the same distance as the nearest $k$ points from
-    the test observation. In this case we normally use all observations
+    the test observation). In this case we normally use all observations
     within the same distance as the first $k$. An alternate would be to
     pick the $k$ neighbours at random.
 
@@ -165,7 +165,7 @@ class: middle, inverse
     vote of class at each node.
 
 -   Instead of minimising RSS to find the next optimal split, we instead
-    minimise a measure of node .
+    minimise a measure of node impurity.
 
 ---
 
@@ -177,7 +177,7 @@ class: middle, inverse
 -   Impurity is then a measure of how close the node is to having
     observations equally distributed among all classes.
 
--   We can measure impurity using the which measures the chance an
+-   We can measure impurity using the Gini splitting index, which measures the chance an
     observation from the node would be misclassified if all the class
     labels were randomly reallocated within that node.
 
@@ -374,7 +374,7 @@ class: middle, inverse
 
     -   Input nodes are the input variables.
 
-    -   These feed into one or more hidden layers or .
+    -   These feed into one or more hidden layers or derived features.
 
     -   The derived features feed into the output node(s).
 ]
@@ -390,7 +390,7 @@ nnet_plot()
 
 ## Neural networks for classification
 
--   A linear combination of nodes at the previous layer feed through an
+-   A linear combination of nodes at the previous layer feed through an activation function
     $\phi$ to nodes in the current layer.
 
 -   The default activation function is the sigmoid, also used for
@@ -434,7 +434,7 @@ nnet_plot()
     so are also defined using the sigmoid function
     $$\hat{p_c} = \phi(\beta_{0c} + \beta_{1c}z_1 + \cdots + \beta_{kc}z_k).$$
 
--   The $\alpha$ and $\beta$ terms (the ) are then estimated from
+-   The $\alpha$ and $\beta$ terms (the *weights*) are then estimated from
     training data.
 
 ---
