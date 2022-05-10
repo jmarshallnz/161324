@@ -1,0 +1,286 @@
+---
+title: 'Workshop 8: Regression classifiers'
+output: html_document
+---
+
+In this workshop we'll be looking at classifiers based on the generalised linear model:
+
+- Logistic regression
+- Multinomial regression
+
+## Logistic regression for Horse Colic data
+
+This Exercise uses the data on horses with colic. Colic can be a serious
+illness for horses and can result in death. Physiological data on 368
+horses with Colic were recorded, along with whether surgery was
+required, with some of the horses dying and some surviving.
+
+The goal is to train a logistic regression classifier in order to
+classify the horses into whether they're likely to survive or die based
+on the physiological parameters measured.
+
+We'll start by loading packages and reading in the data, and then converting a bunch of the columns to factors:
+
+```{r, message=FALSE}
+library(tidyverse)
+library(rsample)
+library(skimr)
+library(discrim)
+library(yardstick)
+library(recipes)
+step <- stats::step # override recipes::step() with stats::step()
+
+horse.orig <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horse2.csv")
+
+horse <- horse.orig %>%
+  mutate(across(-c(RectalTemp, Pulse, RespRate, PckCellVol, TotlProtein), as_factor))
+
+set.seed(2013)
+
+split <- initial_split(horse, prop=0.75)
+horse.train <- training(split)
+horse.test  <- testing(split)
+```
+
+### Try yourself
+
+1. Use `logistic_reg()` with the `glm` engine to build a logistic model for `Died` based on all the other physiological parameters.
+
+```{r}
+horse.lr1 <- logistic_reg() %>%
+  fit(Died ~ ., data=horse.train)
+```
+
+2. Take a look at the model summary - recall that you can do this with `tidy()` or alternatively `extract_fit_engine()` and then `summary()`.
+
+```{r}
+horse.lr1 %>%
+  extract_fit_engine() %>%
+  summary()
+
+horse.lr1 %>%
+  tidy()
+
+horse.lr1 %>% glance()
+```
+
+3. Compute the odds ratio for the `Surgery` predictor, where a 1 specifies that the horse had surgery. Does having surgery increase or decrease the odds of the horse dying?
+
+A logistic regression takes the form:
+$$
+\begin{aligned}
+y_i &\sim \mathsf{Bernoulli}(p_i)\\
+\log\left(\frac{p_i}{1-p_i}\right) &= \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \cdots + \beta_p x_{ip}\\
+\end{aligned}
+$$
+
+```{r}
+horse.lr1 %>%
+  tidy() %>%
+  mutate(OR = exp(estimate)) %>%
+  filter(term == "Surgery1")
+```
+
+The odds ratio for death following surgery is 1.48, so there is an increased risk of dying following surgery. This isn't really surprising, as surgery is likely reserved for the horses with more severe disease (i.e. they may be dying as a result of the more severe disease, not as a result of surgery).
+
+In addition, the P-value here is high, so we have lots of uncertainty about this.
+
+4. Perform a prediction on the test data set for whether the horses will die or not, and assess the misclassification rate.
+
+```{r}
+horse.lr1.pred <- horse.lr1 %>%
+  augment(horse.test)
+horse.lr1.pred %>%
+  conf_mat(truth=Died, estimate=.pred_class)
+horse.lr1.pred %>%
+  accuracy(truth=Died, estimate=.pred_class)
+```
+
+Our accuracy is 70/92 = 0.76. Misclassification rate is 24%.
+
+5. Try using the `step` command to derive a simpler model for the data, and check how the simpler model performs as a classifier. *NOTE: You'll have to re-fit the model directly using `glm` before running `step`. Once done, you can feed the final model formula into `fit()` to get back into tidymodel land!*
+
+This won't work. Reason is that parsnip uses a slightly different storage method, so the underlying `glm()` object doesn't have the data at hand to be able to re-fit the model over and over.
+
+```{r, eval=FALSE}
+step(horse.lr1 %>% extract_fit_engine())
+```
+
+Instead, we need to re-fit the model directly in `glm`:
+
+```{r}
+horse.lr1.refit <- glm(Died ~ ., family='binomial', data=horse.train)
+summary(horse.lr1.refit)
+horse.lr2.refit <- step(horse.lr1.refit)
+```
+
+Take a look at the summary:
+
+```{r}
+summary(horse.lr2.refit)
+```
+
+Evaluate model performance on the test data. We could do this manually by using augment() to produce response variable predictions (i.e. predicted probability of Died=1) then classify using P(Died) > 0.5:
+
+```{r}
+horse.lr2.pred <- horse.lr2.refit %>%
+  augment(newdata=horse.test, type.predict='response') %>%
+  mutate(.pred_class =
+           factor(
+             if_else(.fitted > 0.5, 1, 0)
+           ))
+horse.lr2.pred %>%
+  conf_mat(truth=Died, estimate=.pred_class)
+```
+
+Alternatively (and much simpler!) we could re-fit in the tidymodels framework:
+
+```{r}
+horse.lr2 <- logistic_reg() %>%
+  fit(Died ~ RespRate + TempExtr + Pain + Peristalsos + PckCellVol + 
+    TotlProtein + Age, data=horse.train)
+
+horse.lr2 %>%
+  augment(horse.test) %>%
+  conf_mat(truth=Died, estimate=.pred_class)
+```
+
+The misclassification rate is the same as the big model, but we have a much simpler model now.
+
+
+## Classifying the Italian wine data
+
+We'll use multinomial regression on the Italian wine data to examine the effects of data scaling on classification results.
+
+We'll start by loading the wine test and training data in:
+
+```{r, message=FALSE}
+wine.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-train.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+wine.test  <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-test.csv") %>%
+  mutate(Cultivar = factor(Cultivar))
+```
+
+### Try yourself
+
+1. Use `multinom_reg()` to fit a multinomial regression model on all the data. Remember that the number of iterations (epochs) is important to ensuring it converges.
+
+```{r}
+set.seed(1234)
+wine.mn1 <- multinom_reg() %>%
+  fit(Cultivar ~ ., data=wine.train)
+wine.mn1 %>%
+  pluck('fit', 'convergence')
+```
+
+This has reached convergence as the convergence entry is 0.
+
+Take a look at the model:
+
+```{r}
+wine.mn1 %>%
+  extract_fit_engine()
+```
+
+2. Evaluate the performance of classification on the test set by computing accuracy and a confusion table.
+
+```{r}
+wine.mn1.pred <- wine.mn1 %>% augment(wine.test)
+wine.mn1.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+```
+
+Interesting! The predicted probabilities all looked really close to 1 and 0 for each class. My initial feeling was that we may be having computational problems, in that the initial weights caused
+the linear predictors to be large in magnitude so that we ran out of precision in the computer, and
+thus "converged" to a very unoptimal end point. BUT, the predictions seem OK! We only get it wrong 4 times!
+
+Let's see what the predicted probabilities were for the ones we got wrong:
+
+```{r}
+wine.mn1.pred %>%
+  filter(Cultivar != .pred_class)
+```
+3. Now create a `recipe` to scale the numeric predictors, and refit the multinomial regression model using the scaled data.
+
+Create a recipe, normalise all the numeric predictors, and prep it (train it) using the training data:
+
+```{r}
+wine.rec <- recipe(Cultivar ~ ., data=wine.train) %>%
+  step_normalize(all_numeric_predictors()) %>%
+  prep(wine.train)
+wine.rec
+```
+
+Now use this to fit the multinomial model:
+
+```{r}
+wine.train.bake <- bake(wine.rec, new_data=NULL)
+wine.test.bake  <- bake(wine.rec, new_data=wine.test)
+
+wine.mn2 <- multinom_reg() %>%
+  fit(Cultivar ~ ., wine.train.bake)
+
+wine.mn2 %>% pluck('fit', 'convergence')
+```
+
+4. Evaluate the performance of the classifiers before and after scaling. Which does better?
+
+Looking at our predictions, we note that many observations are 'completely' separating the classes, but some aren't.
+
+```{r}
+wine.mn2.pred <- wine.mn2 %>%
+  augment(wine.test.bake)
+wine.mn2.pred
+```
+
+```{r}
+wine.mn2.pred %>% conf_mat(truth=Cultivar, estimate=.pred_class)
+```
+
+```{r}
+wine.mn2.pred %>% filter(Cultivar != .pred_class)
+```
+
+5. You might want to investigate running `step()` on these multinomial models to simplify them. Again, this has to be done outside the `tidymodels` framework.
+
+NOTE: There doesn't seem to be a way to pass the max iterations down through step(), so we'll have to deal with the convergence it results in.
+
+```{r}
+library(nnet)
+set.seed(1234)
+wine.mn2.refit <- multinom(Cultivar ~ ., data=wine.train.bake)
+wine.mn3.refit <- step(wine.mn2.refit)
+wine.mn3.refit
+```
+
+Try refitting with these 3 variables in tidymodels to get our nice tools:
+
+```{r}
+wine.mn3.refit
+set.seed(12356)
+wine.mn3 <- multinom_reg() %>%
+  set_engine('nnet', maxit=100000) %>%
+  fit(Cultivar ~ Malic + Flav + Proline, data = wine.train.bake)
+wine.mn3 %>% pluck('fit', 'convergence')
+wine.mn3
+
+wine.mn3.pred <- wine.mn3 %>% augment(wine.test.bake)
+wine.mn3.pred %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+wine.mn3.pred %>%
+  filter(Cultivar != .pred_class) %>% select(Cultivar, starts_with('.pred'))
+```
+
+The fit here is much worse - we're getting 11 wrong, whereas before we only got 4 or 2 wrong.
+
+The model is also taking a long time to converge, which might suggest it's overfitting, but this
+doesn't seem to be dependent on the random seed we start with, which suggests it's finding either different local minima, or the same global minima that is nonetheless overfitting??
+
+```{r}
+wine.mn3 %>% augment(wine.train.bake) %>%
+  conf_mat(truth=Cultivar, estimate=.pred_class)
+```
+
+We're clearly overfitting here - we're getting perfect separation of the three Cultivars on the training data. Thus, our predictions will be really over-confident on the test data, but as the test data might look slightly different, we'll be confidentally wrong!
+
+This is a consequence of a really flexible model on a small dataset!

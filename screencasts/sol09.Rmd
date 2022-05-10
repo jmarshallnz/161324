@@ -1,0 +1,232 @@
+---
+title: 'Workshop 9: More classifiers'
+output: html_document
+---
+
+In this workshop we'll be looking at some more classifiers, all of which you have met before:
+
+- k-nearest neighbours
+- trees and forests
+- neural networks
+
+As always, we'll use the `tidymodels` framework for fitting, estimating classes and for
+model accuracy.
+
+## Return to the Crime Scene
+
+Let's reload the data on glass from earlier.
+
+```{r, message=FALSE}
+library(tidyverse)
+library(rsample)
+library(parsnip)
+library(yardstick)
+
+set.seed(1234)
+glass <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/glass.csv") %>%
+  mutate(Type = as_factor(Type))
+split <- initial_split(glass, prop=0.75)
+glass.train <- training(split)
+glass.test  <- testing(split)
+```
+
+### Try yourself
+
+1. Fit the following model types to the `glass.train` data:
+
+- A k-nearest neighbour classifier with `nearest_neighbour()`
+- A classification tree with `decision_tree()`
+- A random forest with `rand_forest()`
+- A neural network with `mlp()`
+
+```{r}
+glass.knn <- nearest_neighbor(mode='classification', neighbors = 5) %>%
+  fit(Type ~ ., data=glass.train)
+
+glass.rp <- decision_tree(mode='classification') %>%
+  fit(Type ~ ., data=glass.train)
+
+glass.rf <- rand_forest(mode='classification', engine='randomForest') %>%
+  fit(Type ~ ., data=glass.train)
+
+glass.nn <- mlp(mode='classification', hidden_units=5) %>%
+  fit(Type ~ ., data=glass.train)
+```
+
+2. Evaluate their performance on the `glass.test` data using confusion matrices and accuracy.
+
+```{r}
+pred_list <- list(knn = glass.knn %>% augment(glass.test),
+               rp  = glass.rp %>% augment(glass.test),
+               rf  = glass.rf %>% augment(glass.test),
+               nn  = glass.nn %>% augment(glass.test))
+
+# Alternate: Have the models in a list, and process them all at once via map()
+model_list <- list(knn = glass.knn, rp = glass.rp, rf = glass.rf, nn = glass.nn)
+
+pred_list <- model_list %>% map(augment, new_data=glass.test)
+
+# confusion matrices:
+pred_list %>%
+  map(conf_mat, truth=Type, estimate=.pred_class)
+
+pred_list %>%
+  bind_rows(.id='model') %>%
+  group_by(model) %>%
+  accuracy(truth=Type, estimate=.pred_class)
+```
+
+3. You may wish to try tuning the models, e.g. altering the variables used, changing `k` for the knn classifier, or `size` for the neural network.
+
+```{r}
+nearest_neighbor(mode='classification', neighbors = 5) %>%
+  fit(Type ~ ., data=glass.train) %>%
+  augment(glass.test) %>%
+  accuracy(truth=Type, estimate=.pred_class)
+
+set.seed(1234)
+mlp(mode='classification', hidden_units=5, penalty = 0.001, epochs=1000) %>%
+  fit(Type ~ ., data=glass.train) %>%
+#  pluck('fit', 'convergence')
+  augment(glass.test) %>%
+  accuracy(truth=Type, estimate=.pred_class)
+```
+
+4. Which model(s) perform best?
+
+The decision tree and k-nearest neighbours performed best for me. Others might do better for you! See if you can beat 89% :)
+
+
+## Singling out Scribes: The "Avila" Bible
+
+The Avila data set has been extracted from 800 images of the the "Avila Bible", a giant Latin copy of the whole Bible produced during the XII century between Italy and Spain.  
+
+The palaeographic analysis of the  manuscript has  individuated the presence of 12 copyists, or scribes.
+
+There are 10 numeric predictors, each of them normalised to mean 0 and standard deviation 1. The following predictors are available:
+
+  Variable     Description
+  ------------ -----------------------------------------------------
+  `icd`        Inter-column distance (i.e. distance between columns of text on the page)
+  `upmar`      Upper margin above the text
+  `lomar`      Lower margin below the text
+  `exploit`    How much of a column is exploited (filled with ink) for text.
+  `numrow`     Number of rows on a page
+  `charratio`  The average ratio of width:height of characters
+  `ils`        Inter-line spacing
+  `weight`     How much each row is filled with ink
+  `numpeaks`   How many peaks there are in the ink density across a row (counts vertical bars in letters).
+  `crils`      Ratio of charratio and ils
+  `scribe`     Which copyist or scribe, identified as unique letters. Target variable.
+
+The goal is to assign sections of the text (rows) to the correct scribe.
+
+The data has been partitioned into a training and (artificial) testing set:
+
+```{r, message=FALSE}
+avila.train <- read_csv("../data/avila-train.csv") %>% mutate(scribe = factor(scribe))
+avila.test <- read_csv("../data/avila-test.csv") %>% mutate(scribe = factor(scribe))
+```
+
+### Try yourself
+
+1. Start by exploring the data. e.g. you might want to assess the relationship between each variable and the target `scribe`.
+
+```{r}
+avila.train %>%
+  pivot_longer(-scribe, names_to='name', values_to='value') %>%
+  ggplot() +
+  geom_density(mapping=aes(x=value, col=scribe)) +
+  facet_wrap(vars(name), scales='free')
+```
+
+It looks like there's some very large outliers in some of the measures. This could cause an issue!
+
+Let's look at `upmar`: We find an outlier that is extreme for lots of variables:
+
+```{r}
+#avila.train %>% filter(upmar > 300)
+avila.train.clean <- avila.train %>% filter(upmar < 300)
+avila.train.clean %>% filter(upmar > 10)
+avila.train.clean %>%
+  pivot_longer(-scribe, names_to='name', values_to='value') %>%
+  ggplot() +
+  geom_density(mapping=aes(x=value, col=scribe)) +
+  facet_wrap(vars(name), scales='free')
+
+# also check the test set:
+avila.test %>%
+  pivot_longer(-scribe, names_to='name', values_to='value') %>%
+  ggplot() +
+  geom_density(mapping=aes(x=value, col=scribe)) +
+  facet_wrap(vars(name), scales='free')
+```
+
+I think I'm OK with just removing that one extreme observation. Now we'll try classification :)
+
+2. Fit a range of classification models to the training data.
+
+```{r}
+models <- list(lda = discrim_linear(),
+               nb  = naive_Bayes(engine='naivebayes'),
+               mn  = multinom_reg(),
+               knn = nearest_neighbor(mode='classification', neighbors=10),
+               rp  = decision_tree(mode='classification', cost_complexity = 0.0001),
+               rf  = rand_forest(mode='classification', engine='randomForest'),
+               nn  = mlp(mode='classification', hidden_units=5, epochs=1000))
+models
+
+library(discrim)
+set.seed(123)
+fits <- models %>% map(fit, formula=scribe ~ ., data=avila.train.clean)
+```
+
+3. Evaluate their predictive performance on the testing data.
+
+Compute our prediction dataframes and confusion matrices:
+
+```{r}
+preds <- fits %>% map(augment, new_data=avila.test)
+preds %>% map(conf_mat, truth=scribe, estimate=.pred_class)
+```
+
+4. Which model do you think works best?
+
+```{r}
+preds %>% bind_rows(.id='model') %>%
+  group_by(model) %>%
+  accuracy(truth=scribe, estimate=.pred_class)
+```
+
+Based on this the random forest is clearly the best - it's not even close.
+
+But, we've done no tuning yet, and tuning might get a better model.
+
+I would probably rule out the LDA immediately from this, as tuning it (e.g. altering the prior, doing some transformation?) is not likely to help enough to get it's performance up with the forest.
+
+What about Naive Bayes? It's nowhere near as good as the forest, but still, not too terrible. There's not much we can tune (we could potentially switch to gaussians instead of densities) but does independence of these things even make sense?
+
+```{r}
+ggplot(avila.train.clean) +
+  geom_point(mapping=aes(x=icd, y=exploit, col=scribe))
+library(GGally)
+ggpairs(avila.train.clean, mapping=aes(col=scribe))
+```
+
+Independence is OK - not great, but not terrible either by the looks of the pairs plots. Probably not much room to tune things though.
+
+The forest is clearly best.
+
+5. If, instead of classification performance, the goal was to understand how the scribes differ, which model would you prefer?
+
+This is an inference problem, so we'd like to use a model that we can interrogate for inference purposes. This differs from prediction, where we really only care about 'did you get the answer right' and not about 'can you explain what is going on' (black box is fine for prediction - we want a transparent box for inference!)
+
+We might choose the decision tree in this instance, as it gives the second best performance and is transparent to interrogation:
+
+```{r}
+tree_fit <- fits[['rp']] %>%
+  extract_fit_engine()
+plot(tree_fit, margin=0.1, compress=TRUE)
+text(tree_fit, cex=0.4)
+tree_fit
+```
