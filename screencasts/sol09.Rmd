@@ -124,8 +124,8 @@ The goal is to assign sections of the text (rows) to the correct scribe.
 The data has been partitioned into a training and (artificial) testing set:
 
 ```{r, message=FALSE}
-avila.train <- read_csv("../data/avila-train.csv") %>% mutate(scribe = factor(scribe))
-avila.test <- read_csv("../data/avila-test.csv") %>% mutate(scribe = factor(scribe))
+avila.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/avila-train.csv") %>% mutate(scribe = factor(scribe))
+avila.test <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/avila-test.csv") %>% mutate(scribe = factor(scribe))
 ```
 
 ### Try yourself
