@@ -164,9 +164,12 @@ Points to note:
     with `TRUE` for each row of the data frame which is a complete case
     (i.e. does not contain missing values) and `FALSE` for incomplete cases.
 
--   The `filter(complete.cases(.))` command filters based on running
-    `complete.cases` on all the data, specified by the special `.` argument.
-    This can be useful in `dplyr` data processing chains.
+-   The `filter(complete_rows)` command filters the data and returns only
+    those rows where `complete_rows` is `TRUE` (i.e. only rows that are complete).
+    The first two lines of code could alternatively be done using the `magrittr` pipe
+    `%>%` via `husbands2 <- husbands %>% filter(complete.cases(.))`. The special `.`
+    argument here is specific to the `%>%` pipe and represents the data on the left of
+    the pipe. The base R pipe as of R 4.2.0 doesn't yet have this same capability.
 
 -   The complete case data frame has 169 rows, indicating that there
     were 30 ($=199-169$) incomplete records.
