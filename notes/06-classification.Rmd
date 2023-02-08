@@ -137,7 +137,7 @@ appearing with probability $0.5$. However, his GP (an avid Bayesian!)
 seems very unconcerned. She notes that this is a classification problem
 with two categories: diseased (class 1) and non-diseased (class 2). It
 is well known that Erdheim-Chester disease is a very rare condition, so
-that $\pi_1 = 0.000001$ (i.e. 1 in a million), and hence
+that $\pi_1 = 0.000001$ (i.e. 1 in a million), and hence
 $\pi_2 = 1 - \pi_1 = 0.999999$. From the test results the GP knows that
 $f_1(\boldsymbol{x}) = 0.5$ and $f_2(\boldsymbol{x}) = 0.01$, but she
 computes the conditional probability of being diseased given the test
@@ -176,9 +176,9 @@ matrix*, which cross-tabulates true and predicted classes. In some cases
 the impact of certain types of misclassification may be far greater than
 others, in which case one my wish to consider a weighted error rate.
 This can occur, for example, in medical testing, where the consequences
-of false positives may be somewhat unpleasant (e.g. unnecessary
+of false positives may be somewhat unpleasant (e.g. unnecessary
 biopsies) but the consequence of false negatives can be fatal
-(e.g. failure to detect a disease while it is still treatable).
+(e.g. failure to detect a disease while it is still treatable).
 
 ::: {.example}
 **Comparison of Tests for Tuberculosis**
@@ -271,7 +271,7 @@ f_j(\boldsymbol{x}) &= \frac{1}{2 \pi} \exp \left \{ -\frac {(x_1 - \mu_{1j})^2}
 \end{array} 
 \right .\end{aligned}$$
 If the prior class probabilities are equal
-(i.e. $\pi_1 = \pi_2 = 0.5$) then we will assign an observation
+(i.e. $\pi_1 = \pi_2 = 0.5$) then we will assign an observation
 $\boldsymbol{x}= (x_1, x_2)$ to class $1$ if and only if
 $$\begin{aligned}
                  f_1(\boldsymbol{x}) &> f_2(\boldsymbol{x}) \\
@@ -422,7 +422,7 @@ Note the following:
     probabilities.
 
 -   The `yardstick` function `conf_mat` tabulates the predicted classes
-    against the true classes; i.e. the confusion matrix. We see that the
+    against the true classes; i.e. the confusion matrix. We see that the
     overall misclassification rate is
     $`r perf.lda1$wrong`/`r perf.lda1$total` \approx `r perf.lda1$perc`\%$.
 
@@ -659,7 +659,7 @@ Predictions will then be made in the same way
 
 The implementation of the naive Bayes classifier can take
 both quantitative and categorical predictors. The marginal distributions
-(i.e. the $f_j(x_i)$ mentioned above) for the numerical variables are
+(i.e. the $f_j(x_i)$ mentioned above) for the numerical variables are
 estimated using kernel density estimators (or, alternatively univariate normal
 distributions), while marginal probabilities for the categorical variables are
 estimated using class-specific proportions.
@@ -729,7 +729,7 @@ known as *generalised linear models* (GLMs), and is thus closely related
 to linear regression. The generalisation involved is that the
 distribution of the response variable $y$ need not be a normal
 distribution. In particular, logistic regression is primarily concerned
-with a binary (i.e. 0 and 1) response variable, whose expected value
+with a binary (i.e. 0 and 1) response variable, whose expected value
 will be the probability of a response $y=1$. Thus, it is useful for
 classifying data into two groups, which we can associate with the two
 outcomes -- say $y=0$ codes for group 1, and $y=1$ for group 2.
@@ -922,7 +922,7 @@ Some comments on this R snippet.
     and `diagonal` are predictors.
 
 -   For `swiss.glm.1` we see that the coefficient of `margin` is
-    negative, so ${\textsf P}(y=1 | \texttt{margin})$ (i.e. probability
+    negative, so ${\textsf P}(y=1 | \texttt{margin})$ (i.e. probability
     of genuine note) decreases as `margin` increases.
 
 -   For `swiss.glm.1` linear predictor is
@@ -950,7 +950,7 @@ Some comments on this R snippet.
 When using logistic regression as a classifier, for a given value of the
 predictors $\boldsymbol{x}$ we would classify as a 1 if
 ${\textsf P}(Y=1|\boldsymbol{x}) > {\textsf P}(Y=0|\boldsymbol{x})$ and
-as 0 otherwise. i.e. we classify as a 1 if
+as 0 otherwise. i.e. we classify as a 1 if
 $$\frac{{\textsf P}(Y=1|\boldsymbol{x})}{{\textsf P}(Y=0|\boldsymbol{x})} > 1.$$
 Now, ${\textsf P}(Y=1|\boldsymbol{x}) = p(\boldsymbol{x})$, and thus
 ${\textsf P}(Y=0|\boldsymbol{x}) = 1-p(\boldsymbol{x})$. Hence, we
@@ -1272,7 +1272,7 @@ in the `tidymodels` framework automatically scales the predictors to have
 common standard deviations for us.
 
 Turning to the choice of $k$, the usual considerations of the
-bias-variance trade-off apply. A small value of $k$ (e.g. $k=1$) will
+bias-variance trade-off apply. A small value of $k$ (e.g. $k=1$) will
 result in a method with considerable variability. A large value of $k$
 will reduce the variability (since the choice of class will now be
 determined by majority vote over a larger number of observations), but

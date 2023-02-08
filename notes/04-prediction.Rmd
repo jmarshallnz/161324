@@ -177,11 +177,11 @@ the late 1980s. For each worker the following attributes are recorded.
   `SECTOR`    Employment sector (Construction, Manufacturing, or Other)
   `MARRIED`   Married? (no or yes)
 
-The target variable (predictand) is `WAGE` (i.e. this is the variable
+The target variable (predictand) is `WAGE` (i.e. this is the variable
 that we generically denote $y$). The other attributes are the predictors
 (generically denoted $x_1, x_2, \ldots, x_{p}$, where $p=10$ is the
 number of them). Notice that some of these predictors are numerical
-variables (e.g. `EDU`, `AGE`) and some are categorical (e.g. `SEX`,
+variables (e.g. `EDU`, `AGE`) and some are categorical (e.g. `SEX`,
 `OCCUP`).
 
 The training set comprises data on 400 employees, which can be
@@ -232,9 +232,9 @@ where
 You may have already spotted a problem with the model described in
 equation \@ref(eq:regress) (particularly if you have studied linear
 regression models previously). The model formulation is appropriate for
-numerical predictors, but what about factors (i.e. categorical predictor
+numerical predictors, but what about factors (i.e. categorical predictor
 variables)? The answer is that we can replace each factor by a set of
-dummy (indicator) variables. These are binary variables (i.e. taking
+dummy (indicator) variables. These are binary variables (i.e. taking
 value zero or one), and can be used to code each level of each factor.
 For instance, the variable `SEX` from the previous Example can be
 replaced by two indicator variables, `MALE` and `FEMALE` (say), where
@@ -272,7 +272,7 @@ SS(\beta_0, \beta_1, \ldots, \beta_p) = \sum_{i=1}^n \left (
 The minimizers
 $\hat \beta_0, \hat \beta_1, \ldots, \hat \beta_p$ are called least
 squares estimates of the parameters. The minimum value of the $SS$
-(i.e. the value of $SS$ when the parameters are set to the least squares
+(i.e. the value of $SS$ when the parameters are set to the least squares
 estimates) is called the *residual sum of squares*, frequently
 abbreviated to RSS. Hence
 
@@ -306,7 +306,7 @@ y ~ 1 + x1 + x2
 ```
 
 The number `1` on the right hand side of the formula tells R that you
-want to include an intercept (i.e. a $\hat \beta_0$) term in your model.
+want to include an intercept (i.e. a $\hat \beta_0$) term in your model.
 In fact you can omit the `1 +` from the formula since R includes an
 intercept by default, but some people like to include it for aesthetic
 reasons. If you want to fit a regression through the origin, then the
@@ -364,7 +364,7 @@ Some comments on this R snippet.
     type of object it is applied to. For linear models we get a generic
     type of table of regression coefficients. This table includes the
     estimated coefficients themselves
-    (i.e. $\hat \beta_0, \ldots, \hat \beta_p$); their standard errors;
+    (i.e. $\hat \beta_0, \ldots, \hat \beta_p$); their standard errors;
     and t-values and corresponding p-values for testing whether the
     associated coefficient is different from zero. A small p-value
     (usually interpreted as one less than $0.05$) indicates that there
@@ -590,7 +590,7 @@ anywhere in the range $(-0.15,\, 0.15)$ (depending on the particular
 quirks of the sample of training data that we happen to have to hand).
 It follows that unless we get very lucky, the estimate $\hat \beta_2$
 will be further from the true value than will be zero. In other words,
-it would typically be better to set $\beta_2 = 0$ (i.e. eliminate the
+it would typically be better to set $\beta_2 = 0$ (i.e. eliminate the
 variable $x_2$ from the model) than to try and estimate this parameter.
 
 This discussion suggests that we should prefer model $M_2$,
@@ -608,7 +608,7 @@ other words, the model is biased.
 
 In summary, excluding a very weakly informative predictor will introduce
 bias into the prediction procedure, but will eliminate variability
-inherent in having to estimate its coefficient (i.e. the corresponding
+inherent in having to estimate its coefficient (i.e. the corresponding
 $\beta$). This leads us to a critical idea in prediction (and indeed in
 Statistics in general). The controllable error in prediction can be
 decomposed into two types. First, there is bias due to misspecification
@@ -719,7 +719,7 @@ points are as follows.
     using the training data, and so will be specially tailored to that
     dataset. To use a sporting analogy, the model enjoys home ground
     advantage when used to predict the training data, while real
-    prediction (e.g. on the test data) is like playing away from home.
+    prediction (e.g. on the test data) is like playing away from home.
     This explains why the MSE values on the training set are so much
     lower.
 
@@ -767,10 +767,10 @@ Note the following.
     AIC indicates a better model. AIC can be said to describe the
     bias-variance trade-off in model construction.
 
--   Each factor (i.e. categorical predictor variables) is handled as a
+-   Each factor (i.e. categorical predictor variables) is handled as a
     whole in the variable selection process. For example, for the wage
     data we must either include the variable `OCCUP` or exclude it; it
-    would be meaningless to include some of its levels (e.g. management)
+    would be meaningless to include some of its levels (e.g. management)
     while excluding others.
 
 -   Backwards variable selection in R can be conducted using the `step`
@@ -865,7 +865,7 @@ toy_splits <- round(toy.rp$splits[,"index"],3)
 
 A tree based method works by systematically splitting the data into
 groups according to $x$, and then predicting the target using the means
-within each group. The recursive partitioning of the data (i.e. the
+within each group. The recursive partitioning of the data (i.e. the
 division into groups) is displayed using a tree in Figure \@ref(fig:toytree2). From
 the first branching of the tree (at its root) we see that the initial
 step is to divide the data into two parts: those with $x < `r toy_splits[1]`$ branch
@@ -913,12 +913,12 @@ undirected graph. In the language of graph theory, the branches of the
 trees are called *edges* or arcs, and the vertices are often referred to
 as *nodes*. The trees that we use are *rooted* (with the root of the
 tree conventionally plotted at the top of the tree) and are binary
-(i.e. each vertex splits into two branches). Vertices at the tips of the
-tree (i.e. those without further splits) are called leaves.
+(i.e. each vertex splits into two branches). Vertices at the tips of the
+tree (i.e. those without further splits) are called leaves.
 
 A regression tree is constructed by making a sequence of binary splits.
 At each step of the algorithm, we need to examine each of the current
-set of terminal nodes (i.e. leaves on the current tree) to see which
+set of terminal nodes (i.e. leaves on the current tree) to see which
 split will most improve the tree. Implicit in this statement is the need
 for some measure of the quality of a tree, by which we can identify the
 optimal split.
@@ -996,16 +996,16 @@ it is conventional to split at the midpoint between the maximum of the
 :::
 
 So far we have dealt only with splits based on numerical predictors.
-With factors (i.e. categorical predictors) we split by dividing the
+With factors (i.e. categorical predictors) we split by dividing the
 factor levels into two sets, and then sending observations down left or
 right branch according to this division. The separation of the levels is
 again done so as to minimize the residual sum of squares.
 
-If we restrict attention to trees of a certain size (i.e. with a maximum
+If we restrict attention to trees of a certain size (i.e. with a maximum
 number of splits), then the reader with a particularly well developed
 sense of curiosity (or good mathematical intuition) might be tempted to
 ask whether a sequence of splits chosen to minimize the residual sum of
-squares at each step will produce the optimal tree (i.e. the one with
+squares at each step will produce the optimal tree (i.e. the one with
 the lowest residual sum of squares overall). The answer is no. The kind
 of step by step methodology that is employed in tree construction is
 known as a 'greedy' algorithm. It is relatively computationally cheap to
@@ -1054,7 +1054,7 @@ Some points to note:
     string of dots) to save space.
 
 -   The table at the head of the summary for `wage.rp` provides
-    information on the extent to which each new split (i.e. the creation
+    information on the extent to which each new split (i.e. the creation
     of each new node) has improved the model. We will examine the
     meaning of the various quantities in this table later, in section \@ref{sec:treeprune}.
 
@@ -1080,9 +1080,9 @@ Some points to note:
 
     With these comments in mind, we see that the first node (at the root
     of the tree) was formed by splitting on the variable `OCCUP`.
-    Observations at levels 1, 3, 5 and 6 (i.e. `Clerical`, `Other`,
+    Observations at levels 1, 3, 5 and 6 (i.e. `Clerical`, `Other`,
     `Sales` and `Service`) are sent down the left-hand branch at
-    the split; those at levels 2 and 4 (i.e. `Management` and `Professional`) are
+    the split; those at levels 2 and 4 (i.e. `Management` and `Professional`) are
     sent down the right-hand branch. Splitting in this way results in a
     17.2% reduction in the residual sum of squares. (The next best
     option would have been to split according to `EDU < 13.5`, which
@@ -1090,12 +1090,12 @@ Some points to note:
 
     The next split is at node 2, the left-hand child of the node. We can
     see that a total of 280 observations were sent to this node at the
-    first split. The optimal split here is on `UNION<0.5` (i.e. whether
+    first split. The optimal split here is on `UNION<0.5` (i.e. whether
     or not the worker has union membership), giving a 13.7% reduction in
     residual sum of squares for observations at node 2.
 
-    The leaves of the tree (i.e. the terminal nodes) are described by
-    the number of observations, the mean response (i.e. prediction) and
+    The leaves of the tree (i.e. the terminal nodes) are described by
+    the number of observations, the mean response (i.e. prediction) and
     sum of squares at each one. For example, there is a leaf (node 30)
     with 11 observations and mean target value $12.18$.
 
@@ -1112,7 +1112,7 @@ regression tree. We add text describing the splits by
 and `margin=0.1` in the plot
 command tends to improve the appearance of the plotted tree.
 Note that the splits based on factors use alphabetically ordered
-letters to represent the factor levels (i.e. 'a' for level 1, 'b'
+letters to represent the factor levels (i.e. 'a' for level 1, 'b'
 for level 2 and so forth).
 
 We can obtain predictions from the fitted regression tree by applying
@@ -1170,7 +1170,7 @@ predictions will be highly variable (if unbiased). On the other hand, if
 there are a good number of observations at each leaf then the averaging
 process will result in a far smaller variance for the prediction. The
 price to pay will be increased bias. In more detail, the predictable
-mean of the target (i.e. $f_0$ from equation \@ref(eq:pred-decompose))
+mean of the target (i.e. $f_0$ from equation \@ref(eq:pred-decompose))
 will typically vary according to the
 predictors. The regression tree models this as constant within each
 leaf, so that the greater the range of predictor values the worse the
@@ -1210,7 +1210,7 @@ tree, while model fit can be measured by the residual sum of squares of
 the fitted tree. The top tree in Figure \@ref(fig:treebiasvariance) is
 a simple model (low complexity), with a fairly poor fit to the data.
 The bottom tree in Figure \@ref(fig:treebiasvariance) follows the training data extremely
-closely (i.e. has a very low residual sum of squares), but is highly
+closely (i.e. has a very low residual sum of squares), but is highly
 complex -- far more complex than seems warranted. The middle tree
 provides a balance in terms of model complexity and model fit.
 
@@ -1323,7 +1323,7 @@ attention.
 -   The 90% to 10% data split just described gives rise to so-called
     *10-fold cross-validation*. While this is common choice, it is by no
     means the only one. For models that are highly computationally
-    expensive we might prefer 5-fold cross-validation (i.e. a split of
+    expensive we might prefer 5-fold cross-validation (i.e. a split of
     80% to 20% between validation and training sets at each step).
 
 -   Cross-validation results are subject to noise arising from the
@@ -1343,7 +1343,7 @@ A table of model characteristics for different values of $cp$ can be
 obtained using the command `printcp`. (This in fact mirrors the first
 part of the output that we obtain when using the `summary` function of a
 regression tree.) The argument for `printcp` is the most complex model
-to be assessed (i.e. the one corresponding to the smallest value of
+to be assessed (i.e. the one corresponding to the smallest value of
 $cp$).
 
 ```{r}
@@ -1352,7 +1352,7 @@ printcp(wage.rp.2)
 
 The `xerror` column in the output table contains cross-validation
 estimates of the (relative) prediction error. The `xstd` is the standard
-error (i.e. an estimate of the uncertainty) for these cross-validation
+error (i.e. an estimate of the uncertainty) for these cross-validation
 estimates. What we see is that the minimum cross-validation error occurs
 when $cp=0.2396$. (Note that any tree grown with $cp$ between this value
 of the next in the table, $cp=0.2018$ will produce the same tree.)
@@ -1571,7 +1571,7 @@ type henceforth.
 
 To implement a neural network we must (i) decide on the number, $M$, of
 nodes in the hidden layer; (ii) devise functions to relate the *derived
-features* $z_1, \ldots, z_M$ (i.e. the values in the hidden layer) to
+features* $z_1, \ldots, z_M$ (i.e. the values in the hidden layer) to
 the input variables; and (iii) choose a function to describe the
 predicted target $\hat y$ in terms of $z_1, \ldots, z_M$. Now, neural
 networks are rather complex things (we are definitely entering the
@@ -1585,7 +1585,7 @@ often a reasonable place to start, though some further exploration is
 often useful[^30].
 
 The function that relates the derived features to the inputs
-(i.e. predictors) is called the *activation function*, which we shall
+(i.e. predictors) is called the *activation function*, which we shall
 denote by $\phi$. It operates on a linear combination of the predictors,
 so that $z_k = \phi(v_k)$ where
 \begin{equation}
@@ -1794,11 +1794,11 @@ We might assess the accuracy of our prediction model. This can be done
 using an artificial test dataset, which should be independent of
 training and validation sets (so as to avoid bias due to unfair 'home
 advantage'). The rich theory for linear regression models allows us to
-assess prediction accuracy (e.g. through prediction intervals) without
+assess prediction accuracy (e.g. through prediction intervals) without
 the need for a test dataset, but the results are reliable only when
 model assumptions hold.
 
-Once we have selected what we think is a good prediction model (e.g. a
+Once we have selected what we think is a good prediction model (e.g. a
 neural network with 6 nodes in the hidden layer and some given value of
 the decay parameter) we are in a position to do 'real world' prediction
 on test cases where the target is truly missing. As mentioned in Section
@@ -1856,7 +1856,7 @@ whereas the (real) test data does not (which is why we're trying to
 predict it!)
 
 Next, we divide the training data into a new training set and a
-validation (i.e. artificial test) set. The `rsample` package has the
+validation (i.e. artificial test) set. The `rsample` package has the
 useful function `initial_split` for this:
 
 ```{r, message=FALSE}
@@ -1905,7 +1905,7 @@ It is natural to use a linear model to predict the sale prices on the
 real test data (since it has far lower prediction MSE on the validation
 data). However, before we do so, it makes sense to refit the linear
 model to the original training data. The point is that the split into
-new training data and validation has served its purpose (i.e. to decide
+new training data and validation has served its purpose (i.e. to decide
 whether regression trees or linear regression is preferable in this
 case). We should now be able to get a slightly better linear regression
 model if we fit it using all 50 training cases, rather than just the 40

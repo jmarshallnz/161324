@@ -176,7 +176,7 @@ species, denoted simply 1, 2, 3. When the data are first read in the
 numeric operations (like taking a square root). Of course, the numbers
 are merely labels here. We can turn the numeric variable into a factor
 using the `as.factor` command. Once R recognizes that `species` is a
-factor (i.e. a categorical variable) it will no longer permit such
+factor (i.e. a categorical variable) it will no longer permit such
 numerical operations.
 
 The `visdat` package is useful for visualising a `data.frame` or `tibble`
@@ -206,7 +206,7 @@ of missing values.
 
 Real datasets often contain missing values. The reasons are various. For
 example, in socio-economic surveys some respondents are unwilling to
-provide what they regard as quite personal information (e.g. gross
+provide what they regard as quite personal information (e.g. gross
 income, marital status). In scientific experiments one may fail to
 record information from all the experimental units: perhaps someone
 dropped a Petri dish, or one of the lab rats died. When missing values
@@ -284,7 +284,7 @@ husb_fixed |>
 Some points to note.
 
 -   The command `glimpse` provides a short summary of a data frame,
-    including the variable type (in this example `dbl`, i.e. integer for
+    including the variable type (in this example `dbl`, i.e. integer for
     all variables) and a listing of the first few elements for each
     variable.
 
@@ -306,7 +306,7 @@ Some points to note.
 
 -   Applying the function `mean` to a variable containing missing values
     will by default return `NA` as a result. However, if we set the
-    optional argument `na.rm=TRUE` (i.e. remove missing values) then we get
+    optional argument `na.rm=TRUE` (i.e. remove missing values) then we get
     the mean for the remaining data. In the case of wives' ages, that is
     just over 40.
     

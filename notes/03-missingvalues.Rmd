@@ -62,7 +62,7 @@ rejected as measurement error and reported as missing values by
 automated data capture and processing software[^nasoftware]. However, it is more
 common to assume that the pattern of missingness is either MCAR or (more
 commonly) MAR. Arguably, the significance of the missing data mechanism
-is more important when doing classical statistics (i.e. building
+is more important when doing classical statistics (i.e. building
 statistical models, testing hypotheses and so forth). Nonetheless, it is
 worth keeping in mind that the conclusions drawn from any data mining
 procedure may be sensitive to the assumptions that we make about missing
@@ -100,7 +100,7 @@ The impact that missing data will have on any subsequent analysis will
 depend on the proportion of the data points that are missing (all other
 things being equal). If there are just a few missing values, or if there
 are missing values on many variables but restricted to a small number of
-records (i.e. cases), then a simple way to deal with them is to exclude
+records (i.e. cases), then a simple way to deal with them is to exclude
 all cases with missing values. In other words, we retain only *complete
 cases*. This is simple to do in R using the `complete.cases` function.
 
@@ -138,7 +138,7 @@ cor(husbands)
 ```
 
 We see from this that there is a positive correlation of $0.36$ between
-wives' and husbands' heights (i.e. `W.Ht` and `H.Ht`), although it is
+wives' and husbands' heights (i.e. `W.Ht` and `H.Ht`), although it is
 not particularly strong. However, much of the correlation structure in
 the data is hidden from us because of missing values in the correlation
 matrix. These occur because R returns `NA` when it tries to compute the
@@ -146,7 +146,7 @@ correlation between a pair of variables where either one contains
 missing values.
 
 One way of handling this is to delete all records which are incomplete
-(i.e. contain at least one missing value).
+(i.e. contain at least one missing value).
 
 ```{r}
 complete_rows <- complete.cases(husbands)
@@ -162,7 +162,7 @@ Points to note:
 
 -   The command `complete.cases()` returns a logical vector,
     with `TRUE` for each row of the data frame which is a complete case
-    (i.e. does not contain missing values) and `FALSE` for incomplete cases.
+    (i.e. does not contain missing values) and `FALSE` for incomplete cases.
 
 -   The `filter(complete.cases(.))` command filters based on running
     `complete.cases` on all the data, specified by the special `.` argument.
@@ -198,7 +198,7 @@ plausible surrogates. This is called *imputation* in Statistics.
 Perhaps the simplest possible approach to imputation is to use an
 average value for each missing data item. For a quantitative variable we
 would replace each missing value by the mean; for a categorical variable
-we would use the mode (i.e. the most frequently occurring category).
+we would use the mode (i.e. the most frequently occurring category).
 
 ::: {.example}
 **Mean Imputation for Husbands and Wives Data**
