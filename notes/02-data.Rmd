@@ -163,10 +163,10 @@ the following example.
 ```{r, error=TRUE}
 fossils <- read_csv(file="../data/fossils.csv")
 fossils
-fossils %>% mutate(sqrt(species))
-fixed_fossils <- fossils %>% mutate(species = as.factor(species))
+fossils |> mutate(sqrt(species))
+fixed_fossils <- fossils |> mutate(species = as.factor(species))
 fixed_fossils
-fixed_fossils %>% mutate(sqrt(species))
+fixed_fossils |> mutate(sqrt(species))
 ```
 
 Here we are dealing with a (small) dataset comprising the bite sizes
@@ -271,11 +271,11 @@ following R snippet.
 husbands <- read_csv(file="../data/husbands.csv")
 glimpse(husbands)
 skimr::skim(husbands)
-husbands %>% summarise(mean(W.Age))
-husb_fixed <- husbands %>%
+husbands |> summarise(mean(W.Age))
+husb_fixed <- husbands |>
   naniar::replace_with_na(replace = list(W.Age = 9999,
                                          H.Age.Marriage = 9999))
-husb_fixed %>%
+husb_fixed |>
   summarise(mean(W.Age),
             mean(W.Age, na.rm=TRUE),
             mean(H.Age.Marriage, na.rm=TRUE))
@@ -317,7 +317,7 @@ replace this with `"9999"`:
 
 ```{r, message=FALSE, render = knitr::normal_print}
 husbands <- read_csv(file="../data/husbands.csv", na="9999")
-husbands %>% skimr::skim()
+husbands |> skimr::skim()
 ```
 
 :::

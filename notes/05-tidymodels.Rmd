@@ -60,13 +60,13 @@ We can split the US wage data into a new training and artificial test/validation
 ```{r, message=FALSE, warning=FALSE}
 library(rsample)
 set.seed(1945)
-wage.orig <- read_csv("../data/wage-train.csv") %>% rowid_to_column()
+wage.orig <- read_csv("../data/wage-train.csv") |> rowid_to_column()
 split <- initial_split(wage.orig, prop = 0.75)
 split
 wage.new.train <- training(split)
 wage.validation <- testing(split)
-wage.new.train %>% slice_head(n=4)
-wage.validation %>% slice_head(n=4)
+wage.new.train |> slice_head(n=4)
+wage.validation |> slice_head(n=4)
 ```
 
  -  For demonstration purposes, we add row identifiers to the original data set using `rowid_to_column()`.
@@ -104,23 +104,23 @@ wage.recipe
 Our next step is to remove the `rowid` variable as not being useful for modelling and to normalise the numeric variables except those that are binary indicators (`UNION` and `SOUTH`):
 
 ```{r}
-wage.recipe.norm <- wage.recipe %>%
-  step_rm(rowid) %>%
+wage.recipe.norm <- wage.recipe |>
+  step_rm(rowid) |>
   step_normalize(all_numeric_predictors(), -UNION, -SOUTH)
 wage.recipe.norm
 ```
 We then prep (train) this recipe with the training set:
 
 ```{r}
-wage.recipe.trained <- wage.recipe.norm %>% prep(wage.new.train)
+wage.recipe.trained <- wage.recipe.norm |> prep(wage.new.train)
 wage.recipe.trained
 ```
 
 Finally, we `bake` our recipe into the final datasets:
 
 ```{r}
-wage.train.baked <- wage.recipe.trained %>% bake(wage.new.train)
-wage.valid.baked <- wage.recipe.trained %>% bake(wage.validation)
+wage.train.baked <- wage.recipe.trained |> bake(wage.new.train)
+wage.valid.baked <- wage.recipe.trained |> bake(wage.validation)
 ```
 
 This has resulted in datasets where our numeric variables have been centered and scaled to have mean zero and standard deviation one:
@@ -137,10 +137,10 @@ skimr::skim(wage.valid.baked)
 Typically the above process will be done without many of the intermediate objects[^baking]:
 
 ```{r}
-wage.recipe <- recipe(WAGE ~ ., data=wage.new.train) %>%
-  step_rm(rowid) %>%
+wage.recipe <- recipe(WAGE ~ ., data=wage.new.train) |>
+  step_rm(rowid) |>
   step_normalize(all_numeric_predictors(), -UNION, -SOUTH)
-wage.prepped <- wage.recipe %>% prep(wage.new.train)
+wage.prepped <- wage.recipe |> prep(wage.new.train)
 wage.train.baked <- bake(wage.prepped, wage.new.train)
 wage.valid.baked <- bake(wage.prepped, wage.validation)
 ```
@@ -183,10 +183,10 @@ wage.spec.nn <- mlp(mode = "regression",
                     penalty = 0.01,
                     epochs = 1000)
 
-wage.fit.lm <- wage.spec.lm %>% fit(WAGE ~ ., data=wage.train.baked)
-wage.fit.nn <- wage.spec.nn %>% fit(WAGE ~ ., data=wage.train.baked)
+wage.fit.lm <- wage.spec.lm |> fit(WAGE ~ ., data=wage.train.baked)
+wage.fit.nn <- wage.spec.nn |> fit(WAGE ~ ., data=wage.train.baked)
 
-wage.fit.lm %>% extract_fit_engine() %>% summary()
+wage.fit.lm |> extract_fit_engine() |> summary()
 ```
 Some notes:
 
@@ -216,17 +216,17 @@ Some notes:
 Once we have our model fits, we can perform prediction:
  
 ```{r}
-wage.pred <- wage.validation %>%
+wage.pred <- wage.validation |>
   bind_cols(
-    predict(wage.fit.lm, new_data = wage.valid.baked) %>% rename(pred.lm = .pred),
-    predict(wage.fit.nn, new_data = wage.valid.baked) %>% rename(pred.nn = .pred)
+    predict(wage.fit.lm, new_data = wage.valid.baked) |> rename(pred.lm = .pred),
+    predict(wage.fit.nn, new_data = wage.valid.baked) |> rename(pred.nn = .pred)
     )
 
-wage.pred %>%
-  select(rowid, WAGE, pred.lm, pred.nn, everything()) %>%
+wage.pred |>
+  select(rowid, WAGE, pred.lm, pred.nn, everything()) |>
   slice_head(n=4)
 
-wage.pred %>% summarise(
+wage.pred |> summarise(
   MSE.lm = mean((WAGE - pred.lm)^2),
   MSE.nn = mean((WAGE - pred.nn)^2)
 )
@@ -266,19 +266,19 @@ Consider the models fit in Example \@ref(exm:wagefit). The `metrics` function fr
 
 ```{r, message=FALSE}
 library(yardstick)
-wage.pred %>% metrics(truth = WAGE, estimate = pred.lm)
-wage.pred %>% metrics(truth = WAGE, estimate = pred.nn)
+wage.pred |> metrics(truth = WAGE, estimate = pred.lm)
+wage.pred |> metrics(truth = WAGE, estimate = pred.nn)
 ```
 
 Alternatively, we could pivot our two model predictions long so we can evaluate both
 models at once.
 
 ```{r}
-wage.long <- wage.pred %>%
+wage.long <- wage.pred |>
   pivot_longer(starts_with("pred."), names_to="model", values_to="pred")
 
-wage.long %>%
-  group_by(model) %>%
+wage.long |>
+  group_by(model) |>
   metrics(truth = WAGE, estimate = pred)
 ```
 Some notes:

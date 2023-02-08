@@ -129,7 +129,7 @@ as the off-diagonal elements[^paircorr].
 
 ```{r, echo=FALSE, message=FALSE}
 library(tidyverse)
-husbands <- read_csv("../data/husbands.csv") %>%
+husbands <- read_csv("../data/husbands.csv") |>
   naniar::replace_with_na(replace = list(W.Age = 9999, H.Age.Marriage = 9999))
 ```
 
@@ -149,7 +149,8 @@ One way of handling this is to delete all records which are incomplete
 (i.e. contain at least one missing value).
 
 ```{r}
-husbands2 <- husbands %>% filter(complete.cases(.))
+complete_rows <- complete.cases(husbands)
+husbands2 <- husbands |> filter(complete_rows)
 nrow(husbands2)
 cor(husbands2)
 ```
@@ -209,10 +210,10 @@ the first of these variables .
 
 ```{r}
 library(naniar)
-HusWife <- husbands %>%
+HusWife <- husbands |>
   mutate(W.Age.New = impute_mean(W.Age),
          H.Age.Marriage.New = impute_mean(H.Age.Marriage))
-HusWife %>% filter(is.na(H.Age.Marriage))
+HusWife |> filter(is.na(H.Age.Marriage))
 ```
 
 Points to note:
@@ -223,7 +224,7 @@ Points to note:
 -   The `mutate()` command then creates two new columns (with `.New` appended),
     using the `impute_mean()` function to do the imputation.
 
--   Alternatively, we could have used `husbands %>% impute_mean_all()` to do this
+-   Alternatively, we could have used `husbands |> impute_mean_all()` to do this
     same operation - it will impute all missing values from every column using the
     mean of the remaining data.
 :::
@@ -288,7 +289,7 @@ In this example we impute values for the missing data on `W.Age` and
 
 ```{r, message=FALSE}
 library(VIM)
-husbands.imp <- husbands %>% kNN(k = 5)
+husbands.imp <- husbands |> kNN(k = 5)
 ```
 
 Points to note:

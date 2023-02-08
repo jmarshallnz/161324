@@ -492,7 +492,7 @@ period (`.`).
 
 ```{r}
 wage.tidypred <- augment(wage.lm, newdata=wage.test, interval="prediction")
-wage.tidypred %>% select(starts_with("."), everything())
+wage.tidypred |> select(starts_with("."), everything())
 ```
 
 As this is tidy, we can quite happily use `ggplot2` to do plots, e.g. a plot
@@ -669,8 +669,8 @@ wage.pred.all <- bind_rows(list(test1 = wage.pred.test,
                                 test2 = wage.pred.test.2,
                                 train1 = wage.pred.train,
                                 train2 = wage.pred.train.2), .id="Prediction")
-wage.pred.all %>%
-  group_by(Prediction) %>%
+wage.pred.all |>
+  group_by(Prediction) |>
   summarise(MSE = mean((.fitted - WAGE)^2))
 ```
 
@@ -811,8 +811,8 @@ Finally, we note that while model selection using AIC is generally well
 regarded, it will not guarantee improved prediction accuracy.
 
 ```{r}
-wage.lm.step %>%
-  augment(newdata = wage.test) %>%
+wage.lm.step |>
+  augment(newdata = wage.test) |>
   summarise(MSE = mean((.fitted - WAGE)^2))
 ```
 
@@ -855,7 +855,7 @@ set.seed(2012)
 x <- runif(400,0,10)
 x <- sort(x)
 y <- 1+ sin(1.5*x/(1+x^2/100)) + rnorm(400,sd=0.25)
-data.frame(x = x, y = y) %>%
+data.frame(x = x, y = y) |>
   ggplot() +
   geom_point(mapping = aes(x=x, y=y))
 library(rpart)
@@ -894,7 +894,7 @@ segs <- bind_rows(lst(seg1 = data.frame(x = c(toy_splits[1],11), y = 1.794),
                       seg2 = data.frame(x = c(toy_splits[2], toy_splits[1]), y = 0.5704),
                       seg3 = data.frame(x = c(-1, toy_splits[2]), y = 1.645)), .id="seg")
 
-data.frame(x=x, y=y) %>%
+data.frame(x=x, y=y) |>
   ggplot() +
   geom_polygon(data = rects, mapping = aes(x=x, y=y, fill=col)) +
   scale_fill_identity() +
@@ -1119,17 +1119,17 @@ We can obtain predictions from the fitted regression tree by applying
 the `predict` command[^25].
 
 ```{r}
-wage.rp.pred <- wage.test %>%
+wage.rp.pred <- wage.test |>
   bind_cols(.pred = predict(wage.rp, newdata=wage.test))
-wage.rp.pred %>% select(.pred, WAGE, everything())
+wage.rp.pred |> select(.pred, WAGE, everything())
 
-wage.rp.pred %>%
+wage.rp.pred |>
   summarise(MSE = mean((.pred - WAGE)^2))
 ```
 
 ```{r, echo=FALSE}
-mse.rp <- wage.rp.pred %>%
-  summarise(MSE = mean((.pred - WAGE)^2)) %>% pull(MSE)
+mse.rp <- wage.rp.pred |>
+  summarise(MSE = mean((.pred - WAGE)^2)) |> pull(MSE)
 ```
 
 Here we have computed the mean squared error of prediction on the
@@ -1259,18 +1259,18 @@ complex tree.
 We can also compute mean square error on the test data.
 
 ```{r}
-wage.rp.pred.2 <- wage.test %>%
+wage.rp.pred.2 <- wage.test |>
   bind_cols(
     .pred1 = predict(wage.rp.1, newdata=wage.test),
     .pred2 = predict(wage.rp.2, newdata=wage.test)
   )
-wage.rp.pred.2 %>%
+wage.rp.pred.2 |>
   summarise(MSE.1 = mean((.pred1 - WAGE)^2),
             MSE.2 = mean((.pred2 - WAGE)^2))
 ```
 ```{r, echo=FALSE}
-mse.rp.2 <- wage.rp.pred.2 %>%
-  summarise(MSE.2 = mean((.pred2 - WAGE)^2)) %>% pull(MSE.2)
+mse.rp.2 <- wage.rp.pred.2 |>
+  summarise(MSE.2 = mean((.pred2 - WAGE)^2)) |> pull(MSE.2)
 ```
 
 The second point of interest is that the mean squared
@@ -1367,12 +1367,12 @@ $cp=0.023$.
 
 ```{r}
 wage.rp.3 <- rpart(WAGE ~ ., data=wage.train, cp=0.023)
-wage.rp.pred.3 <- wage.test %>% bind_cols(.pred = predict(wage.rp.3, newdata=wage.test))
-wage.rp.pred.3 %>% summarise(MSE = mean((.pred - WAGE)^2))
+wage.rp.pred.3 <- wage.test |> bind_cols(.pred = predict(wage.rp.3, newdata=wage.test))
+wage.rp.pred.3 |> summarise(MSE = mean((.pred - WAGE)^2))
 ```
 
 ```{r, echo=FALSE}
-mse.rp.3 <- wage.rp.pred.3 %>% summarise(MSE = mean((.pred - WAGE)^2)) %>% pull(MSE)
+mse.rp.3 <- wage.rp.pred.3 |> summarise(MSE = mean((.pred - WAGE)^2)) |> pull(MSE)
 ```
 
 The prediction error of $\textsf{MSE}=`r round(mse.rp.3, 1)`$ is a bit better than that
@@ -1405,8 +1405,8 @@ This dataset has the same (or very similar) relationships between `WAGE` and the
 ```{r wageresample, echo=FALSE, fig.cap="Relationships between `WAGE` and the numeric variables from the  `wage.train` and `wage.train.bs` datasets."}
 wage.all <- bind_rows(list(wage.train = wage.train,
                wage.train.bs = wage.train.bs), .id="data")
-wage.all %>% select(data, WAGE, AGE, EDU, EXP) %>%
-  pivot_longer(-c(data, WAGE), names_to="name", values_to="value") %>%
+wage.all |> select(data, WAGE, AGE, EDU, EXP) |>
+  pivot_longer(-c(data, WAGE), names_to="name", values_to="value") |>
   ggplot() +
   geom_point(aes(x=value, y=WAGE), alpha=0.5) +
   facet_grid(vars(data), vars(name), scales='free_x') +
@@ -1461,9 +1461,9 @@ on the test set is performed:
 library(randomForest)
 set.seed(1945)
 wage.rf.1 <- randomForest(WAGE ~ ., data = wage.train)
-wage.rf.1.pred <- wage.test %>%
+wage.rf.1.pred <- wage.test |>
   bind_cols(.pred = predict(wage.rf.1, newdata = wage.test))
-wage.rf.1.pred %>%
+wage.rf.1.pred |>
   summarise(MSE = mean((.pred - WAGE)^2))
 ```
 
@@ -1492,12 +1492,12 @@ We can tune the model by altering the `mtry` parameter, which selects the number
 ```{r}
 wage.rf.2 <- randomForest(WAGE ~ ., data=wage.train, mtry = 2)
 wage.rf.3 <- randomForest(WAGE ~ ., data=wage.train, mtry = 2, nodesize = 1)
-wage.rf.pred <- wage.test %>%
+wage.rf.pred <- wage.test |>
                   bind_cols(
                     .pred2 = predict(wage.rf.2, newdata=wage.test),
                     .pred3 = predict(wage.rf.3, newdata=wage.test)
                   )
-wage.rf.pred %>%
+wage.rf.pred |>
   summarise(MSE.2 = mean((.pred2 - WAGE)^2),
             MSE.3 = mean((.pred3 - WAGE)^2))
 ```
@@ -1699,22 +1699,22 @@ set.seed(1069)
 wage.nn.3 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE, maxit=250)
 set.seed(1069)
 wage.nn.4 <- nnet(WAGE ~ .,size=5, data=wage.train, linout=TRUE, maxit=1000, decay=0.01)
-wage.nn.pred <- wage.test %>% bind_cols(
+wage.nn.pred <- wage.test |> bind_cols(
   nn.1 = predict(wage.nn.1, newdata=wage.test),
   nn.2 = predict(wage.nn.2, newdata=wage.test),
   nn.3 = predict(wage.nn.3, newdata=wage.test),
   nn.4 = predict(wage.nn.4, newdata=wage.test)
 )
-wage.nn.pred %>%
-  pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") %>%
-  group_by(model) %>%
+wage.nn.pred |>
+  pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") |>
+  group_by(model) |>
   summarise(MSE = mean((.pred - WAGE)^2))
 ```
 ```{r, echo=FALSE}
-mse.nn <- wage.nn.pred %>%
-  pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") %>%
-  group_by(model) %>%
-  summarise(MSE = mean((.pred - WAGE)^2)) %>% deframe() %>% as.list()
+mse.nn <- wage.nn.pred |>
+  pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") |>
+  group_by(model) |>
+  summarise(MSE = mean((.pred - WAGE)^2)) |> deframe() |> as.list()
 ```
 
 Some points to note:
@@ -1747,15 +1747,15 @@ Some points to note:
     significantly lower for `wage.nn.2`:
     
     ```{r}
-    wage.nn.pred.train <- wage.train %>% bind_cols(
+    wage.nn.pred.train <- wage.train |> bind_cols(
       nn.1 = predict(wage.nn.1, newdata=wage.train),
       nn.2 = predict(wage.nn.2, newdata=wage.train),
       nn.3 = predict(wage.nn.3, newdata=wage.train),
       nn.4 = predict(wage.nn.4, newdata=wage.train)
     )
-    wage.nn.pred.train %>%
-      pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") %>%
-      group_by(model) %>%
+    wage.nn.pred.train |>
+      pivot_longer(starts_with("nn."), names_to = "model", values_to=".pred") |>
+      group_by(model) |>
       summarise(MSE = mean((.pred - WAGE)^2))
     ```
 
@@ -1847,8 +1847,8 @@ We start by just looking at a print out of some of the data.
 ```{r, message=FALSE}
 clock.train <- read_csv("../data/clock-train.csv")
 clock.test <- read_csv("../data/clock-test.csv")
-clock.train %>% slice_head(n=4)
-clock.test %>% slice_head(n=4)
+clock.train |> slice_head(n=4)
+clock.test |> slice_head(n=4)
 ```
 
 Notice (of course) that the training data includes the sale price,
@@ -1884,13 +1884,13 @@ accuracy on the validation set.
 library(rpart)
 clock.lm <- lm(Price ~ Age + Condition, data=clock.train.new)
 clock.rp <- rpart(Price ~ Age + Condition, data=clock.train.new, cp=0.001)
-clock.pred <- clock.validation %>%
+clock.pred <- clock.validation |>
   bind_cols(
     pred.lm = predict(clock.lm, newdata=clock.validation),
     pred.rp = predict(clock.rp, newdata=clock.validation)
   )
 clock.pred
-clock.pred %>% summarise(MSE.lm = mean((pred.lm - Price)^2),
+clock.pred |> summarise(MSE.lm = mean((pred.lm - Price)^2),
                          MSE.rp = mean((pred.rp - Price)^2))
 ```
 
@@ -1913,7 +1913,7 @@ that were retained in the reduced training set.
 
 ```{r}
 clock.lm.final <- lm(Price ~ Age + Condition, data=clock.train)
-clock.pred.test <- clock.test %>%
+clock.pred.test <- clock.test |>
   bind_cols(PredPrice = predict(clock.lm.final, newdata=clock.test))
 clock.pred.test
 ```

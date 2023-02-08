@@ -202,10 +202,10 @@ heaf <- tribble(~disease, ~test, ~count,
                    "Disease -", "Test +", 30,
                    "Disease -", "Test -", 929)
 
-list(mantoux %>% pivot_wider(names_from=disease, values_from=count) %>%
+list(mantoux |> pivot_wider(names_from=disease, values_from=count) |>
      column_to_rownames("test"),
-     heaf %>% pivot_wider(names_from=disease, values_from=count) %>%
-     column_to_rownames("test")) %>%
+     heaf |> pivot_wider(names_from=disease, values_from=count) |>
+     column_to_rownames("test")) |>
   knitr::kable(
     caption = 'Performance of the Mantoux (left) and Heaf (right) tests for detecting tuberculosis',
     valign = 't',
@@ -370,7 +370,7 @@ first convert the target variable `Cultivar` to a factor.
 
 ```{r, message=FALSE}
 library(rsample)
-wine <- read_csv("../data/wine.csv") %>%
+wine <- read_csv("../data/wine.csv") |>
   mutate(Cultivar = factor(Cultivar))
 
 set.seed(2021)
@@ -385,19 +385,19 @@ We initially consider prediction with LDA using all the variables.
 ```{r, message=FALSE}
 library(discrim)
 library(yardstick)
-wine.lda1 <- discrim_linear() %>% fit(Cultivar ~ ., data=wine.train)
+wine.lda1 <- discrim_linear() |> fit(Cultivar ~ ., data=wine.train)
 wine.lda1
-wine.lda1.pred <- wine.lda1 %>% augment(new_data=wine.test)
-wine.lda1.pred %>%
+wine.lda1.pred <- wine.lda1 |> augment(new_data=wine.test)
+wine.lda1.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
 get_perf <- function(data, true, pred) {
-  data %>% summarise(wrong = sum({{pred}} != {{true}}), total = n(),
+  data |> summarise(wrong = sum({{pred}} != {{true}}), total = n(),
                       perc = round(wrong/total*100,1))
 }
-perf.lda1 <- wine.lda1.pred %>% get_perf(Cultivar, .pred_class)
+perf.lda1 <- wine.lda1.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 Note the following:
@@ -430,13 +430,13 @@ We now consider trying to perform LDA using just the variables
 `Alcohol`, `Color` and `Hue`.
 
 ```{r}
-wine.lda2 <- discrim_linear() %>% fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.lda2.pred <- wine.lda2 %>% augment(new_data=wine.test)
-wine.lda2.pred %>% conf_mat(truth=Cultivar, estimate=.pred_class)
+wine.lda2 <- discrim_linear() |> fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.lda2.pred <- wine.lda2 |> augment(new_data=wine.test)
+wine.lda2.pred |> conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.lda2 <- wine.lda2.pred %>% get_perf(Cultivar, .pred_class)
+perf.lda2 <- wine.lda2.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 We get a worse misclassification rate in this case:
@@ -461,7 +461,7 @@ information through from `discrim_linear()` we would use the `set_engine()`
 function:
 
 ```{r, eval=FALSE}
-spec_lda_equal_priors <- discrim_linear() %>% set_engine("MASS", prior = c(1,1,1)/3)
+spec_lda_equal_priors <- discrim_linear() |> set_engine("MASS", prior = c(1,1,1)/3)
 ```
 
 Note that we wouldn't expect the classifications to change much as the prior
@@ -541,13 +541,13 @@ predictors `Alcohol`, `Colour` and `Hue`.
 
 ```{r}
 library(tidykda)
-wine.kda <- discrim_kernel() %>% fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.kda.pred <- wine.kda %>% augment(new_data=wine.test)
-wine.kda.pred %>% conf_mat(truth=Cultivar, estimate=.pred_class)
+wine.kda <- discrim_kernel() |> fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
+wine.kda.pred <- wine.kda |> augment(new_data=wine.test)
+wine.kda.pred |> conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.kda <- wine.kda.pred %>% get_perf(Cultivar, .pred_class)
+perf.kda <- wine.kda.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 Points to note:
@@ -622,10 +622,10 @@ coke <- tribble(~sex, ~age, ~count,
                    "Female", "Younger", 5,
                    "Female", "Older", 5)
 
-list(pepsi %>% pivot_wider(names_from=age, values_from=count) %>%
+list(pepsi |> pivot_wider(names_from=age, values_from=count) |>
      column_to_rownames("sex"),
-     coke %>% pivot_wider(names_from=age, values_from=count) %>%
-     column_to_rownames("sex")) %>%
+     coke |> pivot_wider(names_from=age, values_from=count) |>
+     column_to_rownames("sex")) |>
   knitr::kable(
     caption = 'Preference of Pepsi (left) and Coke (right) by sex and age',
     valign = 't',
@@ -674,32 +674,32 @@ of the kernel density estimates.
 
 ```{r, message=FALSE}
 spec_nB <- naive_Bayes(engine="naivebayes")
-wine.nB.1 <- spec_nB %>%
+wine.nB.1 <- spec_nB |>
   fit(Cultivar ~ ., data=wine.train)
-wine.nB.1.pred <- wine.nB.1 %>%
+wine.nB.1.pred <- wine.nB.1 |>
   augment(new_data=wine.test)
-wine.nB.1.pred %>%
+wine.nB.1.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
-wine.nB.2 <- spec_nB %>%
+wine.nB.2 <- spec_nB |>
   fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.nB.2.pred <- wine.nB.2 %>%
+wine.nB.2.pred <- wine.nB.2 |>
   augment(new_data=wine.test)
-wine.nB.2.pred %>%
+wine.nB.2.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
-wine.nB.3 <- spec_nB %>%
-  set_engine(engine="naivebayes", usekernel=FALSE) %>%
+wine.nB.3 <- spec_nB |>
+  set_engine(engine="naivebayes", usekernel=FALSE) |>
   fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
 wine.nB.3
-wine.nB.3.pred <- wine.nB.3 %>%
+wine.nB.3.pred <- wine.nB.3 |>
   augment(new_data=wine.test)
-wine.nB.3.pred %>%
+wine.nB.3.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.nB1 <- wine.nB.1.pred %>% get_perf(Cultivar, .pred_class)
-perf.nB2 <- wine.nB.2.pred %>% get_perf(Cultivar, .pred_class)
-perf.nB3 <- wine.nB.3.pred %>% get_perf(Cultivar, .pred_class)
+perf.nB1 <- wine.nB.1.pred |> get_perf(Cultivar, .pred_class)
+perf.nB2 <- wine.nB.2.pred |> get_perf(Cultivar, .pred_class)
+perf.nB3 <- wine.nB.3.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 Points to note:
@@ -893,9 +893,9 @@ margin and diagonal measurements. The data has been split into training
 and validation sets, containing 120 and 80 notes respectively.
 
 ```{r, message=FALSE}
-swiss.train <- read_csv("../data/swiss-train.csv") %>%
+swiss.train <- read_csv("../data/swiss-train.csv") |>
   mutate(type = factor(type))
-swiss.test <- read_csv("../data/swiss-test.csv") %>%
+swiss.test <- read_csv("../data/swiss-test.csv") |>
   mutate(type = factor(type))
 glimpse(swiss.train)
 swiss.glm.1 <- glm(type ~ margin, family=binomial, data=swiss.train)
@@ -997,11 +997,11 @@ We continue our example on the Swiss bank notes by using the output
 from `glm()` to compute the class probabilities ourselves:
 
 ```{r}
-swiss.glm.2 %>% augment(newdata=swiss.test) %>%
+swiss.glm.2 |> augment(newdata=swiss.test) |>
   mutate(.pred_genuine = 1/(1 + exp(-.fitted)))
 ```
 ```{r, echo=FALSE}
-swiss.glm.2.logit <- swiss.glm.2 %>% augment(newdata=swiss.test) %>% pull(.fitted)
+swiss.glm.2.logit <- swiss.glm.2 |> augment(newdata=swiss.test) |> pull(.fitted)
 ```
 
 The `.fitted` entry contains the predicted logits for the
@@ -1021,9 +1021,9 @@ instead utilise our existing framework knowledge, we can get the same
 predictions as we're used to:
 
 ```{r}
-swiss.lr.2 <- logistic_reg() %>%
+swiss.lr.2 <- logistic_reg() |>
   fit(type ~ ., data=swiss.train)
-swiss.lr.2.pred <- swiss.lr.2 %>%
+swiss.lr.2.pred <- swiss.lr.2 |>
   augment(new_data=swiss.test)
 swiss.lr.2.pred
 ```
@@ -1034,12 +1034,12 @@ of each class (`.pred_forged` and `.pred_genuine`). We can thus
 directly cross tabulate the usual way:
 
 ```{r}
-swiss.lr.2.pred %>%
+swiss.lr.2.pred |>
   conf_mat(truth=type, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.glm <- swiss.lr.2.pred %>% get_perf(type, .pred_class)
+perf.glm <- swiss.lr.2.pred |> get_perf(type, .pred_class)
 ```
 
 Some comments:
@@ -1066,14 +1066,14 @@ observation in the `swiss.train` data set slightly. The plot is given in
 Figure \@ref(fig:swiss5).
 
 ```{r swiss5, fig.cap="Forged (black) and genuine (red) Swiss bank notes from Example \\@ref(exm:swiss5)"}
-swiss2.train <- swiss.train %>%
+swiss2.train <- swiss.train |>
   mutate(diagonal = if_else(row_number() == 103, 140.2, diagonal))
 
 ggplot(data=swiss2.train) +
   geom_point(mapping = aes(x=margin, y=diagonal, col=type)) +
   scale_colour_manual(guide = 'none', values=c('red', 'black'))
 
-swiss2.lr <- logistic_reg() %>% fit(type ~ ., data=swiss2.train)
+swiss2.lr <- logistic_reg() |> fit(type ~ ., data=swiss2.train)
 ```
 
 Some comments on the R code.
@@ -1125,17 +1125,17 @@ analysis of the Italian wine data.
 We perform classification using the `multinom_reg` function.
 
 ```{r, message=FALSE}
-wine.mn <- multinom_reg() %>%
+wine.mn <- multinom_reg() |>
   fit(Cultivar ~ ., data=wine.train)
-wine.mn %>%
+wine.mn |>
   extract_fit_engine()
-wine.mn.pred <- wine.mn %>% augment(new_data=wine.test)
-wine.mn.pred %>%
+wine.mn.pred <- wine.mn |> augment(new_data=wine.test)
+wine.mn.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.mn <- wine.mn.pred %>% get_perf(Cultivar, .pred_class)
+perf.mn <- wine.mn.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 Some comments:
@@ -1151,15 +1151,15 @@ We continue by attempting to fit a model containing just the variables
 `Alcohol`, `Color`, and `Hue`.
 
 ```{r}
-wine.mn2 <- multinom_reg() %>%
+wine.mn2 <- multinom_reg() |>
   fit(Cultivar ~ Alcohol + Colour + Hue, data=wine.train)
-wine.mn2.pred <- wine.mn2 %>% augment(new_data=wine.test)
-wine.mn2.pred %>%
+wine.mn2.pred <- wine.mn2 |> augment(new_data=wine.test)
+wine.mn2.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-wine.mn2 <- wine.mn2.pred %>% get_perf(Cultivar, .pred_class)
+wine.mn2 <- wine.mn2.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 We get a worse misclassification rate in this case of
@@ -1207,15 +1207,15 @@ summary(wine.mn3.refit)
 ```
 
 ```{r}
-wine.mn3 <- multinom_reg() %>%
+wine.mn3 <- multinom_reg() |>
   fit(Cultivar ~ Alcohol + Flav + Hue + Proline, data=wine.train)
-wine.mn3.pred <- wine.mn3 %>% augment(new_data=wine.test)
-wine.mn3.pred %>%
+wine.mn3.pred <- wine.mn3 |> augment(new_data=wine.test)
+wine.mn3.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-wine.mn3 <- wine.mn3.pred %>% get_perf(Cultivar, .pred_class)
+wine.mn3 <- wine.mn3.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 Some comments on this R snippet.
@@ -1291,23 +1291,23 @@ that this automatically scales our predictor variables to have a common
 variance. We try $k=1$ and $k=20$ to compare.
 
 ```{r, message=FALSE}
-wine.knn1 <- nearest_neighbor(mode="classification", neighbors = 1) %>%
+wine.knn1 <- nearest_neighbor(mode="classification", neighbors = 1) |>
   fit(Cultivar ~ ., data=wine.train)
-wine.knn1.pred <- wine.knn1 %>%
+wine.knn1.pred <- wine.knn1 |>
   augment(new_data = wine.test)
-wine.knn1.pred %>%
+wine.knn1.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
-wine.knn2 <- nearest_neighbor(mode="classification", neighbors = 20) %>%
+wine.knn2 <- nearest_neighbor(mode="classification", neighbors = 20) |>
   fit(Cultivar ~ ., data=wine.train)
-wine.knn2.pred <- wine.knn2 %>%
+wine.knn2.pred <- wine.knn2 |>
   augment(new_data = wine.test)
-wine.knn2.pred %>%
+wine.knn2.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.knn1 <- wine.knn1.pred %>% get_perf(Cultivar, .pred_class)
-perf.knn2 <- wine.knn2.pred %>% get_perf(Cultivar, .pred_class)
+perf.knn1 <- wine.knn1.pred |> get_perf(Cultivar, .pred_class)
+perf.knn2 <- wine.knn2.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 Using $k=1$ results in a misclassification rate of $`r perf.knn1$wrong`/`r perf.knn1$total` \approx `r perf.knn1$perc`\%$, while using $k=20$ results in a missclassification rate of $`r perf.knn2$wrong`/`r perf.knn2$total` \approx `r perf.knn2$perc`\%$.
@@ -1354,23 +1354,23 @@ We grow a classification tree for the wine data using the default
 settings.
 
 ```{r, message=FALSE}
-wine.rp.1 <- decision_tree(mode="classification") %>%
+wine.rp.1 <- decision_tree(mode="classification") |>
   fit(Cultivar ~ . ,data=wine.train)
-wine.rp.1.pred <- wine.rp.1 %>%
+wine.rp.1.pred <- wine.rp.1 |>
   augment(new_data=wine.test)
-wine.rp.1.pred %>%
+wine.rp.1.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 ```{r, echo=FALSE}
-perf.rp1 <- wine.rp.1.pred %>% get_perf(Cultivar, .pred_class)
+perf.rp1 <- wine.rp.1.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 This R snippet should largely be self explanatory, as it largely follows
 the same pattern that should now be familiar. The overall misclassification rate is $`r perf.rp1$wrong`/`r perf.rp1$total` \approx `r perf.rp1$perc`\%$.
 
 ```{r winetree, echo=FALSE, fig.cap="Classification tree for the wine data."}
-plot(wine.rp.1 %>% extract_fit_engine(), compress=TRUE, margin=0.1)
-text(wine.rp.1 %>% extract_fit_engine())
+plot(wine.rp.1 |> extract_fit_engine(), compress=TRUE, margin=0.1)
+text(wine.rp.1 |> extract_fit_engine())
 ```
 
 The tree employed is displayed in Figure \@ref(fig:winetree). It is
@@ -1400,16 +1400,16 @@ switching out the `mode` to be "classification". We'll utilise the
 `randomForest` package as before.
 
 ```{r, message=FALSE}
-wine.rf <- rand_forest(mode="classification", engine="randomForest") %>%
+wine.rf <- rand_forest(mode="classification", engine="randomForest") |>
   fit(Cultivar ~ . ,data=wine.train)
-wine.rf.pred <- wine.rf %>%
+wine.rf.pred <- wine.rf |>
   augment(new_data=wine.test)
-wine.rf.pred %>%
+wine.rf.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.rf <- wine.rf.pred %>% get_perf(Cultivar, .pred_class)
+perf.rf <- wine.rf.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 The misclassification error is $`r perf.rf$wrong`/`r perf.rf$total` \approx `r perf.rf$perc`\%$,
@@ -1449,22 +1449,22 @@ the data first.
 
 ```{r, message=FALSE}
 library(recipes)
-scaling <- recipe(Cultivar ~ ., data=wine.train) %>%
-  step_normalize(all_numeric_predictors()) %>%
+scaling <- recipe(Cultivar ~ ., data=wine.train) |>
+  step_normalize(all_numeric_predictors()) |>
   prep(wine.train)
 
 set.seed(1000)
-wine.nn.1 <- mlp(mode="classification", hidden_units = 7) %>%
+wine.nn.1 <- mlp(mode="classification", hidden_units = 7) |>
   fit(Cultivar ~ ., data = bake(scaling, wine.train))
-wine.nn.1 %>% extract_fit_engine() %>% pluck("convergence")
-wine.nn.1.pred <- wine.nn.1 %>%
+wine.nn.1 |> extract_fit_engine() |> pluck("convergence")
+wine.nn.1.pred <- wine.nn.1 |>
   augment(new_data = bake(scaling, wine.test))
-wine.nn.1.pred %>%
+wine.nn.1.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.nn1 <- wine.nn.1.pred %>% get_perf(Cultivar, .pred_class)
+perf.nn1 <- wine.nn.1.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 Some notes:
@@ -1480,7 +1480,7 @@ Some notes:
     out of (possibly nested) lists. In this case we could have also used:
     
     ```{r, eval=FALSE}
-    wine.nn.1 %>% pluck("fit", "convergence")
+    wine.nn.1 |> pluck("fit", "convergence")
     ```
     
     as the `wine.nn.1` object returned from `parsnip` is itself a list, with the engine

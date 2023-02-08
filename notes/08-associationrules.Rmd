@@ -52,7 +52,7 @@ marketdb <- tribble(~transaction, ~items,
               5, c('bread', 'butter'),
               6, c('bread', 'beer'))
 
-marketdb %>% mutate(items = map_chr(items, paste, collapse=", ")) %>%
+marketdb |> mutate(items = map_chr(items, paste, collapse=", ")) |>
   knitr::kable(caption = "An example supermarket database with six transactions.")
 ```
 
@@ -62,9 +62,9 @@ purchased in the same transaction, so the data may typically be
 represented by a binary matrix as in Table \@ref(tab:market2).
 
 ```{r market2, echo=FALSE}
-marketdb %>% unnest(items) %>%
-  mutate(count = 1) %>%
-  pivot_wider(names_from=items, values_from=count, values_fill = 0) %>%
+marketdb |> unnest(items) |>
+  mutate(count = 1) |>
+  pivot_wider(names_from=items, values_from=count, values_fill = 0) |>
   knitr::kable(caption = "The binary matrix of transactions from Table \\@ref(tab:market1)")
 ```
 
@@ -132,10 +132,10 @@ coftea <- tribble(~tea, ~coffee, ~count,
                   'tea', 'no coffee', 650,
                   'no tea', 'coffee', 50,
                   'no tea', 'no coffee', 150)
-coftea %>% mutate(tea = as_factor(tea)) %>% uncount(count) %>%
-  tabyl(tea, coffee) %>%
-  adorn_totals(where = c("row", "col"), name = "total") %>%
-  set_names(nm = c("", names(.)[-1])) %>%
+coftea |> mutate(tea = as_factor(tea)) |> uncount(count) |>
+  tabyl(tea, coffee) |>
+  adorn_totals(where = c("row", "col"), name = "total") |>
+  rename(' ' = 1) |>
   knitr::kable(caption = "Contigency table of drinking preferences for 1000 people.")
 ```
 
@@ -202,10 +202,10 @@ itemFrequencyPlot(Income, support=0.05, cex.names=0.8)
 We can re-do this plot using `ggplot` instead which will make it a little nicer. We first use `enframe()` to convert the named vector returned by `itemFrequency()` to a `tibble`:
 
 ```{r}
-Income %>%
-  itemFrequency() %>%
-  enframe(name="item", value="support") %>%
-  filter(support >= 0.05) %>%
+Income |>
+  itemFrequency() |>
+  enframe(name="item", value="support") |>
+  filter(support >= 0.05) |>
   ggplot() +
   geom_col(mapping = aes(x=support, y=item))
 ```
@@ -217,7 +217,7 @@ support of 0.01 and confidence of 0.6, yielding just over a million
 rules.
 
 ```{r}
-rules <- Income %>% apriori(parameter=list(support=0.01, confidence=0.6))
+rules <- Income |> apriori(parameter=list(support=0.01, confidence=0.6))
 rules
 summary(rules)
 ```
@@ -227,9 +227,9 @@ first based on confidence or lift is useful to obtain the most
 interesting (objectively!) relationships first:
 
 ```{r}
-rules %>%
-  sort(by="confidence") %>%
-  head(n = 5) %>%
+rules |>
+  sort(by="confidence") |>
+  head(n = 5) |>
   inspect()
 ```
 
@@ -240,11 +240,11 @@ clearly giving the same information. We can filter out all such rules
 using the `subset` command[^subset]:
 
 ```{r}
-rules <- rules %>%
+rules <- rules |>
   subset(confidence < 1)
 
-rules %>% sort(by="confidence") %>%
-  head(n=2) %>%
+rules |> sort(by="confidence") |>
+  head(n=2) |>
   inspect()
 ```
 
@@ -256,8 +256,8 @@ We can also inspect things interactively via the `inspectDT` function in `arules
 
 ```{r, message=FALSE}
 library(arulesViz)
-rules %>% 
-  head(n=100) %>%
+rules |>
+  head(n=100) |>
   inspectDT()
 ```
 
@@ -270,11 +270,11 @@ us start by finding rules that associate with high income, with moderate
 lift.
 
 ```{r}
-high_income <- rules %>%
+high_income <- rules |>
   subset(rhs %in% "income=$40,000+" & lift > 1.2)
-high_income %>%
-  sort(by="confidence") %>%
-  head(n=3) %>%
+high_income |>
+  sort(by="confidence") |>
+  head(n=3) |>
   inspect()
 ```
 
@@ -287,13 +287,13 @@ but what about home ownership by those that aren't earning a high annual
 income?
 
 ```{r}
-home_own <- rules %>%
+home_own <- rules |>
   subset(lhs %in% "income=$0-$40,000" & 
          rhs %in% "householder status=own" &
          lift > 1.2)
-home_own %>%
-  sort(by="confidence") %>%
-  head(n=2) %>%
+home_own |>
+  sort(by="confidence") |>
+  head(n=2) |>
   inspect()
 ```
 
@@ -304,12 +304,12 @@ dataset: whether the person had answered the question regarding how long
 they'd resided in the San Francisco bay area.
 
 ```{r}
-new_to_bay <- rules %>%
+new_to_bay <- rules |>
   subset(rhs %in% "years in bay area=1-9" &
          lift > 1.2)
-new_to_bay %>%
-  sort(by="lift") %>%
-  head(n=5) %>%
+new_to_bay |>
+  sort(by="lift") |>
+  head(n=5) |>
   inspect()
 ```
 

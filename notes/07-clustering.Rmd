@@ -206,20 +206,20 @@ Mississippi, where the Republican vote is usually poor but there are
 some exceptional years (in comparison to other states).
 
 ```{r repubstars, echo=FALSE, message=FALSE, fig.cap="Stars plot for republican voting data.",fig.height=3}
-repub <- read_csv("../data/repub.csv") %>%
+repub <- read_csv("../data/repub.csv") |>
   column_to_rownames("State") 
-repub %>% stars(nrow=2, ncol=7, flip.labels = FALSE)
+repub |> stars(nrow=2, ncol=7, flip.labels = FALSE)
 ```
 
 Applying the `hclust` command, R code for producing a dendrogram to
 display hierarchical clustering is given below.
 
 ```{r, eval=FALSE}
-repub <- read_csv("../data/repub.csv") %>%
+repub <- read_csv("../data/repub.csv") |>
   column_to_rownames("State")
-repub.dist <- repub %>% dist(method = "euclidean")
-repub.clust.single <- repub.dist %>% hclust(method = "single")
-repub.clust.complete <- repub.dist %>% hclust(method="complete")
+repub.dist <- repub |> dist(method = "euclidean")
+repub.clust.single <- repub.dist |> hclust(method = "single")
+repub.clust.complete <- repub.dist |> hclust(method="complete")
 library(ggdendro)
 ggdendrogram(repub.clust.single)
 ggdendrogram(repub.clust.complete)
@@ -272,7 +272,7 @@ in the data. Fortunately the R command `cutree` generates group
 membership automatically.
 
 ```{r}
-repub.groups.complete <- repub.clust.complete %>% cutree(h=75)
+repub.groups.complete <- repub.clust.complete |> cutree(h=75)
 repub.groups.complete
 ```
 :::
@@ -446,9 +446,9 @@ run_iterations <- function(xy, centers, max_iters) {
 xy <- clust[,1:2]
 centers <- xy[c(4,59,55),]
 df <- run_iterations(xy, centers, max_iters=17)
-df %>% filter(iter %in% c(1,2,3,5,9,17)) %>%
+df |> filter(iter %in% c(1,2,3,5,9,17)) |>
   mutate(name = case_when(iter == 1 ~ "Initial means",
-                          TRUE ~ paste("Iteration", iter-1))) %>%
+                          TRUE ~ paste("Iteration", iter-1))) |>
   ggplot() +
   geom_point(mapping = aes(x=x, y=y, col=as.factor(col), shape=type, size=type)) +
   facet_wrap(vars(name)) +
@@ -472,10 +472,10 @@ relative improvement is minor.
 
 ```{r kmeans3, echo=FALSE, fig.cap="The within cluster variance for one to six clusters for Example \\@ref(exm:kmeans)"}
 library(broom)
-tibble(k=1:6) %>%
+tibble(k=1:6) |>
   mutate(km = map(k, ~kmeans(xy, centers=., nstart=20)),
-         tidied = map(km, glance)) %>%
-  unnest(tidied) %>%
+         tidied = map(km, glance)) |>
+  unnest(tidied) |>
   ggplot() +
   geom_line(mapping = aes(x=k, y=tot.withinss)) +
   labs(x = "k, number of clusters",
@@ -526,9 +526,9 @@ distinguish the species.
 library(palmerpenguins)
 library(patchwork)
 set.seed(32)
-penguins <- penguins %>% filter(complete.cases(.))
-k <- penguins %>% select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
-  mutate(across(everything(), scale)) %>%
+penguins <- penguins |> na.omit()
+k <- penguins |> select(flipper_length_mm, bill_length_mm, body_mass_g) |>
+  mutate(across(everything(), scale)) |>
   kmeans(centers=3, nstart=20)
 
 g1 <- ggplot(penguins) +
@@ -537,7 +537,7 @@ g1 <- ggplot(penguins) +
                          col=species)) +
   guides(col='none')
 
-g2 <- ggplot(k %>% augment(penguins)) +
+g2 <- ggplot(k |> augment(penguins)) +
   geom_point(mapping=aes(x=flipper_length_mm,
                          y=body_mass_g,
                          col=.cluster)) +
@@ -557,12 +557,12 @@ ggplot(penguins) +
                          y=body_mass_g,
                          col=species))
 
-km <- penguins %>%
-  select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
-  mutate(across(everything(), scale)) %>%
+km <- penguins |>
+  select(flipper_length_mm, bill_length_mm, body_mass_g) |>
+  mutate(across(everything(), scale)) |>
   kmeans(centers=3, nstart=20)
 
-km %>% augment(penguins) %>%
+km |> augment(penguins) |>
   ggplot() +
   geom_point(mapping=aes(x=flipper_length_mm,
                        y=body_mass_g,
@@ -579,7 +579,7 @@ up with `body_mass_g` dominating, as shown in Figure \@ref(fig:peng2)
 
 ```{r peng2, echo=FALSE, fig.cap="The actual species (left) and clusters found using $K$-means with 3 clusters (right) for Example \\@ref(exm:penguins) without scaling."}
 set.seed(22)
-k <- penguins %>% select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
+k <- penguins |> select(flipper_length_mm, bill_length_mm, body_mass_g) |>
   kmeans(centers=3, nstart=20)
 
 g1 <- ggplot(penguins) +
@@ -588,7 +588,7 @@ g1 <- ggplot(penguins) +
                          col=species)) +
   guides(col='none')
 
-g2 <- ggplot(k %>% augment(penguins)) +
+g2 <- ggplot(k |> augment(penguins)) +
   geom_point(mapping=aes(x=flipper_length_mm,
                          y=body_mass_g,
                          col=.cluster)) +
@@ -607,18 +607,18 @@ that the data suggest that two clusters may be best, though the scaled data does
 show a very slightly larger kink at 3 clusters.
 
 ```{r peng3, echo=FALSE, fig.cap="Cluster size versus within cluster variation for Example \\@ref(exm:penguins). Scaled data left, unscaled data right"}
-peng_ss <- tibble(k=1:6) %>%
-  mutate(km = map(k, ~ kmeans(penguins %>%
+peng_ss <- tibble(k=1:6) |>
+  mutate(km = map(k, ~ kmeans(penguins |>
                                 select(flipper_length_mm, bill_length_mm, body_mass_g),
                               centers=., nstart=20)),
-         tidied = map(km, glance)) %>%
+         tidied = map(km, glance)) |>
   unnest(tidied)
-peng_ss_scaled <- tibble(k=1:6) %>%
-  mutate(km = map(k, ~ kmeans(penguins %>%
-                                select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
+peng_ss_scaled <- tibble(k=1:6) |>
+  mutate(km = map(k, ~ kmeans(penguins |>
+                                select(flipper_length_mm, bill_length_mm, body_mass_g) |>
                                 mutate(across(everything(), scale)),
                               centers=., nstart=20)),
-         tidied = map(km, glance)) %>%
+         tidied = map(km, glance)) |>
   unnest(tidied)
 
 g1 <- ggplot(peng_ss_scaled) +
@@ -631,15 +631,15 @@ g1+g2
 The code to produce the datasets for these charts is below:
 
 ```{r, eval=FALSE}
-peng.scale <- penguins %>%
-  select(flipper_length_mm, bill_length_mm, body_mass_g) %>%
+peng.scale <- penguins |>
+  select(flipper_length_mm, bill_length_mm, body_mass_g) |>
   mutate(across(everything(), scale))
 
-peng_ss <- tibble(k=1:6) %>%
+peng_ss <- tibble(k=1:6) |>
   mutate(
     km = map(k, ~ kmeans(peng.scale, centers=., nstart=20)),
     tidied = map(km, glance)
-  ) %>%
+  ) |>
   unnest(tidied)
 peng_ss
 ```
@@ -870,7 +870,7 @@ Figure \@ref(fig:silhouetterepub) shows the resulting plots. Points to note:
     the silhouette output from the `pam` object:
 
     ```{r}
-    repub.pam.2 %>% pluck('silinfo', 'widths')
+    repub.pam.2 |> pluck('silinfo', 'widths')
     ```
 
     We can see that Arkansas lies between cluster 1 and cluster 3,
@@ -881,9 +881,9 @@ If you wish to extract the silhouette information and plot yourself using `ggplo
 you can do so via the `pluck` function above:
 
 ```{r}
-repub.pam.2 %>% pluck('silinfo', 'widths') %>%
-  as.data.frame() %>%
-  rownames_to_column("State") %>%
+repub.pam.2 |> pluck('silinfo', 'widths') |>
+  as.data.frame() |>
+  rownames_to_column("State") |>
   ggplot() +
   geom_col(mapping = aes(y=as_factor(State), x=sil_width)) +
   labs(x="Silhouette width", y=NULL)
@@ -908,18 +908,18 @@ generate the clustering. (e.g. the squared Euclidean measure used in
 
 ```{r silhouettepeng, fig.cap="Silhouette plots of the Palmer Penguins data set"}
 set.seed(27)
-peng.scaled <- penguins %>%
-  select(flipper_length_mm, bill_length_mm, bill_depth_mm, body_mass_g) %>%
+peng.scaled <- penguins |>
+  select(flipper_length_mm, bill_length_mm, bill_depth_mm, body_mass_g) |>
   mutate(across(everything(), scale))
-peng.km.1 <- peng.scaled %>% kmeans(centers=3, nstart=20)
-peng.km.2 <- peng.scaled %>% kmeans(centers=4, nstart=20)
-peng.dist <- peng.scaled %>% dist(method='euclidean')
-peng.sil.1 <- peng.km.1 %>% pluck('cluster') %>% silhouette(dist=peng.dist)
-peng.sil.2 <- peng.km.2 %>% pluck('cluster') %>% silhouette(dist=peng.dist)
+peng.km.1 <- peng.scaled |> kmeans(centers=3, nstart=20)
+peng.km.2 <- peng.scaled |> kmeans(centers=4, nstart=20)
+peng.dist <- peng.scaled |> dist(method='euclidean')
+peng.sil.1 <- peng.km.1 |> pluck('cluster') |> silhouette(dist=peng.dist)
+peng.sil.2 <- peng.km.2 |> pluck('cluster') |> silhouette(dist=peng.dist)
 peng.sil <- bind_rows(
-    peng.sil.1[] %>% as.data.frame() %>% mutate(k='k=3'),
-    peng.sil.2[] %>% as.data.frame() %>% mutate(k='k=4')
-  ) %>%
+    peng.sil.1 |> as.data.frame() |> mutate(k='k=3'),
+    peng.sil.2 |> as.data.frame() |> mutate(k='k=4')
+  ) |>
   mutate(cluster = as.factor(cluster))
 
 ggplot(peng.sil) +

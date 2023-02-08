@@ -42,7 +42,7 @@ weight gain through the year (both measured in kilograms), and treatment
 \@ref(fig:goats) below.
 
 ```{r goats, echo=FALSE, message=FALSE, fig.cap="Scatterplot of weight gain against initial weight for goats on standard and intensive drenching regimens."}
-goats <- read_csv("../data/goats.csv") %>% mutate(Treatment = as_factor(Treatment))
+goats <- read_csv("../data/goats.csv") |> mutate(Treatment = as_factor(Treatment))
 ggplot(goats) +
   geom_point(aes(x=Wt.ini, y=Wt.gain, shape=Treatment, col=Treatment)) +
   labs(x = "Initial weight", y="Weight gain") +
