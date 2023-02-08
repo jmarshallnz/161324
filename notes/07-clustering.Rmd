@@ -931,13 +931,11 @@ Plots are given in Figure \@ref(fig:silhouettepeng). Points to note:
 
 -   We've scaled the penguins data prior to fitting k-means or computing distances.
 
--   The `silhouette` command utilises the `cluster` vector from the `peng.km.1` object,
+-   The `silhouette()` command utilises the `cluster` vector from the `peng.km.1` object,
     so we've used `pluck()` to pull it out.
 
--   Unfortunately, `silhouette()` returns a matrix with class `silhouette`. This cannot
-    be coerced directly into a `data.frame` as there is no `data.frame.silhouette()`
-    method provided by the `cluster` package. So we do a trick by using `[]` to return
-    a plain `matrix`, which can then be coerced into a `data.frame` for plotting.
+-   The `silhouette()` function returns a matrix with class `silhouette`. We coerce
+    this into a `data.frame` for plotting.
 
 -   We bind the two datasets together so we can plot them side by side with facetting.
 
