@@ -621,9 +621,9 @@ all |>
   group_by(Model) |>
   roc_curve(
     truth=Status,
-    estimate=.pred_Confirmed,
-    event_level='second'
-    ) %>%
+    .pred_Confirmed,
+    event_level = "second",
+    ) |>
   autoplot() +
   theme(legend.position='top')
 ```
@@ -732,7 +732,7 @@ both |>
   group_by(Model) |>
   roc_curve(
     truth=Status,
-    estimate=.pred_Confirmed,
+    .pred_Confirmed,
     event_level='second'
     ) |>
   autoplot() +
