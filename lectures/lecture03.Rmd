@@ -96,8 +96,8 @@ Sometimes missing values are implicit - they're not in the data at all. An examp
 `roll` data, where there were no entries where `Students` is 0.
 
 ```{r, message=FALSE}
-roll <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/roll.csv")
-roll %>% filter(Students == 0)
+roll <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/schools/roll.csv")
+roll |> filter(Students == 0)
 ```
 
 However, we know there are schools where there will be no students for a particular

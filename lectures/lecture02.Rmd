@@ -601,7 +601,7 @@ In RStudio, we do this using **joins** in `dplyr`.
 We'll use a couple of datasets from the Star Wars movies for this.
 
 ```{r, message=FALSE}
-characters <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/sw_characters.csv")
+characters <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/starwars/sw_characters.csv")
 characters
 ```
 
@@ -612,7 +612,7 @@ characters
 We'll use a couple of datasets from the Star Wars movies for this.
 
 ```{r, message=FALSE}
-films <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/sw_films.csv")
+films <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/starwars/sw_films.csv")
 films
 ```
 
