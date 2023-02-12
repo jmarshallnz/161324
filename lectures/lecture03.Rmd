@@ -298,7 +298,8 @@ husbands_na |> cor()
 ```
 
 ```{r}
-husbands_na %>% filter(complete.cases(.)) %>% cor()
+complete_rows <- complete.cases(husbands_na)
+husbands_na |> filter(complete_rows) |> cor()
 ```
 
 ---
