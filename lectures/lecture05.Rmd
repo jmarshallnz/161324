@@ -559,7 +559,7 @@ for these cross-validation estimates.
 ]
 
 --
-.left-code[**No real evidence to prefer any tree past 1 split!**
+.left-code[**No evidence to prefer trees past 1 split!**
 ]
 
 ---
