@@ -138,10 +138,10 @@ bugs <- tribble(~Insect, ~Colour, ~Stripe, ~Count,
         "Frongles", "Blue", 1, 200,
         "Frongles", "Blue", 2, 150,
         "Frongles", "Green", 1, 20,
-        "Frongles", "Green", 2, 30) %>%
-  mutate(Stripe = paste(Stripe, "stripe")) %>%
+        "Frongles", "Green", 2, 30) |>
+  mutate(Stripe = paste(Stripe, "stripe")) |>
   pivot_wider(names_from=c(Colour, Stripe), values_from=Count, names_sep=" ")
-bugs %>% knitr::kable()
+bugs |> knitr::kable()
 ```
 
 -   If class $j=1$ is Bellbugs, then:
@@ -204,7 +204,7 @@ knitr::include_graphics("graphics/bayes.jpg")
 Based on the same table:
 
 ```{r, echo=FALSE}
-bugs %>% knitr::kable()
+bugs |> knitr::kable()
 ```
 
 The probability that a blue 1 stripe is a Bellbug is given by:
@@ -218,7 +218,7 @@ $$\begin{aligned} P(\mbox{Bellbug} | \mbox{Blue, 1 stripe}) &= \frac{\pi_1 f_1(\
 Based on the same table:
 
 ```{r, echo=FALSE}
-bugs %>% knitr::kable()
+bugs |> knitr::kable()
 ```
 
 The probability that a green 2 stripe is a Frongle is given by:
@@ -270,11 +270,11 @@ $$\begin{aligned} P(\mbox{Frongle} | \mbox{Green, 2 stripe}) &= \frac{\pi_2 f_2(
 ## Example: Swiss banknotes
 
 ```{r, message=FALSE}
-swiss.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/swiss-train.csv") %>%
+swiss.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/swiss-train.csv") |>
   mutate(type = factor(type))
-swiss.test  <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/swiss-test.csv") %>%
+swiss.test  <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/swiss-test.csv") |>
   mutate(type = factor(type))
-swiss.train %>% slice_head(n=4)
+swiss.train |> slice_head(n=4)
 ```
 
 -   Training data contains 120 records, testing data 80 records, on:
@@ -532,7 +532,7 @@ title(expression(paste(pi[1],"=2",pi[2],"=2/3")),cex.main=1.5)
 ```{r swisslda, eval=FALSE}
 library(discrim)
 library(yardstick)
-swiss.lda <- discrim_linear() %>%
+swiss.lda <- discrim_linear() |>
   fit(type ~ ., data=swiss.train)
 swiss.lda
 ```
@@ -558,10 +558,10 @@ to the discriminants.
 ## LDA for forged banknotes
 
 ```{r swisslda2, eval=FALSE}
-swiss.pred <- swiss.lda %>%
+swiss.pred <- swiss.lda |>
   augment(new_data=swiss.test)
 swiss.pred
-swiss.pred %>%
+swiss.pred |>
   conf_mat(truth=type,
            estimate=.pred_class)
 ```
@@ -601,10 +601,10 @@ clearly awful.
 .right-plot[
 ```{r, echo=FALSE}
 find_lin_disc <- expand_grid(margin=c(6.5, 14),diagonal=seq(135,145,length=1000))
-lin_disc <- swiss.lda %>% augment(new_data=find_lin_disc) %>% 
-    mutate(diff = abs(.pred_forged - .pred_genuine)) %>%
-    group_by(margin) %>%
-    slice_min(diff, n=1) %>% ungroup()
+lin_disc <- swiss.lda |> augment(new_data=find_lin_disc) |> 
+    mutate(diff = abs(.pred_forged - .pred_genuine)) |>
+    group_by(margin) |>
+    slice_min(diff, n=1) |> ungroup()
 
 swiss.all <- bind_rows(list(test=swiss.test, train=swiss.train), .id='data')
 
@@ -621,21 +621,21 @@ ggplot(swiss.all) +
 ## LDA Dislikes Jam Donuts
 
 ```{r, echo=FALSE, message=FALSE}
-donut.train <- read.csv("../data/donut-train.csv") %>%
+donut.train <- read.csv("../data/donut-train.csv") |>
   mutate(Class = factor(Class, levels=1:2, labels=c("donut", "jam")))
 ```
 
 ```{r}
 donut.lda.fit <-
-  discrim_linear() %>%
-  fit(Class ~ ., data=donut.train) %>%
+  discrim_linear() |>
+  fit(Class ~ ., data=donut.train) |>
   augment(new_data=donut.train)
-donut.lda.fit %>%
+donut.lda.fit |>
   conf_mat(truth=Class,
            estimate=.pred_class)
 ```
 
-- Accuracy is just `r donut.lda.fit %>% accuracy(truth=Class, estimate=.pred_class) %>% pull(.estimate) %>% round(digits=2)`.
+- Accuracy is just `r donut.lda.fit |> accuracy(truth=Class, estimate=.pred_class) |> pull(.estimate) |> round(digits=2)`.
 
 - About as bad as tossing a coin. With home-ground advantage!
 ]
@@ -684,9 +684,9 @@ with `discrim_kernel()` from `tidykda`
 
 ```{r}
 library(tidykda)
-discrim_kernel() %>%
-  fit(Class ~ ., data=donut.train) %>%
-  augment(new_data=donut.train) %>%
+discrim_kernel() |>
+  fit(Class ~ ., data=donut.train) |>
+  augment(new_data=donut.train) |>
   conf_mat(truth=Class,
            estimate=.pred_class)
 ```
@@ -698,8 +698,8 @@ As expected, it does extremely well in this example.
 ```{r, echo=FALSE}
 ggplot(donut.train, mapping=aes(x=x1, y=x2, col=Class)) +
   geom_point(alpha=0.02) +
-  geom_density_2d(data=donut.train %>% filter(Class == "donut")) +
-  geom_density_2d(data=donut.train %>% filter(Class == "jam")) +
+  geom_density_2d(data=donut.train |> filter(Class == "donut")) +
+  geom_density_2d(data=donut.train |> filter(Class == "jam")) +
   scale_colour_manual(values = c(donut='tan', jam='red3'))
 ```
 ]
@@ -727,10 +727,10 @@ The `discrim_kernel()` function allows at most 3 numeric predictors.
 ## KDA for Swiss Banknotes
 
 ```{r}
-swiss.kda <- discrim_kernel() %>%
+swiss.kda <- discrim_kernel() |>
   fit(type ~ ., data=swiss.train)
-swiss.kda %>%
-  augment(new_data=swiss.test) %>%
+swiss.kda |>
+  augment(new_data=swiss.test) |>
   conf_mat(truth=type,
            estimate=.pred_class)
 ```
@@ -901,10 +901,10 @@ naive_Bayes(engine='naivebayes')
 ```{r}
 donut.nB <- naive_Bayes(
     engine="naivebayes"
-    ) %>%
+    ) |>
   fit(Class ~ ., data=donut.train)
-donut.nB %>%
-  augment(new_data=donut.train) %>%
+donut.nB |>
+  augment(new_data=donut.train) |>
   conf_mat(truth=Class,
            estimate=.pred_class)
 ```
@@ -926,8 +926,8 @@ all <- full_join(x1_dens %>% rename(x1=x, y1=y),
   mutate(z = y1*y2)
 g1 <- ggplot(donut.train, mapping=aes(x=x1, y=x2, col=Class)) +
   geom_point(alpha=.02) +
-  geom_contour(data=all %>% filter(Class=="donut"), aes(z=z)) +
-  geom_contour(data=all %>% filter(Class=="jam"), aes(z=z)) +
+  geom_contour(data=all |> filter(Class=="donut"), aes(z=z)) +
+  geom_contour(data=all |> filter(Class=="jam"), aes(z=z)) +
   scale_colour_manual(guide='none', values = c(donut='tan', jam='red3'))
 g2 <- ggplot(donut.train, mapping=aes(y=x2, col=Class)) +
   geom_density() +
@@ -948,12 +948,12 @@ g3 + plot_spacer() + g1 + g2 + plot_layout(nrow=2, ncol=2, widths=c(5, 1), heigh
 ## Naive bayes and Jam Donuts
 
 ```{r}
-donut.nB <- naive_Bayes() %>%
+donut.nB <- naive_Bayes() |>
   set_engine("naivebayes",        #<<
-             usekernel=FALSE) %>% #<<
+             usekernel=FALSE) |> #<<
   fit(Class ~ ., data=donut.train)
-donut.nB %>%
-  augment(new_data=donut.train) %>%
+donut.nB |>
+  augment(new_data=donut.train) |>
   conf_mat(truth=Class,
            estimate=.pred_class)
 ```
@@ -971,9 +971,9 @@ density is still much higher for jam.
 library(patchwork)
 
 # Now compute both and then calculate accordingly...
-mu_sd <- bind_rows(x1 = donut.nB$fit$tables$x1 %>% as.data.frame() %>% set_names("which", "Class", "value") ,
-          x2 = donut.nB$fit$tables$x2 %>% as.data.frame() %>% set_names("which", "Class", "value") ,
-          .id = "variable") %>%
+mu_sd <- bind_rows(x1 = donut.nB$fit$tables$x1 |> as.data.frame() |> set_names("which", "Class", "value") ,
+          x2 = donut.nB$fit$tables$x2 |> as.data.frame() |> set_names("which", "Class", "value") ,
+          .id = "variable") |>
   pivot_wider(names_from=which, values_from=value)
 
 dens_x1 <- tibble(x1 = seq(min(donut.train$x1),
@@ -989,8 +989,8 @@ dens_all <- dens_x1 %>% full_join(dens_x2, by="Class") %>% mutate(z = y.x*y.y, .
 
 g1 <- ggplot(donut.train, mapping=aes(x=x1, y=x2, col=Class)) +
   geom_point(alpha=.02) +
-  geom_contour(data=dens_all %>% filter(Class=="donut"), aes(z=z)) +
-  geom_contour(data=dens_all %>% filter(Class=="jam"), aes(z=z)) +
+  geom_contour(data=dens_all |> filter(Class=="donut"), aes(z=z)) +
+  geom_contour(data=dens_all |> filter(Class=="jam"), aes(z=z)) +
   scale_colour_manual(guide='none', values = c(donut='tan', jam='red3'))
 g2 <- ggplot(donut.train, mapping=aes(y=x2, col=Class)) +
   geom_path(data=dens_x2, mapping=aes(x=y)) +

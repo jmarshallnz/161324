@@ -273,8 +273,8 @@ We get a table of:
 ```{r wagepred, eval=FALSE}
 pred <- predict(wage.lm,
                 newdata=wage.test)
-wage.test %>%
-  bind_cols(.pred=pred) %>% #<<
+wage.test |>
+  bind_cols(.pred=pred) |> #<<
   select(WAGE, .pred, everything())
 ```
 
@@ -298,8 +298,8 @@ a new column.
 pred <- predict(wage.lm,
                 newdata=wage.test,
                 interval="prediction")
-wage.test %>%
-  bind_cols(pred) %>%
+wage.test |>
+  bind_cols(pred) |>
   select(WAGE, fit, lwr, upr,
          everything())
 ```
@@ -324,7 +324,7 @@ for `fit`, `lwr` and `upr`.
 library(broom)
 augment(wage.lm,
         newdata=wage.test,
-        interval="prediction") %>%
+        interval="prediction") |>
   select(WAGE, .fitted,
          .lower, .upper,
          everything())
@@ -347,7 +347,7 @@ named `.fitted`).
 ```{r wagepredplot, eval=FALSE}
 augment(wage.lm,
         newdata=wage.test,
-        interval="prediction") %>%
+        interval="prediction") |>
   ggplot() +
   geom_linerange(
     mapping=aes(x=.fitted,
@@ -536,8 +536,8 @@ sim.test  <- testing(split)
 ## Simulation study on the misspecified model
 
 ```{r simplot1, eval=FALSE}
-sim.train %>%
-  pivot_longer(c(x1,x2)) %>%
+sim.train |>
+  pivot_longer(c(x1,x2)) |>
   ggplot() +
   geom_point(aes(x=value, y=y)) +
   facet_wrap(vars(name), ncol=1)
@@ -568,8 +568,8 @@ We know that `model1` will be unbiased, while `model2` will be biased as it is m
 And, as expected, `model1` has a better fit overall, a higher $R^2$.
 
 ```{r}
-glance(model1) %>% pull(r.squared)
-glance(model2) %>% pull(r.squared)
+glance(model1) |> pull(r.squared)
+glance(model2) |> pull(r.squared)
 ```
 
 ---
@@ -587,7 +587,7 @@ sim.pred <-
                      newdata = sim.test,
                      interval="prediction"),
     .id="model"
-  ) %>%
+  ) |>
   mutate(pred_length = .upper - .lower)
 
 ggplot(sim.pred) +
@@ -619,9 +619,9 @@ options(pillar.sigfig = 6)
 ```
 
 ```{r}
-sim.pred %>%
-  group_by(model) %>%
-  summarise(MSE = mean((y - .fitted)^2)) %>%
+sim.pred |>
+  group_by(model) |>
+  summarise(MSE = mean((y - .fitted)^2)) |>
   arrange(MSE)
 ```
 
@@ -737,11 +737,11 @@ model should be preferred:
 
 ```{r}
 wage.lm2 <- lm(WAGE ~ . - RACE, data=wage.train)
-wage.train %>%
+wage.train |>
   bind_cols(
     model1 = predict(wage.lm),
     model2 = predict(wage.lm2)
-  ) %>%
+  ) |>
   summarise(MSE.1 = mean((model1 - WAGE)^2), MSE.2 = mean((model2 - WAGE)^2))
 ```
 
@@ -753,11 +753,11 @@ If we do prediction on the **test** data, we find that second model should be pr
 
 ```{r}
 wage.lm2 <- lm(WAGE ~ . - RACE, data=wage.train)
-wage.test %>% #<<
+wage.test |> #<<
   bind_cols(
     model1 = predict(wage.lm, newdata=wage.test), #<<
     model2 = predict(wage.lm2, newdata=wage.test) #<<
-  ) %>%
+  ) |>
   summarise(MSE.1 = mean((model1 - WAGE)^2), MSE.2 = mean((model2 - WAGE)^2))
 ```
 
@@ -893,12 +893,12 @@ options(pillar.sigfig = 5)
 ```
 
 ```{r}
-wage.test %>%
+wage.test |>
   bind_cols(
     wage.lm = predict(wage.lm, newdata=wage.test),
     wage.lm2 = predict(wage.lm2, newdata=wage.test),
     wage.lm.step = predict(wage.lm.step, newdata=wage.test)
-  ) %>%
+  ) |>
   summarise(
     across(starts_with("wage.lm"), ~ mean((. - WAGE)^2))
     )

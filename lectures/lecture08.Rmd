@@ -30,9 +30,9 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
 theme_set(theme_minimal())
 
-swiss.train <- read_csv("../data/swiss-train.csv") %>%
+swiss.train <- read_csv("../data/swiss-train.csv") |>
   mutate(type = factor(type))
-swiss.test <- read_csv("../data/swiss-test.csv") %>%
+swiss.test <- read_csv("../data/swiss-test.csv") |>
   mutate(type = factor(type))
 ```
 
@@ -259,10 +259,10 @@ beta1 = round(coef(swiss.glm.1)[2], 4)
 .right-plot[
 ```{r, echo=FALSE}
 new_data <- tibble(margin = seq(6,12.5,length=400))
-swiss.pred <- swiss.glm.1 %>% broom::augment(newdata=new_data,
+swiss.pred <- swiss.glm.1 |> broom::augment(newdata=new_data,
                         type.predict='response')
-xint <- swiss.pred %>% mutate(lt = .fitted-0.5) %>%
-  slice_min(abs(lt), n=2) %>% lm(margin ~ lt, data=.) %>%
+xint <- swiss.pred |> mutate(lt = .fitted-0.5) |>
+  slice_min(abs(lt), n=2) |> lm(margin ~ lt, data=_) |>
   predict(newdata=data.frame(lt=0))
 
 ggplot(swiss.pred) +
@@ -394,9 +394,9 @@ summary(swiss.glm.1)
 
 .right-plot-narrow[
 ```{r, echo=FALSE, fig.dim=c(3.2,4.5), message=FALSE}
-swiss.glm.1 %>% broom::augment() %>%
+swiss.glm.1 |> broom::augment() |>
   mutate(.pred = if_else(.fitted > 0, 'genuine', 'forged'),
-         correct = .pred == type) %>%
+         correct = .pred == type) |>
   ggplot() +
   geom_quasirandom(mapping=aes(x=type, y=margin, col=type, alpha=correct)) +
   scale_alpha_manual(values = c(`TRUE` = 1, `FALSE`=0.4)) +
@@ -452,9 +452,9 @@ where:
 
 .right-plot[
 ```{r swiss2plot, echo=FALSE}
-swiss.glm.2 %>% broom::augment() %>%
+swiss.glm.2 |> broom::augment() |>
   mutate(.pred = if_else(.fitted > 0, 'genuine', 'forged'),
-         correct = .pred == type) %>%
+         correct = .pred == type) |>
   ggplot() +
   geom_point(
     mapping=aes(x=margin, y=diagonal,
@@ -499,13 +499,13 @@ swiss.glm.2 %>% broom::augment() %>%
 
 ```{r swisspred, eval=FALSE}
 library(broom)
-swiss.glm.2 %>%
-  augment(newdata = swiss.test) %>%
+swiss.glm.2 |>
+  augment(newdata = swiss.test) |>
   slice_head(n=3)
 
-swiss.glm.2 %>%
+swiss.glm.2 |>
   augment(newdata = swiss.test,
-          type.predict = 'response') %>%
+          type.predict = 'response') |>
   slice_head(n=3)
 ```
 
@@ -527,8 +527,8 @@ swiss.glm.2 %>%
 
 ```{r swisspred2, eval=FALSE}
 swiss.glm.pred <-
-  swiss.glm.2 %>%
-  augment(newdata = swiss.test) %>%
+  swiss.glm.2 |>
+  augment(newdata = swiss.test) |>
   mutate(
     .pred_class = factor(
       .fitted > 0,
@@ -561,14 +561,14 @@ way around.
 library(parsnip)
 library(yardstick)
 swiss.glm.pred <-
-  logistic_reg() %>%
-  fit(type ~ ., data=swiss.train) %>%
+  logistic_reg() |>
+  fit(type ~ ., data=swiss.train) |>
   augment(new_data=swiss.test)
 
-swiss.glm.pred %>%
+swiss.glm.pred |>
   slice_head(n=3)
 
-swiss.glm.pred %>%
+swiss.glm.pred |>
   conf_mat(truth=type,
            estimate=.pred_class)
 ```
@@ -610,7 +610,7 @@ that are more likely in confirmed cases than those not a case.
 We read the data into R and process it a little using:
 
 ```{r, message=FALSE}
-covid_all <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/covid19/symptoms.csv") %>%
+covid_all <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/covid19/symptoms.csv") |>
   mutate(across(everything(), as.factor), Status = fct_relevel(Status, "Not_a_case"))
 ```
 
@@ -637,13 +637,13 @@ Our goal will be to predict the `Status` of an individual, given their symptoms.
 ## Symptoms of COVID-19 cases in New Zealand
 
 ```{r symptoms_plot, eval=FALSE}
-covid.train %>%
-  select(-AgeGrp, -Month, -Sex) %>%
-  pivot_longer(-Status) %>%
-  group_by(Status, name, value) %>%
-  summarise(n=n()) %>%
-  mutate(p=n/sum(n)) %>%
-  filter(value != "No") %>%
+covid.train |>
+  select(-AgeGrp, -Month, -Sex) |>
+  pivot_longer(-Status) |>
+  group_by(Status, name, value) |>
+  summarise(n=n()) |>
+  mutate(p=n/sum(n)) |>
+  filter(value != "No") |>
   ggplot() +
   geom_col(
     mapping=aes(
@@ -670,11 +670,11 @@ covid.train %>%
 ## Symptoms of COVID-19 cases in New Zealand
 
 ```{r covid_lr, eval=FALSE}
-covid.lr <- logistic_reg() %>%
+covid.lr <- logistic_reg() |>
   fit(Status ~ ., data=covid.train)
 
-covid.lr %>%
-  tidy() %>%
+covid.lr |>
+  tidy() |>
   print(n=100)
 ```
 
@@ -698,8 +698,8 @@ also associated with Gastro symptoms.**
 ## Symptoms of COVID-19 cases in New Zealand
 
 ```{r}
-covid.pred <- covid.lr %>% augment(covid.test)
-covid.pred %>%
+covid.pred <- covid.lr |> augment(covid.test)
+covid.pred |>
   conf_mat(truth=Status, estimate=.pred_class)
 ```
 
@@ -757,7 +757,7 @@ and specificity change as the threshold changes.
 
 ```{r roc, eval=FALSE}
 covid.roc <-
-  covid.pred %>%
+  covid.pred |>
   roc_curve(Status,
             .pred_Confirmed,
             event_level='second')
@@ -778,7 +778,7 @@ i.e. correctly identify more cases, but misclassify more non-cases.
 .right-plot[
 ```{r, echo=FALSE}
 covid.roc <-
-  covid.pred %>%
+  covid.pred |>
   roc_curve(Status,
             .pred_Confirmed,
             event_level='second')
@@ -786,8 +786,8 @@ ggplot(covid.roc,
        mapping = aes(x=1-specificity, y=sensitivity)) +
   geom_line() +
   geom_abline(linetype='dotted') +
-  geom_point(data=covid.roc %>% slice_min(abs(.threshold-.5)), size=3) +
-  geom_text(data=covid.roc %>% slice_min(abs(.threshold-.5)),
+  geom_point(data=covid.roc |> slice_min(abs(.threshold-.5)), size=3) +
+  geom_text(data=covid.roc |> slice_min(abs(.threshold-.5)),
             mapping=aes(label=0.5),
             hjust=0, nudge_x=0.03) +
   guides(col='none') +
@@ -804,7 +804,7 @@ There's no 'correct' threshold, but one simple criteria is to
 maximise the sum of the sensitivity and specificities.
 
 ```{r}
-covid.roc %>%
+covid.roc |>
   slice_max(sensitivity+specificity,
             n=1)
 ```
@@ -818,9 +818,9 @@ the plot (100% sensitive and specific).
 ggplot(covid.roc, mapping=aes(x=1-specificity,
                 y=sensitivity)) +
   geom_line() +
-  geom_point(data=covid.roc %>% slice_max(sensitivity+specificity, n=1),
+  geom_point(data=covid.roc |> slice_max(sensitivity+specificity, n=1),
              size=3) +
-  geom_text(data=covid.roc %>% slice_max(sensitivity+specificity, n=1),
+  geom_text(data=covid.roc |> slice_max(sensitivity+specificity, n=1),
           mapping=aes(label=round(.threshold, 3)),
           hjust=1, nudge_x=-0.03) +
   geom_abline(linetype='dotted') +
@@ -833,12 +833,12 @@ ggplot(covid.roc, mapping=aes(x=1-specificity,
 ## Results with the alternate threshold
 
 ```{r, warning=FALSE}
-covid.pred2 <- covid.pred %>%
+covid.pred2 <- covid.pred |>
   mutate(.pred_class_alt = 
            factor(.pred_Confirmed > 0.185,
                   levels = c(FALSE, TRUE),
                   labels = c("Not_a_case", "Confirmed")))
-covid.pred2 %>%
+covid.pred2 |>
   conf_mat(truth=Status, estimate=.pred_class_alt)
 ```
 
@@ -862,8 +862,8 @@ cost_fun <- function(truth, prediction) {
             TRUE ~ 0)
 }
 
-covid.pred2 %>% mutate(lr = cost_fun(Status, .pred_class),
-                       lr_alt = cost_fun(Status, .pred_class_alt)) %>%
+covid.pred2 |> mutate(lr = cost_fun(Status, .pred_class),
+                       lr_alt = cost_fun(Status, .pred_class_alt)) |>
   summarise(across(starts_with('lr'), sum))
 ```
 
@@ -944,9 +944,9 @@ knitr::include_graphics('graphics/chianti.jpg')
 ## Computerized Wine Tasting
 
 ```{r, message=FALSE}
-wine.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-train.csv") %>%
+wine.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-train.csv") |>
   mutate(Cultivar = factor(Cultivar))
-wine.test <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-test.csv") %>%
+wine.test <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/wine-test.csv") |>
   mutate(Cultivar = factor(Cultivar))
 wine.train
 ```
@@ -957,11 +957,11 @@ wine.train
 ## Computerized Wine Tasting
 
 ```{r winemn, results='hide'}
-wine.mn <- multinom_reg() %>%
+wine.mn <- multinom_reg() |>
   fit(Cultivar ~ ., data=wine.train)
 wine.mn
-wine.mn %>%
-  augment(new_data=wine.test) %>%
+wine.mn |>
+  augment(new_data=wine.test) |>
   conf_mat(
     truth=Cultivar,
     estimate=.pred_class
@@ -970,11 +970,11 @@ wine.mn %>%
 
 ```{r, echo=FALSE}
 get_perf <- function(data, true, pred) {
-  data %>% summarise(wrong = sum({{pred}} != {{true}}), total = n(),
+  data |> summarise(wrong = sum({{pred}} != {{true}}), total = n(),
                       perc = round(wrong/total*100,1))
 }
-perf.mn <- wine.mn %>%
-  augment(new_data=wine.test) %>%
+perf.mn <- wine.mn |>
+  augment(new_data=wine.test) |>
   get_perf(Cultivar, .pred_class)
 ```
 
@@ -1015,16 +1015,16 @@ to do this directly with `multinom`.
 Once we know which variables to use from the step wise procedure, we can re-fit using `tidymodels`.
 
 ```{r winerefit}
-wine.mn2.refit <- multinom_reg() %>%
+wine.mn2.refit <- multinom_reg() |>
   fit(Cultivar ~ Alcohol + Flav + Hue + Proline, data=wine.train)
-wine.mn2.pred <- wine.mn2.refit %>%
+wine.mn2.pred <- wine.mn2.refit |>
   augment(new_data = wine.test)
-wine.mn2.pred %>%
+wine.mn2.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
 ```{r, echo=FALSE}
-perf.mn2 <- wine.mn2.pred %>% get_perf(Cultivar, .pred_class)
+perf.mn2 <- wine.mn2.pred |> get_perf(Cultivar, .pred_class)
 ```
 
 The misclassification rate of the simpler model is $`r perf.mn2$wrong`/`r perf.mn2$total` \approx `r perf.mn2$perc`\%$.

@@ -31,20 +31,20 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
 theme_set(theme_minimal())
 
-swiss.train <- read_csv("../data/swiss-train.csv") %>%
+swiss.train <- read_csv("../data/swiss-train.csv") |>
   mutate(type = factor(type))
-swiss.test <- read_csv("../data/swiss-test.csv") %>%
+swiss.test <- read_csv("../data/swiss-test.csv") |>
   mutate(type = factor(type))
 
-wine.train <- read_csv("../data/wine-train.csv") %>%
+wine.train <- read_csv("../data/wine-train.csv") |>
   mutate(Cultivar = factor(Cultivar))
-wine.test <- read_csv("../data/wine-test.csv") %>%
+wine.test <- read_csv("../data/wine-test.csv") |>
   mutate(Cultivar = factor(Cultivar))
 
-donut.train <- read_csv("../data/donut-train.csv") %>%
+donut.train <- read_csv("../data/donut-train.csv") |>
   mutate(Class = factor(Class))
 
-covid_all <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/covid19/symptoms.csv") %>%
+covid_all <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/covid19/symptoms.csv") |>
   mutate(across(everything(), as.factor), Status = fct_relevel(Status, "Not_a_case"))
 
 set.seed(3)
@@ -124,11 +124,11 @@ Thus, we need only concern ourselves with determining $k$.
 ```{r, message=FALSE}
 library(parsnip)
 library(yardstick)
-wine.knn1 <- nearest_neighbor(mode="classification", neighbors = 1) %>%
+wine.knn1 <- nearest_neighbor(mode="classification", neighbors = 1) |>
   fit(Cultivar ~ ., data=wine.train)
-wine.knn1.pred <- wine.knn1 %>%
+wine.knn1.pred <- wine.knn1 |>
   augment(new_data = wine.test)
-wine.knn1.pred %>%
+wine.knn1.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
@@ -139,11 +139,11 @@ With $k=1$ we find 9 wines get misclassified - all of Cultivar B.
 ## K-Nearest neighbours for the Wine data
 
 ```{r}
-wine.knn2 <- nearest_neighbor(mode="classification", neighbors = 20) %>%
+wine.knn2 <- nearest_neighbor(mode="classification", neighbors = 20) |>
   fit(Cultivar ~ ., data=wine.train)
-wine.knn2.pred <- wine.knn2 %>%
+wine.knn2.pred <- wine.knn2 |>
   augment(new_data = wine.test)
-wine.knn2.pred %>%
+wine.knn2.pred |>
   conf_mat(truth=Cultivar, estimate=.pred_class)
 ```
 
@@ -251,13 +251,13 @@ So $x=3.3$ is the best split.
 ```{r}
 swiss.rp <- decision_tree(
   mode = 'classification'
-  ) %>%
+  ) |>
   fit(type ~ ., data=swiss.train)
 
-swiss.rp.pred <- swiss.rp %>%
+swiss.rp.pred <- swiss.rp |>
   augment(swiss.test)
 
-swiss.rp.pred %>%
+swiss.rp.pred |>
   conf_mat(truth=type,
            estimate=.pred_class)
 ```
@@ -265,11 +265,11 @@ swiss.rp.pred %>%
 
 .right-plot[
 ```{r, echo=FALSE, message=FALSE}
-swiss.rp %>%
-  extract_fit_engine() %>%
+swiss.rp |>
+  extract_fit_engine() |>
   plot(margin=0.1)
-swiss.rp %>%
-  extract_fit_engine() %>%
+swiss.rp |>
+  extract_fit_engine() |>
   text()
 ```
 ]
@@ -283,13 +283,13 @@ swiss.rp %>%
 swiss.rp2 <- decision_tree(
   mode='classification',
   min_n=7
-  ) %>%
+  ) |>
   fit(type ~ ., data=swiss.train)
 
-swiss.rp2.pred <- swiss.rp2 %>%
+swiss.rp2.pred <- swiss.rp2 |>
   augment(swiss.test)
 
-swiss.rp2.pred %>%
+swiss.rp2.pred |>
   conf_mat(truth=type,
            estimate=.pred_class)
 ```
@@ -297,8 +297,8 @@ swiss.rp2.pred %>%
 
 .right-plot[
 ```{r, echo=FALSE, message=FALSE}
-swiss.rp2 %>% extract_fit_engine() %>% plot(margin=0.1)
-swiss.rp2 %>% extract_fit_engine() %>% text()
+swiss.rp2 |> extract_fit_engine() |> plot(margin=0.1)
+swiss.rp2 |> extract_fit_engine() |> text()
 ```
 ]
 
@@ -311,13 +311,13 @@ swiss.rp2 %>% extract_fit_engine() %>% text()
 swiss.rp2 <- decision_tree(
   mode='classification',
   min_n=7
-  ) %>%
+  ) |>
   fit(type ~ ., data=swiss.train)
 
-swiss.rp2.pred <- swiss.rp2 %>%
+swiss.rp2.pred <- swiss.rp2 |>
   augment(swiss.test)
 
-swiss.rp2.pred %>%
+swiss.rp2.pred |>
   conf_mat(truth=type,
            estimate=.pred_class)
 ```
@@ -330,7 +330,7 @@ swiss.grid <- expand_grid(margin=seq(7.1,12.8,by=0.05),
                           diagonal=seq(137.5, 142.5, by=0.05))
 
 ggplot(swiss.all) +
-  geom_tile(data=swiss.rp2 %>% augment(swiss.grid),
+  geom_tile(data=swiss.rp2 |> augment(swiss.grid),
             mapping=aes(x=margin, y=diagonal, fill=.pred_class), alpha=0.3) +
   geom_point(mapping=aes(x=margin, y=diagonal, col=type, alpha=data)) +
   scale_alpha_manual(values = c(test=1, train=0.3)) +
@@ -476,17 +476,17 @@ mlp(mode='classification', hidden_units=2, penalty=0.1, epochs=1000)
 
 ```{r, message=FALSE}
 library(recipes)
-swiss.rec <- recipe(type ~ ., data=swiss.train) %>%
-  step_normalize(all_numeric_predictors()) %>%
+swiss.rec <- recipe(type ~ ., data=swiss.train) |>
+  step_normalize(all_numeric_predictors()) |>
   prep(swiss.train)
 
 set.seed(2001)
-swiss.nn <- mlp(mode='classification', hidden_units=2, epochs=500) %>%
+swiss.nn <- mlp(mode='classification', hidden_units=2, epochs=500) |>
   fit(type ~ ., data=bake(swiss.rec, swiss.train))
 
-swiss.nn.pred <- swiss.nn %>% augment(new_data=bake(swiss.rec, swiss.test))
+swiss.nn.pred <- swiss.nn |> augment(new_data=bake(swiss.rec, swiss.test))
 
-swiss.nn.pred %>% conf_mat(truth=type, estimate=.pred_class)
+swiss.nn.pred |> conf_mat(truth=type, estimate=.pred_class)
 ```
 
 ---
@@ -503,13 +503,13 @@ class: middle, inverse
 ## Symptoms of COVID-19 cases in New Zealand
 
 ```{r symptoms_plot, eval=FALSE}
-covid.train %>%
-  select(-AgeGrp, -Month, -Sex) %>%
-  pivot_longer(-Status) %>%
-  group_by(Status, name, value) %>%
-  summarise(n=n()) %>%
-  mutate(p=n/sum(n)) %>%
-  filter(value != "No") %>%
+covid.train |>
+  select(-AgeGrp, -Month, -Sex) |>
+  pivot_longer(-Status) |>
+  group_by(Status, name, value) |>
+  summarise(n=n()) |>
+  mutate(p=n/sum(n)) |>
+  filter(value != "No") |>
   ggplot() +
   geom_col(
     mapping=aes(
@@ -539,14 +539,14 @@ covid.train %>%
 covid.rp <- decision_tree(
   mode='classification',
   cost_complexity=0.001
-) %>%
+) |>
   fit(Status ~ ., data=covid.train)
 
 covid.rp.pred <- 
-  covid.rp %>%
+  covid.rp |>
   augment(covid.test)
 
-covid.rp.pred %>%
+covid.rp.pred |>
   conf_mat(truth=Status,
            estimate=.pred_class)
 ```
@@ -555,11 +555,11 @@ covid.rp.pred %>%
 .right-plot[
 ```{r, echo=FALSE, message=FALSE}
 par(mar=c(0,0,0,0))
-covid.rp %>%
-  extract_fit_engine() %>%
+covid.rp |>
+  extract_fit_engine() |>
   plot(margin=0.1)
-covid.rp %>%
-  extract_fit_engine() %>%
+covid.rp |>
+  extract_fit_engine() |>
   text(cex=0.4)
 ```
 ]
@@ -570,13 +570,13 @@ covid.rp %>%
 
 ```{r}
 set.seed(1234)
-covid.rf <- rand_forest(mode='classification', mtry=2) %>%
+covid.rf <- rand_forest(mode='classification', mtry=2) |>
   fit(Status ~ ., data=covid.train)
 
-covid.rf.pred <- covid.rf %>%
+covid.rf.pred <- covid.rf |>
   augment(covid.test)
 
-covid.rf.pred %>%
+covid.rf.pred |>
   conf_mat(truth=Status,
            estimate=.pred_class)
 ```
@@ -587,14 +587,14 @@ covid.rf.pred %>%
 
 ```{r}
 set.seed(1234)
-covid.nn <- mlp(mode='classification', hidden_units=7, penalty = 0.001, epochs=1000) %>%
+covid.nn <- mlp(mode='classification', hidden_units=7, penalty = 0.001, epochs=1000) |>
   fit(Status ~ ., data=covid.train)
-covid.nn %>% pluck('fit', 'convergence')
+covid.nn |> pluck('fit', 'convergence')
 
-covid.nn.pred <- covid.nn %>%
+covid.nn.pred <- covid.nn |>
   augment(covid.test)
 
-covid.nn.pred %>%
+covid.nn.pred |>
   conf_mat(truth=Status,
            estimate=.pred_class)
 ```
@@ -602,9 +602,9 @@ covid.nn.pred %>%
 ---
 
 ```{r, echo=FALSE}
-covid.lr <- logistic_reg() %>%
+covid.lr <- logistic_reg() |>
   fit(Status ~ ., data=covid.train)
-covid.lr.pred <- covid.lr %>% augment(covid.test)
+covid.lr.pred <- covid.lr |> augment(covid.test)
 ```
 
 .left-code[
@@ -617,8 +617,8 @@ all <- bind_rows(
        tree=covid.rp.pred,
        nnet=covid.nn.pred),
   .id="Model")
-all %>%
-  group_by(Model) %>%
+all |>
+  group_by(Model) |>
   roc_curve(
     truth=Status,
     estimate=.pred_Confirmed,
@@ -677,14 +677,14 @@ We use `step_smotenc()` from the `themis` package which handles categorical pred
 ```{r, message=FALSE}
 library(themis)
 set.seed(1234)
-rec <- recipe(Status ~ ., data=covid.train) %>%
+rec <- recipe(Status ~ ., data=covid.train) |>
   step_smotenc(Status,
                over_ratio = 1,
-               skip=TRUE) %>%
+               skip=TRUE) |>
   prep(covid.train)
 
-covid.balanced <- rec %>% bake(new_data=NULL)
-covid.balanced %>% count(Status)
+covid.balanced <- rec |> bake(new_data=NULL)
+covid.balanced |> count(Status)
 ```
 ]
 
@@ -707,14 +707,14 @@ set.seed(1234)
 covid.rf2 <-
   rand_forest(
     mode='classification',
-    mtry=2) %>%
+    mtry=2) |>
   fit(Status ~ .,
       data=covid.balanced)
 
-covid.rf2.pred <- covid.rf2 %>%
-  augment(rec %>% bake(covid.test))
+covid.rf2.pred <- covid.rf2 |>
+  augment(rec |> bake(covid.test))
 
-covid.rf2.pred %>%
+covid.rf2.pred |>
   conf_mat(truth=Status,
            estimate=.pred_class)
 ```
@@ -728,13 +728,13 @@ both <- bind_rows(
        unbalanced=covid.rf.pred),
   .id="Model")
 
-both %>%
-  group_by(Model) %>%
+both |>
+  group_by(Model) |>
   roc_curve(
     truth=Status,
     estimate=.pred_Confirmed,
     event_level='second'
-    ) %>%
+    ) |>
   autoplot() +
   theme(legend.position='top')
 ```

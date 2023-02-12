@@ -68,7 +68,7 @@ husbands
 If we didn't notice this, summaries such as means will be wrong:
 
 ```{r}
-husbands %>% summarise(W.MeanAge = mean(W.Age))
+husbands |> summarise(W.MeanAge = mean(W.Age))
 ```
 
 Clearly the mean age of the wives here is not 1492 years old!
@@ -82,8 +82,8 @@ We can fix this with the `replace_with_na` function from the `naniar` package:
 ```{r, message=FALSE, skimr_include_summary = FALSE}
 library(naniar)
 library(skimr)
-husbands_na <- husbands %>% replace_with_na(replace = list(W.Age = 9999, H.Age.Marriage = 9999))
-husbands_na %>% skim()
+husbands_na <- husbands |> replace_with_na(replace = list(W.Age = 9999, H.Age.Marriage = 9999))
+husbands_na |> skim()
 ```
 
 ---
@@ -110,7 +110,7 @@ combination of `Gender`, `EthnicGroup` and `Level`.
 As an example, consider `Freyberg Community School` new entrants:
 
 ```{r}
-freyberg_new_entrants <- roll %>% filter(School == "Freyberg Community School",
+freyberg_new_entrants <- roll |> filter(School == "Freyberg Community School",
                                          Level == "Year 1")
 freyberg_new_entrants
 ```
@@ -122,7 +122,7 @@ freyberg_new_entrants
 The `complete` function is useful for adding rows for the missing combinations of variables:
 
 ```{r}
-freyberg_new_entrants %>% complete(School, Level, Gender, EthnicGroup)
+freyberg_new_entrants |> complete(School, Level, Gender, EthnicGroup)
 ```
 
 ---
@@ -132,7 +132,7 @@ freyberg_new_entrants %>% complete(School, Level, Gender, EthnicGroup)
 In this case, we know the `Students` entry should be 0, so we can add that in:
 
 ```{r}
-freyberg_new_entrants %>% complete(School, Level, Gender, EthnicGroup,
+freyberg_new_entrants |> complete(School, Level, Gender, EthnicGroup,
                                    fill = list(Students = 0))
 ```
 
@@ -281,7 +281,7 @@ There are generally two approaches:
 
 ## Working with complete cases
 
-- The `complete.cases` command is useful to use inside `filter` to just get the complete rows.
+- The `complete.cases` command is useful to use alongside a `filter` to just get the complete rows.
 
 - You might want to first use `select` to remove columns for which lots of data are missing.
 
@@ -294,7 +294,7 @@ There are generally two approaches:
 Suppose we want to find the correlation between the various columns in `husbands`:
 
 ```{r}
-husbands_na %>% cor()
+husbands_na |> cor()
 ```
 
 ```{r}
@@ -341,10 +341,10 @@ The `impute_mean()` function in `naniar`
 can do mean imputation:
 
 ```{r meanimpute, eval=FALSE}
-husbands_na %>%
+husbands_na |>
   mutate(
     W.Age.Imp = impute_mean(W.Age) #<<
-    ) %>%
+    ) |>
   ggplot() +
   geom_point(
     mapping = aes(
@@ -429,7 +429,7 @@ Gower's distance is then the sum of these two.
 
 ```{r, message=FALSE}
 library(VIM)
-husbands_na %>% kNN(k=5)
+husbands_na |> kNN(k=5)
 ```
 
 By default `kNN` gives additional columns `W.Age_imp` indiciating whether or not they were imputed.
@@ -441,8 +441,8 @@ By default `kNN` gives additional columns `W.Age_imp` indiciating whether or not
 
 ```{r knn, eval=FALSE}
 library(VIM)
-husbands_na %>%
-  kNN(k=5) %>% #<<
+husbands_na |>
+  kNN(k=5) |> #<<
   ggplot() +
   geom_point(
     mapping = aes(
@@ -494,7 +494,7 @@ tribble(~x, ~z,
         3, NA,
         5, 10,
         8, 18,
-        12, 26) %>% knitr::kable()
+        12, 26) |> knitr::kable()
 ```
 
 Find k-nearest neighbour imputations for the `NA` value using $k=1,2,3,4$.

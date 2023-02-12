@@ -425,24 +425,24 @@ to the complexity of the model.
 ## Neural Networks for the Wage Data
 .left-code-wide[
 ```{r wagenetsumm, eval=FALSE}
-wage.test %>%
+wage.test |>
   bind_cols(
     nn.1 = predict(wage.nn.1, newdata=wage.test),
     nn.2 = predict(wage.nn.2, newdata=wage.test),
     nn.3 = predict(wage.nn.3, newdata=wage.test),
     nn.4 = predict(wage.nn.4, newdata=wage.test),
-  ) %>%
+  ) |>
   summarise(
     across(starts_with('nn.'), ~mean((. - WAGE)^2)))
 ```
 ```{r wagenetsumm2, eval=FALSE}
-wage.train %>%
+wage.train |>
   bind_cols(
     nn.1 = predict(wage.nn.1, newdata=wage.train),
     nn.2 = predict(wage.nn.2, newdata=wage.train),
     nn.3 = predict(wage.nn.3, newdata=wage.train),
     nn.4 = predict(wage.nn.4, newdata=wage.train),
-  ) %>%
+  ) |>
   summarise(
     across(starts_with('nn.'), ~mean((. - WAGE)^2)))
 ```
@@ -548,10 +548,10 @@ vacc
 
 ## Example: COVID-19 vaccinations
 
-Unfortunately, the `VaccRate` data has become corrupted, and `r vacc %>% filter(is.na(VaccRate)) %>% nrow()` SA2s are missing `VaccRate`:
+Unfortunately, the `VaccRate` data has become corrupted, and `r vacc |> filter(is.na(VaccRate)) |> nrow()` SA2s are missing `VaccRate`:
 
 ```{r, echo=FALSE, skimr_include_summary = FALSE}
-skim(vacc %>% select(where(is.numeric)), -sa2)
+skim(vacc |> select(where(is.numeric)), -sa2)
 ```
 
 Out goal is to predict `VaccRate` in the regions where it is unknown. We also have some map data:
@@ -567,8 +567,8 @@ sa2_map <- read_sf("https://www.massey.ac.nz/~jcmarsha/data/covid19/sa2_boundary
 ## Example: COVID-19 vacc
 
 ```{r covidreg, eval=FALSE}
-sa2_map %>%
-  left_join(vacc) %>%
+sa2_map |>
+  left_join(vacc) |>
   ggplot() +
   geom_sf(aes(fill=VaccRate),
           size=0.1) +
@@ -601,8 +601,8 @@ rely on spatial auto-correlation.
 We'll start by dividing into training and test sets:
 
 ```{r}
-vacc.train <- vacc %>% filter(!is.na(VaccRate))
-vacc.test  <- vacc %>% filter(is.na(VaccRate)) %>% select(-VaccRate)
+vacc.train <- vacc |> filter(!is.na(VaccRate))
+vacc.test  <- vacc |> filter(is.na(VaccRate)) |> select(-VaccRate)
 ```
 
 Out goal now will be to build some models with `vacc.train` and apply these to do prediction on `vacc.test`.
@@ -619,11 +619,11 @@ We start by plotting the relationships between the covariates and vaccination ra
 First the numeric measures:
 
 ```{r vaccrel, eval=FALSE}
-vacc.train %>%
+vacc.train |>
   pivot_longer(c(Population,
                  SocialDeprivation,
                  DistanceToVacc,
-                 PropUnder30)) %>%
+                 PropUnder30)) |>
   ggplot() +
   geom_point(aes(x=value,
                  y=VaccRate),
@@ -647,9 +647,9 @@ vacc.train %>%
 And now the factors:
 
 ```{r vaccrel2, eval=FALSE}
-vacc.train %>%
+vacc.train |>
   pivot_longer(
-    c(DHB, TertiaryStudents)) %>%
+    c(DHB, TertiaryStudents)) |>
   ggplot() +
   geom_boxplot(aes(x=VaccRate,
                    y=value)) +
@@ -736,10 +736,10 @@ vacc.base
 .left-code[
 
 ```{r vaccrec, eval=FALSE}
-vacc.rec <- vacc.base %>%
+vacc.rec <- vacc.base |>
   update_role(sa2,
-              new_role="id") %>%
-  step_log(DistanceToVacc) %>%
+              new_role="id") |>
+  step_log(DistanceToVacc) |>
   step_normalize(
     all_numeric_predictors())
 
@@ -766,7 +766,7 @@ with mean 0 and variance 1.
 Now that we have our recipe, we can prepare it using the analysis data set. This will train the various data transformations:
 
 ```{r}
-vacc.prep <- vacc.rec %>% prep(vacc.analysis)
+vacc.prep <- vacc.rec |> prep(vacc.analysis)
 vacc.prep
 ```
 
@@ -777,12 +777,12 @@ vacc.prep
 Finally, we can bake our prepared recipe to produce the final analysis set:
 
 ```{r, eval=FALSE}
-vacc.analysis.baked <- vacc.prep %>% bake(vacc.analysis)
+vacc.analysis.baked <- vacc.prep |> bake(vacc.analysis)
 skim(vacc.analysis.baked)
 ```
 ```{r, echo=FALSE, skimr_include_summary = FALSE}
-vacc.analysis.baked <- vacc.prep %>% bake(vacc.analysis)
-skim(vacc.analysis.baked %>% select(where(is.numeric), -sa2))
+vacc.analysis.baked <- vacc.prep |> bake(vacc.analysis)
+skim(vacc.analysis.baked |> select(where(is.numeric), -sa2))
 ```
 
 ---
@@ -792,12 +792,12 @@ skim(vacc.analysis.baked %>% select(where(is.numeric), -sa2))
 The final validation set is baked in the same way:
 
 ```{r, eval=FALSE}
-vacc.validation.baked <- vacc.prep %>% bake(vacc.validation)
+vacc.validation.baked <- vacc.prep |> bake(vacc.validation)
 skim(vacc.validation.baked)
 ```
 ```{r, echo=FALSE, skimr_include_summary = FALSE}
-vacc.validation.baked <- vacc.prep %>% bake(vacc.validation)
-skim(vacc.validation.baked %>% select(where(is.numeric), -sa2))
+vacc.validation.baked <- vacc.prep |> bake(vacc.validation)
+skim(vacc.validation.baked |> select(where(is.numeric), -sa2))
 ```
 Note the mean and sd are not 0 and 1, because the transformation was trained
 using the `vacc.analysis` set and we've used the same scaling coefficients here.
@@ -841,9 +841,9 @@ We then fit the models with `fit()`. Notice how this is consistent for all model
 
 ```{r}
 set.seed(9)
-fit.lm <- spec.lm %>% fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
-fit.rf <- spec.rf %>% fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
-fit.nn <- spec.nn %>% fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
+fit.lm <- spec.lm |> fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
+fit.rf <- spec.rf |> fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
+fit.nn <- spec.nn |> fit(VaccRate ~ . - sa2, data=vacc.analysis.baked)
 ```
 
 .footnote[
@@ -857,13 +857,13 @@ If we like, we can extract the underlying model
 object to interrogate it:
 
 ```{r parsniplm, eval=FALSE}
-fit.lm %>%
-  extract_fit_engine() %>%
+fit.lm |>
+  extract_fit_engine() |>
   summary()
 ```
 
 ```{r, echo=FALSE}
-lm.tidy <- fit.lm %>% glance()
+lm.tidy <- fit.lm |> glance()
 ```
 
 - Larger population centers are more vaccinated.
@@ -889,18 +889,18 @@ of the variation.
 We then do prediction from our fitted models using our baked validation set:
 
 ```{r parsnippred, eval=FALSE}
-pred.lm <- fit.lm %>%
+pred.lm <- fit.lm |>
   predict(new_data=vacc.validation.baked)
-pred.rf <- fit.rf %>%
+pred.rf <- fit.rf |>
   predict(new_data=vacc.validation.baked)
-pred.nn <- fit.nn %>%
+pred.nn <- fit.nn |>
   predict(new_data=vacc.validation.baked)
 
-vacc.validation %>%
-  select(VaccRate) %>%
-  bind_cols(pred.lm %>% rename(lm = .pred),
-            pred.rf %>% rename(rf = .pred),
-            pred.nn %>% rename(nn = .pred))
+vacc.validation |>
+  select(VaccRate) |>
+  bind_cols(pred.lm |> rename(lm = .pred),
+            pred.rf |> rename(rf = .pred),
+            pred.nn |> rename(nn = .pred))
 ```
 
 `predict` returns a `tibble` with a `.pred` column,
@@ -922,18 +922,18 @@ There is correlation between `VaccRate` and predictions.
 It's tidier to bind the predictions into one column:
 
 ```{r plotpred, eval=FALSE}
-pred.lm <- vacc.validation %>%
-  bind_cols(fit.lm %>% predict(vacc.validation.baked))
-pred.rf <- vacc.validation %>%
-  bind_cols(fit.rf %>% predict(vacc.validation.baked))
-pred.nn <- vacc.validation %>%
-  bind_cols(fit.nn %>% predict(vacc.validation.baked))
+pred.lm <- vacc.validation |>
+  bind_cols(fit.lm |> predict(vacc.validation.baked))
+pred.rf <- vacc.validation |>
+  bind_cols(fit.rf |> predict(vacc.validation.baked))
+pred.nn <- vacc.validation |>
+  bind_cols(fit.nn |> predict(vacc.validation.baked))
 
 pred <- bind_rows(
   lst(pred.lm, pred.rf, pred.nn),
   .id="model")
 
-pred %>% ggplot() +
+pred |> ggplot() +
   geom_abline(slope=1, intercept=0) +
   geom_point(aes(x=.pred, y=VaccRate), alpha=0.3) +
   facet_wrap(vars(model), ncol=1)
@@ -960,9 +960,9 @@ for prediction:
 
 ```{r, message=FALSE}
 library(yardstick)
-pred %>%
-  group_by(model) %>%
-  metrics(truth=VaccRate, .pred) %>%
+pred |>
+  group_by(model) |>
+  metrics(truth=VaccRate, .pred) |>
   pivot_wider(names_from=.metric, values_from=.estimate)
 ```
 
@@ -975,14 +975,14 @@ For all metrics, the random forest is best.
 Now that we know which model is best<sup>1</sup> we can now re-train it using all the training data (rather than just our analysis subset) and use this to do prediction for the unknown vaccination rates:
 
 ```{r testfit, eval=FALSE}
-trained_fit <- spec.rf %>% fit(VaccRate ~ . -sa2, bake(vacc.prep, vacc.train))
+trained_fit <- spec.rf |> fit(VaccRate ~ . -sa2, bake(vacc.prep, vacc.train))
 
-vacc.test.pred <- vacc.test %>%
+vacc.test.pred <- vacc.test |>
                     bind_cols(
                       predict(trained_fit, bake(vacc.prep, vacc.test))
-                    ) %>%
+                    ) |>
                     rename(VaccRate = .pred)
-vacc.test.pred %>% slice_head(n=5)
+vacc.test.pred |> slice_head(n=5)
 ```
 
 ```{r, echo=FALSE}
@@ -1013,8 +1013,8 @@ vacc_all <- bind_rows(
        test=vacc.test.pred),
        .id="set")
 
-sa2_map %>%
-  left_join(vacc_all) %>%
+sa2_map |>
+  left_join(vacc_all) |>
   ggplot() +
   geom_sf(aes(fill=VaccRate),
           size=0.1) +

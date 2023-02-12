@@ -53,11 +53,11 @@ we can compare and contrast.
 Let's look at two sites on the Manawatu river near the Manawatu campus.
 
 ```{r}
-two_sites <- hrc %>%
+two_sites <- hrc |>
   filter(Site %in% c("manawatu at u/s pncc stp", "manawatu at teachers college"),
          Date >= "2008-01-01")
 
-two_sites %>% group_by(Site) %>%
+two_sites |> group_by(Site) |>
   summarise(Median = median(Value), Max = max(Value))
 ```
 
@@ -204,8 +204,8 @@ The `NA` for `sex` though is a bit odd!
 ## Combining plots
 
 ```{r peng2, eval=FALSE}
-penguins %>% #<<
-  filter(!is.na(sex)) %>% #<<
+penguins |> #<<
+  filter(!is.na(sex)) |> #<<
 ggplot() + 
   geom_density(aes(x=body_mass_g),
                fill='light blue') +
@@ -232,8 +232,8 @@ i.e. Males are heavier than females for each species, less pronounced in Chinstr
 ## Combining plots
 
 ```{r peng3, eval=FALSE}
-penguins %>%
-  filter(!is.na(sex)) %>%
+penguins |>
+  filter(!is.na(sex)) |>
 ggplot() + 
   geom_density(aes(x=body_mass_g),
                fill='light blue') +
@@ -264,8 +264,8 @@ while females differ.
 ## Combining plots
 
 ```{r peng4, eval=FALSE}
-penguins %>%
-  filter(!is.na(sex)) %>%
+penguins |>
+  filter(!is.na(sex)) |>
 ggplot() + 
   geom_density(aes(x=body_mass_g,
                    fill=species),
@@ -841,7 +841,7 @@ We fix this by pivoting the two country columns into a new pair of variables. We
 `covid4a` is too wide, so let's take the `Australia` and `New Zealand` columns and pivot to a new set of columns `country` and `cases`.
 
 ```{r}
-covid4a %>%
+covid4a |>
   pivot_longer(c(Australia, `New Zealand`), names_to="country", values_to="cases")
 ```
 
@@ -871,11 +871,11 @@ This is now tidy: each row is an observation, each column is a variable, and all
 
 Once we have pivoted both tables to long format, we can join them with `left_join`
 ```{r}
-tidy4a = covid4a %>%
+tidy4a = covid4a |>
   pivot_longer(c(Australia, `New Zealand`), names_to = "country", values_to = "cases")
-tidy4b = covid4b %>%
+tidy4b = covid4b |>
   pivot_longer(c(Australia, `New Zealand`), names_to = "country", values_to = "tests")
-tidy4a %>% left_join(tidy4b)
+tidy4a |> left_join(tidy4b)
 ```
 
 ---
@@ -909,7 +909,7 @@ We use `pivot_wider()` for this.
 `covid2` is too long: we need to take the `type` and `count` columns and pivot so that the variables in `type` are separate columns.
 
 ```{r}
-covid2 %>%
+covid2 |>
   pivot_wider(names_from = type, values_from = count)
 ```
 
@@ -952,10 +952,10 @@ What might be better is to compute the percentage of cases by tests, to get a fe
 Using the tidy `covid1` data, we could compute rates and then pivot wider to a tabular display:
 
 ```{r}
-covid1 %>%
-  mutate(rate = cases/tests * 100) %>%
-  select(-cases, -tests) %>%
-  pivot_wider(names_from = country, values_from = rate) %>%
+covid1 |>
+  mutate(rate = cases/tests * 100) |>
+  select(-cases, -tests) |>
+  pivot_wider(names_from = country, values_from = rate) |>
   knitr::kable(format='html', digits=2)
 ```
 

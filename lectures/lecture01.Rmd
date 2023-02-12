@@ -355,10 +355,10 @@ The other nice thing is the consistency:
 new_data <- do_something(old_data, other, stuff)
 ```
 
-This means that it works with the pipe `%>%` from the `magittr` package (or `|>` from base R). i.e.
+This means that it works with the pipe `|>` (or `%>%` from the `magrittr` package). i.e.
 
 ```{r, eval=FALSE}
-new_data <- old_data %>% do_something(other, stuff)
+new_data <- old_data |> do_something(other, stuff)
 ```
 
 ---
@@ -370,14 +370,14 @@ Let's look at some data from Horizon's Regional Council on river quality.
 ```{r, include=FALSE}
 library(lubridate)
 hrc <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horizons_river_ecoli.csv")
-date <- hrc %>% mutate(Year = year(ymd(Date))) %>% pull(Year) %>% range()
+date <- hrc |> mutate(Year = year(ymd(Date))) |> pull(Year) |> range()
 ```
 
 ```{r}
 hrc
 ```
 
-We have *E. coli* counts from `r hrc %>% count(Site) %>% nrow()` sites throughout the region from `r date[1]` to `r date[2]`.
+We have *E. coli* counts from `r hrc |> count(Site) |> nrow()` sites throughout the region from `r date[1]` to `r date[2]`.
 
 ---
 
@@ -386,7 +386,7 @@ We have *E. coli* counts from `r hrc %>% count(Site) %>% nrow()` sites throughou
 What if we just wanted the rows from 2017 onwards?
  
 ```{r}
-hrc %>% filter(Date >= '2017-01-01')
+hrc |> filter(Date >= '2017-01-01')
 ```
 
 ---
@@ -396,7 +396,7 @@ hrc %>% filter(Date >= '2017-01-01')
 Or rows with large counts?
 
 ```{r}
-hrc %>% filter(Value > 100000)
+hrc |> filter(Value > 100000)
 ```
 
 ---
@@ -406,7 +406,7 @@ hrc %>% filter(Value > 100000)
 What if we wanted really low counts before 2010?
 
 ```{r}
-hrc %>% filter(Value < 100, Date <= '2010-12-31')
+hrc |> filter(Value < 100, Date <= '2010-12-31')
 ```
 
 ---
@@ -416,7 +416,7 @@ hrc %>% filter(Value < 100, Date <= '2010-12-31')
 What if we wanted the extreme low or high counts?
 
 ```{r}
-hrc %>% filter(Value < 3 | Value > 100000)
+hrc |> filter(Value < 3 | Value > 100000)
 ```
 
 ---
@@ -429,7 +429,7 @@ For convenience, filter can take more than one logical expression, separated by 
 
 If we want to use OR rather than AND, we use the vertical bar `|` character.
 
-i.e. `hrc %>% filter(Value < 3 | Value > 100000, SiteID == "00081")`
+i.e. `hrc |> filter(Value < 3 | Value > 100000, SiteID == "00081")`
 
 will return rows where the value is very small or very large from Site 00081.
 
@@ -440,7 +440,7 @@ will return rows where the value is very small or very large from Site 00081.
 Other operations are `!=` (not equal to) and `%in%` (in). e.g.
 
 ```{r}
-hrc %>% filter(Value %in% c(3,5))
+hrc |> filter(Value %in% c(3,5))
 ```
 
 ---
@@ -450,7 +450,7 @@ hrc %>% filter(Value %in% c(3,5))
 Rather than pick rows out, we can sort the data instead.
 
 ```{r}
-hrc %>% arrange(Value)
+hrc |> arrange(Value)
 ```
 
 ---
@@ -460,7 +460,7 @@ hrc %>% arrange(Value)
 Selecting more than one variable to arrange on will first arrange on the first, then use later variables for ties:
 
 ```{r}
-hrc %>% arrange(Value, Date)
+hrc |> arrange(Value, Date)
 ```
 
 ---
@@ -470,7 +470,7 @@ hrc %>% arrange(Value, Date)
 To arrange descending rather than ascending, we can use `desc`
 
 ```{r}
-hrc %>% arrange(Value, desc(Date))
+hrc |> arrange(Value, desc(Date))
 ```
 
 Interestingly, no value of 1 after 2012... This suggests a change in the way things were measured.
@@ -482,8 +482,8 @@ Interestingly, no value of 1 after 2012... This suggests a change in the way thi
 The nice thing about the pipe is it allows us to chain things together. Let's look at post-2012 values:
 
 ```{r}
-hrc %>%
-  filter(Date >= '2013-01-01') %>%
+hrc |>
+  filter(Date >= '2013-01-01') |>
   arrange(Value)
 ```
 
@@ -494,7 +494,7 @@ It seems some of the values recorded as 4 actually mean "less than 4".
 ## Combining filter and arrange
 
 ```{r}
-hrc %>% filter(Value > 50000) %>% arrange(Site, Date)
+hrc |> filter(Value > 50000) |> arrange(Site, Date)
 ```
 
 ---
@@ -507,7 +507,7 @@ This is useful for getting rid of columns we don't need, for rearranging columns
 something more convenient.
 
 ```{r}
-hrc %>% select(Site, Date, Value)
+hrc |> select(Site, Date, Value)
 ```
 
 ---
@@ -517,7 +517,7 @@ hrc %>% select(Site, Date, Value)
 We can select a range of columns with a colon `:`
 
 ```{r}
-hrc %>% select(Council, Site:RawValue)
+hrc |> select(Council, Site:RawValue)
 ```
 
 ---
@@ -527,7 +527,7 @@ hrc %>% select(Council, Site:RawValue)
 The `everything()` helper function is useful if you want one column first, then everything else:
 
 ```{r}
-hrc %>% select(Symbol, Value, everything())
+hrc |> select(Symbol, Value, everything())
 ```
 
 ---
@@ -537,7 +537,7 @@ hrc %>% select(Symbol, Value, everything())
 The `starts_with()` helper is useful if you have a bunch of columns that start similarly:
 
 ```{r}
-hrc %>% select(Date, Value, starts_with("Site"))
+hrc |> select(Date, Value, starts_with("Site"))
 ```
 
 ---
@@ -547,7 +547,7 @@ hrc %>% select(Date, Value, starts_with("Site"))
 To drop a column use `-` in front of the name:
 
 ```{r}
-hrc %>% select(-Indicator, -RawValue, -Symbol)
+hrc |> select(-Indicator, -RawValue, -Symbol)
 ```
 
 ---
@@ -557,7 +557,7 @@ hrc %>% select(-Indicator, -RawValue, -Symbol)
 If you want to rename a column while keeping the other columns, then `rename()` does this:
 
 ```{r}
-hrc %>% rename(Name = Site)
+hrc |> rename(Name = Site)
 ```
 
 ---
@@ -567,7 +567,7 @@ hrc %>% rename(Name = Site)
 We can add new columns based on existing ones with `mutate`:
 
 ```{r}
-hrc %>% select(SiteID, Date, Value) %>%
+hrc |> select(SiteID, Date, Value) |>
   mutate(Log10Value = log10(Value))
 ```
 
@@ -579,7 +579,7 @@ We can add new columns based on existing ones with `mutate`:
 
 ```{r, message=FALSE}
 library(lubridate)
-hrc %>% select(SiteID, Date, Value) %>%
+hrc |> select(SiteID, Date, Value) |>
   mutate(Year = year(Date), Month = month(Date, label=TRUE))
 ```
 
@@ -588,10 +588,10 @@ hrc %>% select(SiteID, Date, Value) %>%
 .left-code[
 ## Seasonality?
 ```{r, label='hrc_season', eval=FALSE}
-hrc %>%
+hrc |>
   mutate(
     Month = month(Date, label=TRUE)
-    ) %>%
+    ) |>
   ggplot() +
   geom_boxplot(
     aes(
@@ -607,7 +607,7 @@ We can pipe the result of wrangling into
 `ggplot()` as it takes a data.frame as first
 argument.
 
-Remember to switch from `%>%` to `+` !!
+Remember to switch from `|>` to `+` !!
 ]
 
 .right-plot[
@@ -622,7 +622,7 @@ Remember to switch from `%>%` to `+` !!
 We can change existing columns by overwriting them:
 
 ```{r}
-hrc %>% select(SiteID, Site, Date, Value) %>%
+hrc |> select(SiteID, Site, Date, Value) |>
   mutate(SiteID = as.numeric(SiteID),
          Site = str_to_title(Site))
 ```
@@ -638,7 +638,7 @@ It generally takes lots of rows, performs some computation on one (or more) colu
 e.g. you can use this to compute means, medians, counts, totals or other summary statistics:
 
 ```{r}
-hrc %>% summarise(Mean = mean(Value))
+hrc |> summarise(Mean = mean(Value))
 ```
 
 ---
@@ -648,7 +648,7 @@ hrc %>% summarise(Mean = mean(Value))
 You can do as many summaries at once as you like:
 
 ```{r}
-hrc %>% summarise(Mean = mean(Value),
+hrc |> summarise(Mean = mean(Value),
                   Median = median(Value),
                   IQR = IQR(Value),
                   Count = n(),
@@ -668,13 +668,13 @@ The power of `dplyr` is that it can do all of the previous actions on subgroups 
 
 .pull-left[
 ```{r}
-hrc %>% select(SiteID, Date, Value)
+hrc |> select(SiteID, Date, Value)
 ```
 ]
 
 .pull-right[
 ```{r}
-hrc %>% select(SiteID, Date, Value) %>% 
+hrc |> select(SiteID, Date, Value) |> 
   group_by(SiteID)
 ```
 ]
@@ -688,7 +688,7 @@ hrc %>% select(SiteID, Date, Value) %>%
 So while this produces a single row:
 
 ```{r}
-hrc %>%
+hrc |>
   summarise(Median = median(Value))
 ```
 ]
@@ -701,8 +701,8 @@ hrc %>%
 This produces multiple rows, one for each year:
 
 ```{r}
-hrc %>% mutate(Year = year(Date)) %>%
-  group_by(Year) %>% 
+hrc |> mutate(Year = year(Date)) |>
+  group_by(Year) |> 
   summarise(Median = median(Value))
 ```
 ]
@@ -716,9 +716,9 @@ When you `group_by()` more than one variable, the other verbs operate within uni
 If you do a `summarise()` then you reduce the data down to one row for the inner-most variable. So it will drop this level of grouping, retaining grouping at higher levels.
 
 ```{r}
-hrc %>%
-  mutate(Year = year(Date)) %>%
-  group_by(Site, Year) %>%
+hrc |>
+  mutate(Year = year(Date)) |>
+  group_by(Site, Year) |>
   summarise(Median = median(Value))
 ```
 
@@ -727,10 +727,10 @@ hrc %>%
 This means that subsequent operations happen at the `Site` level:
 
 ```{r}
-hrc %>%
-  mutate(Year = year(Date)) %>%
-  group_by(Site, Year) %>%
-  summarise(Median = median(Value)) %>%
+hrc |>
+  mutate(Year = year(Date)) |>
+  group_by(Site, Year) |>
+  summarise(Median = median(Value)) |>
   mutate(Overall = median(Median))
 ```
 
@@ -739,11 +739,11 @@ hrc %>%
 You can remove grouping with `ungroup()`:
 
 ```{r}
-hrc %>%
-  mutate(Year = year(Date)) %>%
-  group_by(Site, Year) %>%
-  summarise(Median = median(Value)) %>%
-  ungroup() %>%
+hrc |>
+  mutate(Year = year(Date)) |>
+  group_by(Site, Year) |>
+  summarise(Median = median(Value)) |>
+  ungroup() |>
   mutate(Overall = median(Median))
 ```
 
@@ -754,13 +754,13 @@ hrc %>%
 There are a number of other helper functions in `dplyr` thare are useful to know, such as `count()`.
 
 ```{r, eval=FALSE}
-hrc %>% count(Site)
+hrc |> count(Site)
 ```
 
 is equivalent to:
 
 ```{r, eval=FALSE}
-hrc %>% group_by(Site) %>% summarise(n = n())
+hrc |> group_by(Site) |> summarise(n = n())
 ```
 
 The function `add_count()` adds a count column instead of summarising.
@@ -769,12 +769,12 @@ The function `add_count()` adds a count column instead of summarising.
 
 .pull-left[
 ```{r}
-hrc %>% count(Site)
+hrc |> count(Site)
 ```
 ]
 .pull-right[
 ```{r}
-hrc %>% add_count(Site) %>%
+hrc |> add_count(Site) |>
   select(Site, Value, n)
 ```
 ]
@@ -787,16 +787,16 @@ hrc %>% add_count(Site) %>%
 
 .pull-left[
 ```{r}
-hrc %>% select(Site, Value) %>%
-  arrange(desc(Value)) %>%
+hrc |> select(Site, Value) |>
+  arrange(desc(Value)) |>
   filter(row_number() <= 10)
 ```
 ]
 
 .pull-right[
 ```{r}
-hrc %>%
-  select(Site, Value) %>%
+hrc |>
+  select(Site, Value) |>
   slice_max(Value, n=10)
 ```
 ]
@@ -808,7 +808,7 @@ hrc %>%
 There are also `slice()` for taking rows out by row number, or `slice_head()` and `slice_tail()` for taking from the ends. `slice_sample()` can be used to take a random sample.
 
 ```{r}
-hrc %>% slice_sample(n=10)
+hrc |> slice_sample(n=10)
 ```
 
 ---
@@ -830,8 +830,8 @@ With the 6 main functions `select`, `arrange`, `filter`, `mutate`, `summarise` a
 Which sites are the **best** on average (by median)
 
 ```{r}
-hrc %>% group_by(Site) %>%
-  summarise(Median = median(Value)) %>%
+hrc |> group_by(Site) |>
+  summarise(Median = median(Value)) |>
   arrange(Median)
 ```
 
@@ -840,8 +840,8 @@ hrc %>% group_by(Site) %>%
 Which sites are the **worst** on average (by median)
 
 ```{r}
-hrc %>% group_by(Site) %>%
-  summarise(Median = median(Value)) %>%
+hrc |> group_by(Site) |>
+  summarise(Median = median(Value)) |>
   arrange(desc(Median))
 ```
 
@@ -851,16 +851,16 @@ Which sites are the **best** or **worst** on average (by median)
 
 .pull-left[
 ```{r, message=FALSE}
-hrc %>% group_by(Site) %>%
-  summarise(Median = median(Value)) %>%
+hrc |> group_by(Site) |>
+  summarise(Median = median(Value)) |>
   slice_min(Median, n=5)
 ```
 ]
 
 .pull-right[
 ```{r, message=FALSE}
-hrc %>% group_by(Site) %>%
-  summarise(Median = median(Value)) %>%
+hrc |> group_by(Site) |>
+  summarise(Median = median(Value)) |>
   slice_max(Median, n=5)
 ```
 ]
@@ -870,7 +870,7 @@ hrc %>% group_by(Site) %>%
 Which sites do we not have much data on?
 
 ```{r}
-hrc %>% count(Site) %>% arrange(n)
+hrc |> count(Site) |> arrange(n)
 ```
 
 ---
@@ -878,8 +878,8 @@ hrc %>% count(Site) %>% arrange(n)
 Which sites are new?
 
 ```{r}
-hrc %>% group_by(Site) %>%
-  summarise(FirstDate = min(Date)) %>%
+hrc |> group_by(Site) |>
+  summarise(FirstDate = min(Date)) |>
   arrange(desc(FirstDate))
 ```
 
@@ -888,8 +888,8 @@ hrc %>% group_by(Site) %>%
 Which sites are tested infrequently?
 
 ```{r}
-hrc %>% group_by(Site) %>%
-  summarise(DateRange = max(Date) - min(Date), Count = n()) %>%
-  mutate(DaysPerTest = DateRange / Count) %>%
+hrc |> group_by(Site) |>
+  summarise(DateRange = max(Date) - min(Date), Count = n()) |>
+  mutate(DaysPerTest = DateRange / Count) |>
   arrange(desc(DaysPerTest))
 ```

@@ -337,11 +337,11 @@ Prediction works by running each test case down the tree, using surrogate splits
 
 ```{r}
 wage.pred.rp <- 
-  wage.test %>%
+  wage.test |>
   bind_cols(
     .pred = predict(wage.rp, newdata=wage.test)
   )
-wage.pred.rp %>%
+wage.pred.rp |>
   summarise(MSE =  mean((.pred - WAGE)^2))
 ```
 
@@ -474,13 +474,13 @@ title("cp=0.001")
 ## MSE of Prediction for Models
 
 ```{r}
-wage.rp.pred <- wage.test %>%
+wage.rp.pred <- wage.test |>
   bind_cols(
     .pred1 = predict(wage.rp, newdata=wage.test),
     .pred2 = predict(wage.rp.2, newdata=wage.test),
     .pred3 = predict(wage.rp.3, newdata=wage.test)
   )
-wage.rp.pred %>%
+wage.rp.pred |>
   summarise(MSE.1 = mean((.pred1 - WAGE)^2),
             MSE.2 = mean((.pred2 - WAGE)^2),
             MSE.3 = mean((.pred3 - WAGE)^2))
@@ -597,10 +597,10 @@ wage.train.bs <- slice_sample(
 
 bind_rows(lst(wage.train,
               wage.train.bs),
-          .id="data") %>%
+          .id="data") |>
   select(data, WAGE,
-           AGE, EDU, EXP) %>%
-  pivot_longer(-c(data, WAGE)) %>%
+           AGE, EDU, EXP) |>
+  pivot_longer(-c(data, WAGE)) |>
   ggplot() +
   geom_point(aes(x=value, y=WAGE),
              alpha=0.5) +
@@ -699,12 +699,12 @@ library(randomForest)
 set.seed(1945)
 wage.rf.1 <- randomForest(WAGE ~ .,
                data = wage.train)
-wage.rf.1.pred <- wage.test %>%
+wage.rf.1.pred <- wage.test |>
   bind_cols(
     .pred=predict(wage.rf.1,
                   newdata=wage.test)
     )
-wage.rf.1.pred %>%
+wage.rf.1.pred |>
   summarise(
     MSE = mean((.pred - WAGE)^2))
 ```
@@ -749,13 +749,13 @@ Tuning these parameters is sometimes useful for improving the model fit.
 ```{r}
 wage.rf.2 <- randomForest(WAGE ~ ., data=wage.train, mtry = 2)
 wage.rf.3 <- randomForest(WAGE ~ ., data=wage.train, mtry = 2, nodesize = 1)
-wage.rf.pred <- wage.test %>%
+wage.rf.pred <- wage.test |>
                   bind_cols(
                     .pred1 = predict(wage.rf.1, newdata=wage.test),
                     .pred2 = predict(wage.rf.2, newdata=wage.test),
                     .pred3 = predict(wage.rf.3, newdata=wage.test)
                   )
-wage.rf.pred %>%
+wage.rf.pred |>
   summarise(MSE.1 = mean((.pred1 - WAGE)^2),
             MSE.2 = mean((.pred2 - WAGE)^2),
             MSE.3 = mean((.pred3 - WAGE)^2))
