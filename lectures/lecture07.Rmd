@@ -921,8 +921,8 @@ library(patchwork)
 # Now compute both and then calculate accordingly...
 x1_dens <- map_dfr(donut.nB$fit$tables$x1, broom::tidy, .id='Class')
 x2_dens <- map_dfr(donut.nB$fit$tables$x2, broom::tidy, .id='Class')
-all <- full_join(x1_dens %>% rename(x1=x, y1=y),
-                 x2_dens %>% rename(x2=x, y2=y)) %>%
+all <- full_join(x1_dens |> rename(x1=x, y1=y),
+                 x2_dens |> rename(x2=x, y2=y), multiple='all') |>
   mutate(z = y1*y2)
 g1 <- ggplot(donut.train, mapping=aes(x=x1, y=x2, col=Class)) +
   geom_point(alpha=.02) +
@@ -977,15 +977,15 @@ mu_sd <- bind_rows(x1 = donut.nB$fit$tables$x1 |> as.data.frame() |> set_names("
   pivot_wider(names_from=which, values_from=value)
 
 dens_x1 <- tibble(x1 = seq(min(donut.train$x1),
-                           max(donut.train$x1),by=0.05)) %>%
-  full_join(mu_sd %>% filter(variable == "x1"), by=character()) %>%
-  mutate(y = dnorm(x1, mean=mean, sd=sd)) %>% select(x1, Class, y)
+                           max(donut.train$x1),by=0.05)) |>
+  cross_join(mu_sd |> filter(variable == "x1")) |>
+  mutate(y = dnorm(x1, mean=mean, sd=sd)) |> select(x1, Class, y)
 dens_x2 <- tibble(x2 = seq(min(donut.train$x2),
-                           max(donut.train$x2),by=0.05)) %>%
-  full_join(mu_sd %>% filter(variable == "x2"), by=character()) %>%
-  mutate(y = dnorm(x2, mean=mean, sd=sd)) %>% select(x2, Class, y)
+                           max(donut.train$x2),by=0.05)) |>
+  cross_join(mu_sd |> filter(variable == "x2")) |>
+  mutate(y = dnorm(x2, mean=mean, sd=sd)) |> select(x2, Class, y)
 
-dens_all <- dens_x1 %>% full_join(dens_x2, by="Class") %>% mutate(z = y.x*y.y, .keep='unused')
+dens_all <- dens_x1 |> full_join(dens_x2, by="Class", multiple='all') |> mutate(z = y.x*y.y, .keep='unused')
 
 g1 <- ggplot(donut.train, mapping=aes(x=x1, y=x2, col=Class)) +
   geom_point(alpha=.02) +

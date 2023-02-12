@@ -674,6 +674,8 @@ Rows in y that do not match rows in x are dropped.
 - If y doesn't have a match, `NA` is used.
 
 If more than one row in y matches a row in x then you duplicate the x information.
+
+In the case where you expect multiple rows, you can add `multiple='all'` as a parameter.
 ]
 
 .right-plot[
@@ -685,7 +687,7 @@ If more than one row in y matches a row in x then you duplicate the x informatio
 `left_join(x, y)` returns all rows in x, and all rows that match these in y. If y doesn't have a match, `NA` will be used.
 
 ```{r}
-characters %>% left_join(films)
+characters |> left_join(films, multiple='all')
 ```
 
 ---
