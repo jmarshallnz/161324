@@ -31,7 +31,7 @@ husbands
 The first thing you should notice is that the `W.Age` column has an entry of 9999 in row 8. Clearly this is incorrect, as it is very unlikely that the wife's age was 9999 years. Instead, the person who put these data together coded the missing values as 9999. Indeed, the `skim` function in `skimr` is useful for taking a quick look across the data frame (the `skimr_include_summary=FALSE` chunk option omits the 'Data Summary' block when knitting).
 
 ```{r, skimr_include_summary = FALSE}
-husbands %>% skim()
+husbands |> skim()
 ```
 
 We can see that both the `W.Age` and `H.Age.Marriage` contain entries of 9999 (note the p100 column, which is the maximum), whereas the other columns seem sensible. Indeed, this makes the mean wife age and mean husband age at marriage senseless.
@@ -39,10 +39,10 @@ We can see that both the `W.Age` and `H.Age.Marriage` contain entries of 9999 (n
 To fix this, we can use the `replace_with_na()` function in `naniar`. This takes an argument `replace` which should be a named list, where the names are column names and the values are the value(s) you wish to replace in each column with `NA`. Note that there is also a function for doing the opposite, `replace_na()` in the `tidyr` package (useful for filling in `NA` where you know the correct value).
 
 ```{r, skimr_include_summary = FALSE}
-husbands_na <- husbands %>%
+husbands_na <- husbands |>
   replace_with_na(replace = list(W.Age = 9999,
                                  H.Age.Marriage = 9999))
-husbands_na %>% skim()
+husbands_na |> skim()
 ```
 
 With this we see that the means are now sensible. We also know how many are missing.
@@ -64,7 +64,7 @@ vis_miss(husbands_na)
 From this we can see that the wife's age is missing relatively frequently, while the husbands age at marriage is only missing a few times. Of interest is whether these times coincide:
 
 ```{r}
-husbands_na %>% filter(is.na(H.Age.Marriage)) %>% vis_miss()
+husbands_na |> filter(is.na(H.Age.Marriage)) |> vis_miss()
 ```
 
 Yes, we see that of the 4 rows where we have missing values for the husbands age at marriage, 3 of them also have the wife's age missing. Thus, if we want to try and guess what the Husbands Age at Marriage might be by utilising information in the `W.Age` column, we note that we'd only be able to guess one of the 4 missing observations.
@@ -111,17 +111,17 @@ Note that the wife's ages that are missing (red) are just given an arbitrary val
 One option for imputing (filling in) the missing values is to use the mean value for the variable at the non-missing values. Another option would be the median. Let's have a go for the `husbands_na` data.
 
 ```{r, skimr_include_summary = FALSE}
-husbands_na %>%
-  mutate(W.Age = impute_mean(W.Age)) %>%
+husbands_na |>
+  mutate(W.Age = impute_mean(W.Age)) |>
   skim()
 ```
 
 Notice that what we've done is replaced the `W.Age` column with an imputed version there-of. It would be useful to be able to track what is going on (e.g. so we could visualise how we've done) - the `bind_shadow()` and `add_label_shadow()` functions are useful for this. `bind_shadow()` adds another set of columns, one for each variable, dictating whether it's missing or not. In this case we're utilising the added `W.Age_NA` column.
 
 ```{r}
-husbands_na %>%
-  bind_shadow() %>%
-  mutate(W.Age = impute_mean(W.Age)) %>%
+husbands_na |>
+  bind_shadow() |>
+  mutate(W.Age = impute_mean(W.Age)) |>
   ggplot() +
   geom_point(mapping = aes(x = H.Age, y = W.Age, col=W.Age_NA))
 ```
@@ -133,8 +133,8 @@ We can see that the imputation isn't particularly good! This really shouldn't be
 We can improve the imputation using numerous methods. A useful one is k-nearest neighbours utilising the `VIM` package. This automatically adds columns with the postfix `_imp` containing whether or not the column was imputed, so we don't need to `bind_shadow()`:
 
 ```{r}
-husbands_na %>%
-  kNN(k=5) %>%
+husbands_na |>
+  kNN(k=5) |>
   ggplot() +
   geom_point(mapping = aes(x = H.Age, y = W.Age, col=W.Age_imp))
 ```

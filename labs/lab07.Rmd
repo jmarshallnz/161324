@@ -66,21 +66,21 @@ We can implement linear discriminant analysis on the first dataset using:
 
 ```{r}
 spec_lda <- discrim_linear()
-fit_lda1 <- spec_lda %>%
+fit_lda1 <- spec_lda |>
   fit(group ~ ., data=syn1.train)
 ```
 
 We can then perform prediction and produce a confusion matrix via:
 
 ```{r}
-pred_lda1 <- fit_lda1 %>% augment(new_data=syn1.test)
-pred_lda1 %>% conf_mat(truth=group, estimate=.pred_class)
+pred_lda1 <- fit_lda1 |> augment(new_data=syn1.test)
+pred_lda1 |> conf_mat(truth=group, estimate=.pred_class)
 ```
 
 And can compute accuracy (i.e. classification rate) using:
 
 ```{r}
-pred_lda1 %>% accuracy(truth=group, estimate=.pred_class)
+pred_lda1 |> accuracy(truth=group, estimate=.pred_class)
 ```
 
 ### Try yourself
@@ -94,19 +94,19 @@ We'll now implement two other models (Naive Bayes and KDA) for the syn1 dataset:
 
 ```{r}
 spec_nb <- naive_Bayes(engine="naivebayes")
-fit_nb1 <- spec_nb %>%
+fit_nb1 <- spec_nb |>
   fit(group ~ ., data=syn1.train)
 
 spec_kda <- discrim_kernel()
-fit_kda1 <- spec_kda %>%
+fit_kda1 <- spec_kda |>
   fit(group ~ ., data=syn1.train)
 ```
 
 We can then do prediction and combine this across all models:
 
 ```{r}
-pred_nb1 <- fit_nb1 %>% augment(new_data=syn1.test)
-pred_kda1 <- fit_kda1 %>% augment(new_data=syn1.test)
+pred_nb1 <- fit_nb1 |> augment(new_data=syn1.test)
+pred_kda1 <- fit_kda1 |> augment(new_data=syn1.test)
 pred1 <- bind_rows(list(lda=pred_lda1,
                         nb=pred_nb1,
                         kda=pred_kda1), .id='model')
@@ -115,7 +115,7 @@ pred1 <- bind_rows(list(lda=pred_lda1,
 And then evaluate our predictive accuracy:
 
 ```{r}
-pred1 %>% group_by(model) %>% accuracy(truth=group, estimate=.pred_class)
+pred1 |> group_by(model) |> accuracy(truth=group, estimate=.pred_class)
 ```
 
 ### Try yourself
@@ -144,7 +144,7 @@ We read the data in and split into training and test sets as follows:
 ```{r}
 library(rsample)
 set.seed(1234)
-glass <- read_csv(file="https://www.massey.ac.nz/~jcmarsha/data/glass.csv") %>%
+glass <- read_csv(file="https://www.massey.ac.nz/~jcmarsha/data/glass.csv") |>
   mutate(Type = as_factor(Type))
 split <- initial_split(glass, prop=0.75)
 glass.train <- training(split)
@@ -154,7 +154,7 @@ glass.test  <- testing(split)
 We'll start by assessing how the training data looks by assessing the shape of each predictor (e.g do they look normal, which is the assumption for LDA and QDA?)
 
 ```{r}
-glass.train %>% pivot_longer(where(is.numeric)) %>%
+glass.train |> pivot_longer(where(is.numeric)) |>
   ggplot() +
   geom_density(aes(x=value)) +
   facet_wrap(vars(name), scales='free')
@@ -163,7 +163,7 @@ glass.train %>% pivot_longer(where(is.numeric)) %>%
 A few of these look decidely non-normal! We could also assess the balance in the data by just tabling up the number of each window type:
 
 ```{r}
-glass.test %>% count(Type)
+glass.test |> count(Type)
 ```
 
 We see it is dominated by building windows, so one could make a pretty accurate classifier just by saying "every bit of glass is a building window"! This would have a training accuracy of 116/160=72.5%, so is a useful baseline.
@@ -178,15 +178,15 @@ We see it is dominated by building windows, so one could make a pretty accurate 
 We'll start by fitting an LDA model to these data, and perform prediction:
 
 ```{r}
-glass.lda <- discrim_linear() %>% fit(Type ~ ., data=glass.train)
-glass.pred.lda <- glass.lda %>% augment(new_data=glass.test)
-glass.pred.lda %>% accuracy(truth=Type, estimate=.pred_class)
+glass.lda <- discrim_linear() |> fit(Type ~ ., data=glass.train)
+glass.pred.lda <- glass.lda |> augment(new_data=glass.test)
+glass.pred.lda |> accuracy(truth=Type, estimate=.pred_class)
 ```
 
 The accuracy here isn't too bad, but if you look at the confusion matrix, you can see that it's getting every single vehicle window wrong:
 
 ```{r}
-glass.pred.lda %>% conf_mat(truth=Type, estimate=.pred_class)
+glass.pred.lda |> conf_mat(truth=Type, estimate=.pred_class)
 ```
 
 ### Try yourself

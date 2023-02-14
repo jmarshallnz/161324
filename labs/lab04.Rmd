@@ -72,7 +72,7 @@ and one column per variable (and one entry per value). So we will be making it *
 What we want is to keep the `usr` column but to pivot the rest of the columns into `name` and `value` columns. That way we can plot `value` against `usr`, facetting by `name`. It is useful to first add a row identifier to the dataset - this will help if we want to go back to the original format (as otherwise we don't know which rows should be combined when pivoting wider - unless the `usr` column is unique!). We can do this with `rowid_to_column` from the `tibble` package:
 
 ```{r}
-comp_long <- comp %>% rowid_to_column(var = "id") %>%
+comp_long <- comp |> rowid_to_column(var = "id") |>
   pivot_longer(cols = -c(usr, id), names_to = 'name', values_to='value')
 comp_long
 ```
@@ -146,20 +146,20 @@ glance(model1)
 Now that we have a model, we need to evaluate how well it performs on the test set. We'll typically use the mean squared error (MSE) for this. We'll first use our model to predict the `usr` variable in the test set, and then compute how close our predicted `usr` values are to the true `usr` values, summmarised using the mean square error. The `augment()` function in broom gives us a tidy way to do prediction. This returns the data.frame we supply in `newdata` augmented with additional columns - in this case `.fitted` for the fitted value:
 
 ```{r}
-model1_pred <- augment(model1, newdata = comp_test) %>% select(usr, .fitted, everything())
+model1_pred <- augment(model1, newdata = comp_test) |> select(usr, .fitted, everything())
 model1_pred
 ```
 
 From here we can compute the MSE manually:
 
 ```{r}
-model1_pred %>% summarise(MSE = mean((usr - .fitted)^2))
+model1_pred |> summarise(MSE = mean((usr - .fitted)^2))
 ```
 
 Alternatively, we could compute this using the `yardstick` package to compute the root mean squared error (square root of MSE).
 
 ```{r}
-model1_pred %>% rmse(truth = usr, estimate = .fitted)
+model1_pred |> rmse(truth = usr, estimate = .fitted)
 ```
 ### Try yourself
 
@@ -176,7 +176,7 @@ Which of the models do you think perform the best?
 You should have found that your root mean square error was around 2.4 or so. This is not particularly impressive, given that the standard deviation of the `usr` variable within the training data is about 7:
 
 ```{r}
-comp_train %>% summarise(sd = sd(usr))
+comp_train |> summarise(sd = sd(usr))
 ```
 
 It seems strange that we would get an RMSE that is around 1/3 of the standard deviation of the data, given that the models claim to explain over 90% of the variance in `usr`! What's going on?
@@ -184,7 +184,7 @@ It seems strange that we would get an RMSE that is around 1/3 of the standard de
 To assess, let's take a look at our predictions from `model1` again by plotting them:
 
 ```{r}
-model1_pred %>%
+model1_pred |>
   ggplot() +
   geom_point(mapping = aes(x=usr, y=.fitted))
 ```
@@ -196,8 +196,8 @@ The RMSE measure exacerbates this by squaring the error (which makes large error
 An alternate is the mean absolute error (MAE), the mean of the absolute value of the errors. We can compute this manually, or using `yardstick` as follows:
 
 ```{r}
-model1_pred %>% summarise(mae = mean(abs(usr - .fitted)))
-model1_pred %>% mae(usr, .fitted)
+model1_pred |> summarise(mae = mean(abs(usr - .fitted)))
+model1_pred |> mae(usr, .fitted)
 ```
 
 ### Try yourself

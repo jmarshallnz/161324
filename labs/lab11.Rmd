@@ -21,19 +21,19 @@ Groceries
 Notice that this is a `transactions` data set which comes with 9,835 transactions (rows) of 169 possible items (columns). We can look at the first few transactions by first using `head()` to limit the number of transactions, then utilising `inspect()`:
 
 ```{r}
-Groceries %>% head(n=15) %>% inspect()
+Groceries |> head(n=15) |> inspect()
 ```
 
 A slightly more compact option is utilising `DATAFRAME()`:
 
 ```{r}
-Groceries %>% head(n=15) %>% DATAFRAME()
+Groceries |> head(n=15) |> DATAFRAME()
 ```
 
 The `itemFrequency` function summarises the frequencies of each item across transactions:
 
 ```{r}
-Groceries %>% itemFrequency()
+Groceries |> itemFrequency()
 ```
 
 ### Try yourself
@@ -59,7 +59,7 @@ groc <- apriori(Groceries, parameter=list(support=0.001, confidence=0.5))
 We can sort the rules via `sort()`, which can then be inspected by limiting the results with `head()` and then utilising `inspect()`. e.g. to find the top 5 rules by support, we could use:
 
 ```{r}
-groc %>% sort(by="support") %>% head(n=5) %>% inspect()
+groc |> sort(by="support") |> head(n=5) |> inspect()
 ```
 
 ### Try yourself
@@ -72,7 +72,7 @@ groc %>% sort(by="support") %>% head(n=5) %>% inspect()
 We can use the `subset` command to filter rules. e.g. to find rules where the left hand side contains "mustard" we could use:
 
 ```{r}
-groc %>% subset(lhs %in% "mustard") %>% inspect()
+groc |> subset(lhs %in% "mustard") |> inspect()
 ```
 
 ### Try yourself
@@ -83,7 +83,7 @@ groc %>% subset(lhs %in% "mustard") %>% inspect()
 Both red and white wine are included as separate items in the database. To find all types of wine we could use `%pin%` to partially match items on the left hand side:
 
 ```{r}
-groc %>% subset(lhs %pin% "wine") %>% inspect()
+groc |> subset(lhs %pin% "wine") |> inspect()
 ```
 
 ### Try yourself
@@ -100,7 +100,7 @@ We will investigate itemsets that contain `beer` and `liquor`. Note that some of
 To find rules that contain multiple items, we can use the `%ain%` operator:
 
 ```{r}
-groc %>% subset(lhs %ain% c("whole milk", "white bread")) %>% inspect()
+groc |> subset(lhs %ain% c("whole milk", "white bread")) |> inspect()
 ```
 
 ### Try yourself
@@ -133,14 +133,14 @@ The bank is interested on looking at rules that establish which service types ar
 We read in the data and convert to a transactions database as follows:
 
 ```{r}
-bank <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/bank-rules.csv") %>%
+bank <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/bank-rules.csv") |>
   transactions(format='long', cols=c("ACCOUNT", "SERVICE"))
 ```
 
 There are 7,991 bank accounts representing by row and 13 services representing by columns:
 
 ```{r}
-bank %>% head(n=10) %>% DATAFRAME()
+bank |> head(n=10) |> DATAFRAME()
 bank
 ```
 

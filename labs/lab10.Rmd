@@ -61,9 +61,9 @@ candidate <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/nzelect/2020_cand
 We'll next look at clustering the `party` data using hierarchical clustering:
 
 ```{r}
-party.hc1 <- party %>%
-  column_to_rownames("Electorate") %>%
-  dist() %>%
+party.hc1 <- party |>
+  column_to_rownames("Electorate") |>
+  dist() |>
   hclust(method='single')
 
 ggdendrogram(party.hc1)
@@ -79,11 +79,11 @@ Let's now look into the clustering a little more, by using `cutree` to break thi
 clusters:
 
 ```{r}
-party.cl1 <- party %>% 
-  mutate(Cluster = party.hc1 %>% cutree(k=5))
+party.cl1 <- party |> 
+  mutate(Cluster = party.hc1 |> cutree(k=5))
 
-party.cl1 %>%
-  group_by(Cluster) %>%
+party.cl1 |>
+  group_by(Cluster) |>
   summarise(across(-Electorate, mean), size=n())
 ```
 
@@ -98,9 +98,9 @@ We can see that cluster 5 (The Maori electorates) all teend to have a much highe
 We'll now combine the two datasets so we can look at them together:
 
 ```{r}
-all <- party %>% rename_with(~ paste("Party", ., sep=":"), .cols=-Electorate) %>%
+all <- party |> rename_with(~ paste("Party", ., sep=":"), .cols=-Electorate) |>
   left_join(
-    candidate %>% rename_with(~ paste("Cand", ., sep=":"), .cols=-Electorate),
+    candidate |> rename_with(~ paste("Cand", ., sep=":"), .cols=-Electorate),
     by = 'Electorate'
   )
 ```
@@ -130,11 +130,11 @@ We'll next try using k-means clustering, with the following code fitting k-means
 
 ```{r}
 set.seed(1234)
-km_all <- tibble(k = 1:10) %>%
+km_all <- tibble(k = 1:10) |>
   mutate(
     model = map(k, ~ kmeans(synth, centers = ., nstart = 20)),
     tidied = map(model, glance)
-  ) %>%
+  ) |>
   unnest(tidied)
 km_all
 ```
@@ -149,8 +149,8 @@ are optimal?
 We can rescale the data using a `recipe` as usual:
 
 ```{r}
-scaling <- recipe(synth) %>%
-  step_normalize(everything()) %>%
+scaling <- recipe(synth) |>
+  step_normalize(everything()) |>
   prep(synth)
 
 synth.scale <- bake(scaling, synth)
@@ -167,7 +167,7 @@ We can extract the silhouette information by re-fitting using `pam`:
 
 ```{r}
 clust6 <- pam(synth, k=6)
-clust6.sil <- clust6 %>% pluck('silinfo', 'widths') %>% as_tibble()
+clust6.sil <- clust6 |> pluck('silinfo', 'widths') |> as_tibble()
 ```
 
 ### Try yourself

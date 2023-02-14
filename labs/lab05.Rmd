@@ -55,8 +55,8 @@ cp_table <- printcp(model2.rp)
 What we want to do is pick the largest value of `cp` (to give the smallest tree) such that the error in the tree is about the same as the 'optimal' tree. We typically choose the value of `cp` so that it's within one standard error from the minimum value:
 
 ```{r}
-cp_table %>% as_tibble() %>%
-  mutate(limit = min(xerror + xstd)) %>%
+cp_table |> as_tibble() |>
+  mutate(limit = min(xerror + xstd)) |>
   filter(xerror <= limit)
 ```
 
@@ -85,8 +85,8 @@ predict(model1.rp, newdata=comp_test)
 This returns a vector. We can add it to the original data via `bind_cols`, but this is a little fragile, as we're assuming that `predict` will return a row for everything we provide, and this may not be the case (e.g. if the test set had missing values perhaps).
 
 ```{r}
-comp_pred1 <- comp_test %>%
-  bind_cols(.fitted = predict(model1.rp, newdata=comp_test)) %>%
+comp_pred1 <- comp_test |>
+  bind_cols(.fitted = predict(model1.rp, newdata=comp_test)) |>
   select(usr, .fitted, everything())
 comp_pred1
 ```
@@ -94,7 +94,7 @@ comp_pred1
 Now we can compute MSE in the same way we did in workshop 4:
 
 ```{r}
-comp_pred1 %>% summarise(MSE = mean((.fitted - usr)^2))
+comp_pred1 |> summarise(MSE = mean((.fitted - usr)^2))
 ```
 
 ### Try yourself
@@ -110,9 +110,9 @@ One thing that regression trees are particularly useful for are where we have so
 Let's take our training set and change it so we have some missing data in `vflt` (recall this was the variable used in the first split) [^na_real].
 
 ```{r}
-comp_train.miss <- comp_train %>%
+comp_train.miss <- comp_train |>
   mutate(vflt = if_else(row_number() <= 5, NA_real_, vflt))
-comp_train.miss %>% select(vflt, everything())
+comp_train.miss |> select(vflt, everything())
 ```
 
 ### Try yourself
@@ -155,14 +155,14 @@ The `tidymodels` framework is a way to address this for `rpart`, `randomForest` 
 tree_spec <- decision_tree(mode = "regression",
                             cost_complexity = 0.01)
 
-tree_fit <- tree_spec %>%
+tree_fit <- tree_spec |>
   fit(usr ~ ., data = comp_train)
 
-tree_pred <- comp_test %>%
-  bind_cols(predict(tree_fit, new_data = comp_test)) %>%
+tree_pred <- comp_test |>
+  bind_cols(predict(tree_fit, new_data = comp_test)) |>
   select(usr, .pred, everything())
 
-tree_pred %>% metrics(usr, .pred)
+tree_pred |> metrics(usr, .pred)
 ```
 
 Note the process here:

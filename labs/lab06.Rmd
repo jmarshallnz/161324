@@ -51,7 +51,7 @@ We have used `set.seed` here as the weights in the neural network are assigned r
 You should find that you get very poor predictions compared to linear models, trees or forests. This is because the neural network is exponentiating the linear combination of predictors in order to decide whether the hidden nodes should be activated or not. But, our predictors are on very different scales and some of them are very large:
 
 ```{r}
-comp %>% summarise(across(everything(), max))
+comp |> summarise(across(everything(), max))
 ```
 
 If we exponentiate 2.4 million, we get (essentially) infinity. Thus, hidden nodes are turned on or off directly based on the initial random weights, and there is no way to change them as any change in the weights will still give something like infinity (or minus infinity).
@@ -61,11 +61,11 @@ To deal with this we need to scale the data down to something small. A typical w
 One way to do this is to compute the necessary scaling factors (mean and sd) on the training data, and then applying those via the `scale` function to both training and test data. Using base R this would be:
 
 ```{r}
-comp_train_mean <- comp_train %>% select(-usr) %>% apply(2, mean)
-comp_train_sd   <- comp_train %>% select(-usr) %>% apply(2, sd)
-comp_train_scale <- bind_cols(comp_train %>% select(usr),
-                              comp_train %>% select(-usr) %>%
-                                scale(center=comp_train_mean, scale=comp_train_sd) %>%
+comp_train_mean <- comp_train |> select(-usr) |> apply(2, mean)
+comp_train_sd   <- comp_train |> select(-usr) |> apply(2, sd)
+comp_train_scale <- bind_cols(comp_train |> select(usr),
+                              comp_train |> select(-usr) |>
+                                scale(center=comp_train_mean, scale=comp_train_sd) |>
                                 as.data.frame())
 ```
 
@@ -74,9 +74,9 @@ This is a little messy, but it works. We're using the `apply` function to comput
 We could do this by staying within the tidyverse with dplyr - using the usual trick of pivoting longer first. We start by computing the scaling information:
 
 ```{r}
-comp_train_scaling <- comp_train %>%
-  pivot_longer(-usr, names_to='name', values_to='value') %>%
-  group_by(name) %>%
+comp_train_scaling <- comp_train |>
+  pivot_longer(-usr, names_to='name', values_to='value') |>
+  group_by(name) |>
   summarise(mean = mean(value), sd=sd(value))
 ```
 
@@ -85,12 +85,12 @@ joining to our scaling information, mutating to get the new value and then pivot
 removing the unused mean and sd columns. The same code can then be applied to `comp_test`
 
 ```{r}
-comp_train_scale <- comp_train %>% rowid_to_column() %>%
-  pivot_longer(-c(usr, rowid), names_to='name', values_to='value') %>%
-  left_join(comp_train_scaling) %>%
-  group_by(name) %>%
-  mutate(value = (value - mean)/sd, .keep='unused') %>%
-  pivot_wider(names_from=name, values_from=value) %>%
+comp_train_scale <- comp_train |> rowid_to_column() |>
+  pivot_longer(-c(usr, rowid), names_to='name', values_to='value') |>
+  left_join(comp_train_scaling) |>
+  group_by(name) |>
+  mutate(value = (value - mean)/sd, .keep='unused') |>
+  pivot_wider(names_from=name, values_from=value) |>
   select(-rowid)
 ```
 
@@ -109,7 +109,7 @@ Ofcourse, there's a package for that! We can utilise the `recipe` package within
 To perform scaling we have a simple recipe:
 
 ```{r}
-comp_rec <- recipe(usr ~ ., data=comp_train) %>%
+comp_rec <- recipe(usr ~ ., data=comp_train) |>
   step_normalize(all_numeric_predictors())
 
 comp_rec
@@ -126,14 +126,14 @@ trained_rec
 Finally we need to `bake` our recipe using both our training and testing data. This will perform the needed transformations and return our datasets to us:
 
 ```{r}
-comp_train_baked <- trained_rec %>% bake(comp_train)
-comp_test_baked  <- trained_rec %>% bake(comp_test)
+comp_train_baked <- trained_rec |> bake(comp_train)
+comp_test_baked  <- trained_rec |> bake(comp_test)
 ```
 
 We can check these are the same as we got before with our manual setup by using `anti_join` - we should get no rows if they are the same:
 
 ```{r}
-comp_train_baked %>% anti_join(comp_train_scale)
+comp_train_baked |> anti_join(comp_train_scale)
 ```
 
 So steps to fit our model would be:
@@ -148,25 +148,25 @@ In one code block this is:
 
 ```{r}
 # Create our recipe:
-comp_rec <-  recipe(usr ~ ., data = comp_train) %>%
-  step_normalize(all_numeric_predictors()) %>%
+comp_rec <-  recipe(usr ~ ., data = comp_train) |>
+  step_normalize(all_numeric_predictors()) |>
   prep(training = comp_train)
 
 # Create the model
 nn_spec <- mlp(mode = "regression", hidden_units = 11, penalty = 0.01)
 
 # Train the model
-nn_fit <- nn_spec %>%
+nn_fit <- nn_spec |>
   fit(usr ~ ., data = bake(comp_rec, comp_train))
 
 # Apply to test set and evaluate
-nn_pred <- comp_test %>%
+nn_pred <- comp_test |>
   bind_cols(
-    nn_fit %>% predict(new_data = bake(comp_rec, comp_test))
+    nn_fit |> predict(new_data = bake(comp_rec, comp_test))
   )
 
 # Evaluate the model
-nn_pred %>% metrics(usr, .pred)
+nn_pred |> metrics(usr, .pred)
 ```
 
 ### Try yourself
