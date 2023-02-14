@@ -137,11 +137,11 @@ https://www.educationcounts.govt.nz/statistics/school-rolls
 and is read in using:
 
 ```{r}
-roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/roll_nomacrons.csv")
+roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools/roll_nomacrons.csv")
 roll
 ```
 
-You should see there are 103,598 rows for 5 different variables (`School`, `Gender`, `EthnicGroup`, `Level`, `Students`)
+You should see there are 103,666 rows for 5 different variables (`School`, `Gender`, `EthnicGroup`, `Level`, `Students`)
 
 We'll start by using `filter` to select rows that satisfy one or more conditions. This is useful for quickly obtaining subsets of interest (indeed, the `subset` command from base R works similarly).
 

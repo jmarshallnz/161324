@@ -9,8 +9,8 @@ Today we'll use a new dataset for schools alongside the school roll data, and so
 library(tidyverse)
 library(readxl)
 
-roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/roll_nomacrons.csv")
-schools <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools.csv")
+roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools/roll_nomacrons.csv")
+schools <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools/schools.csv")
 
 clean <- roll %>% mutate(Level = as.numeric(substring(Level, 6)))
 clean
