@@ -373,7 +373,8 @@ hrc <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horizons_river_ecoli.cs
 date <- hrc |> mutate(Year = year(ymd(Date))) |> pull(Year) |> range()
 ```
 
-```{r}
+```{r, message=FALSE}
+hrc <- read_csv("https://www.massey.ac.nz/~jcmarsha/data/horizons_river_ecoli.csv")
 hrc
 ```
 
