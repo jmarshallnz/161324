@@ -36,9 +36,9 @@ class: middle, inverse
 
 In order of appearance:
 
-Jonathan Marshall         |  Rewat (Ray) Khanthaporn
+Jonathan Marshall         |  Adam Smith
 --------------------------|---------------------------
-j.c.marshall@massey.ac.nz |  r.khanthaporn@massey.ac.nz
+j.c.marshall@massey.ac.nz |  a.n.h.smith@massey.ac.nz
 Manawatu ScB3.17          |  Albany
 
 ---
