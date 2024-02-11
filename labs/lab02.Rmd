@@ -136,9 +136,9 @@ Sometimes[^allthetime] the data we're given isn't in the nice, tidy form we've s
 
 As an example, let's look at some real-world data by downloading the **1 July 2021 to 30 September 2021** immunisation data from here:
 
-https://www.health.govt.nz/our-work/preventative-health-wellness/immunisation/immunisation-coverage/national-and-dhb-immunisation-data
+https://www.tewhatuora.govt.nz/for-the-health-sector/vaccine-information/immunisation-coverage/
 
-Click on the link and load the excel sheet for 1 July 2021 to 30 September 2021 into Excel. Let's suppose we want the information in the `Ethnicity` sheet (sheet 2).
+Click on the link and go to the "Immunisation coverage data – three-month reporting period" drop down list at the bottom. Download the excel sheet for 1 July 2021 to 30 September 2021 and load it into Excel. Let's suppose we want the information in the `Ethnicity` sheet (sheet 2).
 
 Notice that there are several issues with these data:
 
@@ -156,7 +156,7 @@ This is a lot of problems to deal with. We're going to keep things quite simple.
 We'll start by automatically downloading the file we want and loading it into R using the `readxl` package:
 
 ```{r}
-download.file(url = "https://www.health.govt.nz/system/files/documents/pages/q1-21-22-imms-coverage-ethnicity-and-deprivation-quarterly-1-july-30-sept-2021-for-v0-3.xlsx",
+download.file(url = "https://www.tewhatuora.govt.nz/assets/For-the-health-sector/Health-sector-guidance/Vaccine-information-for-healthcare-professionals/Immunisation-coverage-data-three-month-reporting-period/1-July-2021-to-30-September-2021-Excel-67-KB.xlsx",
               destfile = "immunisation.xlsx",
               mode = "wb")
 excel_sheets("immunisation.xlsx")
