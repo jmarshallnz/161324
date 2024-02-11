@@ -103,15 +103,16 @@ wage.recipe
 
 Our next step is to remove the `rowid` variable as not being useful for modelling and to normalise the numeric variables except those that are binary indicators (`UNION` and `SOUTH`):
 
-```{r}
+```{r, collapse=TRUE}
 wage.recipe.norm <- wage.recipe |>
   step_rm(rowid) |>
   step_normalize(all_numeric_predictors(), -UNION, -SOUTH)
 wage.recipe.norm
 ```
+
 We then prep (train) this recipe with the training set:
 
-```{r}
+```{r, collapse=TRUE}
 wage.recipe.trained <- wage.recipe.norm |> prep(wage.new.train)
 wage.recipe.trained
 ```
