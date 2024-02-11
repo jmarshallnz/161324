@@ -34,7 +34,7 @@ and prediction competitions, some with quite large prizes available!
 ## Loading Data into R{#sec:dataload}
 
 We'll be mostly using the `readr` package for reading data into R. This is
-part of the (https://tidyverse.org)[tidyverse] set of packages. In general
+part of the [tidyverse](https://tidyverse.org) set of packages. In general
 we'll be using the tidyverse throughout, at least where we can.
 
 We'll start most of our code with:
