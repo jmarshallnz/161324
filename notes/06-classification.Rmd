@@ -997,6 +997,7 @@ We continue our example on the Swiss bank notes by using the output
 from `glm()` to compute the class probabilities ourselves:
 
 ```{r}
+library(broom)
 swiss.glm.2 |> augment(newdata=swiss.test) |>
   mutate(.pred_genuine = 1/(1 + exp(-.fitted)))
 ```
