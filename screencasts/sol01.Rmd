@@ -257,11 +257,11 @@ https://www.educationcounts.govt.nz/statistics/school-rolls
 and is read in using:
 
 ```{r}
-roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/roll_nomacrons.csv")
+roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools/roll_nomacrons.csv")
 roll
 ```
 
-You should see there are 103,598 rows for 5 different variables (`School`, `Gender`, `EthnicGroup`, `Level`, `Students`)
+You should see there are 103,666 rows for 5 different variables (`School`, `Gender`, `EthnicGroup`, `Level`, `Students`)
 
 We'll start by using `filter` to select rows that satisfy one or more conditions. This is useful for quickly obtaining subsets of interest (indeed, the `subset` command from base R works similarly).
 
@@ -296,15 +296,17 @@ filter(roll, School == "Queen Elizabeth College", Level == "Year 9")
 2. Find all rows where there are more than 100 Year 9 Asian students.
 
 ```{r}
-filter(roll, EthnicGroup == "Asian", Level == "Year 9", Students > 100)
+filter(roll, Level == "Year 9", EthnicGroup == "Asian", Students > 100)
 ```
 
 3. Find all rows where the school name starts with the letter 'G' (hint: you can use School > 'G' for this, but using `str_starts` might be better!)
 
 ```{r}
 filter(roll, School > 'G', School < 'H')
-filter(roll, str_starts(School, "G"))
+# Another way is to use str_starts()
+filter(roll, str_starts(School, 'G'))
 ```
+
 
 You can `arrange` (sort) row output based on the values in each column, and can arrange by more than one column at once. The first column specified will be sorted first, and then all entries that are the same on that column will then be sorted by the second and multiple columns.
 
@@ -318,11 +320,9 @@ arrange(roll, desc(Students))
 ### Try yourself
 
 1. Arrange the roll rows by number of students.
-
 ```{r}
 arrange(roll, Students)
 ```
-
 2. Find all rows where the ethnicity is Pacific, arranging them by decreasing number of students. (Hint: First filter down to Pacific students, then arrange)
 
 ```{r}
@@ -333,8 +333,9 @@ arrange(pacific, desc(Students))
 3. Which school has the highest number of International fee paying students at Year 13? (Hint: 'International fee paying' is an option for `EthnicGroup`)
 
 ```{r}
-y13_int <- filter(roll, EthnicGroup == "International fee paying", Level == "Year 13")
-arrange(y13_int, desc(Students))
+y13_international <- filter(roll, EthnicGroup == "International fee paying", Level == "Year 13")
+arrange(y13_international, desc(Students))
+# UP International College New Zealand has the most (57+33 = 90)
 ```
 
 ## The pipe operator
@@ -354,15 +355,24 @@ arrange(y13internationals, desc(Students))
 The data frames `internationals` and `y13internationals` here are really only temporary - we only use them to make our code look a little more readable. We could instead do:
 
 ```{r}
-arrange(filter(filter(roll, EthnicGroup == "International fee paying"), Level == "Year 13"), desc(Students))
+# This is filtering the roll by ethnicgroup to pull out international fee paying students, then by year for dropping down to just year 13 international fee paying students, then arranging by descending number of students, so that we can find the school with the most y13 internationals.
+arrange(
+  filter(
+    filter(roll, 
+           EthnicGroup == "International fee paying"
+           ), 
+    Level == "Year 13"
+    ), 
+  desc(Students)
+  )
 ```
 
-But this is hard to read! Instead, we could use the pipe operator, `%>%` (insertable via `Ctrl`-`Shift`-`M`)[^basepipe]. What this does is takes what you provide on the left hand side and "pipes" it as the first argument into the function you provide on the right hand side. Any other arguments to the function then just get placed in the function as usual. So the above could be written:
+But this is hard to read! Instead, we could use the pipe operator, `|>` (insertable via `Ctrl`-`Shift`-`M`)[^magrittr]. What this does is takes what you provide on the left hand side and "pipes" it as the first argument into the function you provide on the right hand side. Any other arguments to the function then just get placed in the function as usual. So the above could be written:
 
 ```{r}
-roll %>%
-  filter(EthnicGroup == "International fee paying") %>%
-  filter(Level == "Year 13") %>%
+roll |>
+  filter(EthnicGroup == "International fee paying") |>
+  filter(Level == "Year 13") |>
   arrange(desc(Students))
 ```
 
@@ -370,9 +380,19 @@ And be read "Take roll, filter so that EthnicGroup is International fee paying, 
 
 ### Try yourself
 
-1. Try doing a few of the above exercises utilising the pipe instead. i.e. all statements should start `roll %>%`.
+1. Try doing a few of the above exercises utilising the pipe instead. i.e. all statements should start `roll |>`.
 
 ```{r}
+# old code:
+pacific <- filter(roll, EthnicGroup == "Pacific")
+arrange(pacific, desc(Students))
+
+# new code:
+roll |>
+  filter(EthnicGroup == "Pacific") |>
+  arrange(desc(Students))
+
+# Alternate pipe operator: %>%
 roll %>%
   filter(EthnicGroup == "Pacific") %>%
   arrange(desc(Students))
@@ -388,35 +408,50 @@ The `select` command from `dplyr` allows you to select columns you wish to keep 
 Try the following examples to understand what they do:
 
 ```{r}
-roll %>% select(School, EthnicGroup, Students)
-roll %>% select(-School, Number=Students)
-roll %>% select(Students, Level, everything())
+roll |> select(School, EthnicGroup, Students)
+roll |> select(-School, Number=Students)
+roll |> select(Students, Level, everything())
 ```
 
 ### Try yourself
 
 1. Rearrange the `roll` data set so that `Students` and `Level` are first.
+
 ```{r}
-roll %>% select(Students, Level, everything())
+roll |> select(Students, Level, everything())
 ```
 
 2. Rename the `School` column to `Name` keeping all other columns.
 
 ```{r}
-roll %>% select(Name = School, everything())
+roll |> select(Name=School, everything())
 ```
 
 3. Try part 2 using `rename` instead of `select`.
 
 ```{r}
-roll %>% rename(Name = School)
+roll |> rename(Name = School)
+roll |> rename(Ethnic = EthnicGroup)
 ```
 
 `mutate()` adds new variables using functions of existing columns. You can overwrite columns as well.
 
 ```{r}
-roll %>% mutate(Proportion = Students/sum(Students))
-clean = roll %>% mutate(Level = as.numeric(substring(Level, 6)))
+roll |> mutate(Proportion = Students/sum(Students))
+
+clean = roll |> mutate(Level = as.numeric(substring(Level, 6)))
+clean
+
+# Breaking this code down a bit:
+roll |> mutate(LevelYear = substring(Level, 6),
+               LevelNumber = as.numeric(LevelYear))
+
+# Use the pipe maybe?
+roll |>
+  mutate(Level =
+           Level |>
+           substring(first=6) |>
+           as.numeric())
 ```
 
 ### Try yourself
@@ -424,57 +459,59 @@ clean = roll %>% mutate(Level = as.numeric(substring(Level, 6)))
 1. Using the `clean` dataset, create a new column combining ethnicgroup and gender with `paste`.
 
 ```{r}
-clean %>% mutate(EthGen = paste(EthnicGroup, Gender))
+clean |> mutate(EthGen = paste(EthnicGroup, Gender))
 ```
-
 2. Redo part 1, so that the original two columns are removed.
 
 ```{r}
-clean %>% mutate(EthGen = paste(EthnicGroup, Gender)) %>%
+clean |> mutate(EthGen = paste(EthnicGroup, Gender)) |>
   select(-EthnicGroup, -Gender)
 ```
 
 3. Create a new variable "Age" with the typical age of students in each year level (Year 1 students are typically 5 years old).
 
 ```{r}
-clean %>% mutate(Age = Level + 4)
+clean |>
+  mutate(Age = Level + 4)
 ```
 
 4. Investigate using the `unite` function from `tidyr` to do what you did in part 1 and 2.
 
 ```{r}
-clean %>% unite(EthGen, EthnicGroup, Gender, sep = " ")
+clean |> unite(EthGen, EthnicGroup, Gender, sep=" ")
 ```
-
 
 The `summarise()` function reduces our dataset down to just a single row containing some summary. Try the following examples to understand what they do. Notice in the second example that we can use variables we've computed (`Total`) in other summaries.
 
 ```{r}
-clean %>% summarise(Rows = n())
-clean %>% summarise(Total = sum(Students), Average = Total/n())
+clean |> summarise(Rows = n())
+clean |> summarise(Total = sum(Students), Average = Total/n())
 ```
 
 ### Try yourself
 
 1. Find the largest (maximum) number of students in any row.
+
 ```{r}
-clean %>% summarise(Largest = max(Students))
+clean |> summarise(Maximum = max(Students))
 ```
 
 2. Find the median number of students in a row.
+
 ```{r}
-clean %>% summarise(MedStudents = median(Students))
+clean |> summarise(Med = median(Students))
 ```
 
 3. What is the lowest and highest year levels in the data?
+
 ```{r}
-clean %>% summarise(Lowest = min(Level), Highest = max(Level))
+clean |> summarise(min(Level), max(Level))
 ```
 
 4. Find the number of Maori students in year 9 (hint: `filter` then `summarise`)
 
 ```{r}
-clean %>% filter(EthnicGroup == "Maori", Level == 9) %>%
+clean |> filter(EthnicGroup == "Maori") |>
   summarise(Total = sum(Students))
 ```
 
@@ -483,98 +520,96 @@ The true power of `dplyr` comes with the `group_by()` operation, which allows al
 The idea with `group_by()` is to collect rows together to be treated as a unit using one or more variables. All the other commands then operate per-group. For example, we can easily find the number of students per school by grouping by school and then adding up the number of students with `summarise`:
 
 ```{r grouping}
-clean %>% group_by(School) %>% summarise(Total = sum(Students))
+clean |> group_by(School) |> summarise(Total = sum(Students))
 ```
 
 ### Try yourself
 
 1. How many students of each ethnicity are there?
-
 ```{r}
-clean %>% group_by(EthnicGroup) %>%
-  summarise(Total = sum(Students))
+clean |> group_by(EthnicGroup) |> summarise(Total = sum(Students))
 ```
 
 2. How many students are there of each gender?
-
 ```{r}
-clean %>% group_by(Gender) %>%
-  summarise(Total = sum(Students))
+clean |> group_by(Gender) |> summarise(Total = sum(Students))
 ```
-
 3. Which school has the most female students in year 13?
 
 ```{r}
-clean %>% filter(Gender == "Female", Level == 13) %>%
-  group_by(School) %>%
-  summarise(Total = sum(Students)) %>%
+clean |>
+  filter(Gender == "Female", Level == 13) |>
+  group_by(School) |>
+  summarise(Total = sum(Students)) |>
   arrange(desc(Total))
 ```
 
 4. Produce a graph of the total number of students by year level. Hint: First get the data frame you want, and then use `ggplot` with `geom_col`.
 
 ```{r}
-clean %>% group_by(Level) %>%
-  summarise(Total = sum(Students)) %>%
+clean |>
+  group_by(Level) |>
+  summarise(Total = sum(Students)) |>
   ggplot() +
-  geom_col(mapping = aes(x=Level, y=Total))
+  geom_col(aes(x=Level, y=Total))
 ```
 
 5. Alter your graph from 4 so as to include gender.  Hint: You'll need to group by two variables for this.
 
 ```{r}
-clean %>% group_by(Level, Gender) %>%
-  summarise(Total = sum(Students)) %>%
+clean |>
+  group_by(Level, Gender) |>
+  summarise(Total = sum(Students)) |>
   ggplot() +
-  geom_col(mapping = aes(x=Level, y=Total, fill=Gender),
-           position = 'dodge')
+  geom_col(aes(x=Level, y=Total, fill=Gender), position='dodge')
 ```
+
 
 ## Missing values
 
 You probably noticed earlier that when plotting the `penguins` data, `ggplot` informed us that it had removed missing values. These are recorded as `NA` in R, and will need to be accounted for when summarising:
 
 ```{r}
-penguins %>% summarise(mean_flipper_length = mean(flipper_length_mm))
+penguins |> summarise(mean_flipper_length = mean(flipper_length_mm))
+penguins |> summarise(mean_flipper_length = mean(flipper_length_mm, na.rm=TRUE))
+penguins |> summarise(median_flipper_length = median(flipper_length_mm, na.rm=TRUE))
+# View(penguins)
 ```
-Adding `na.rm=TRUE` to the `mean` function will fix this.
 
-```{r}
-penguins %>% summarise(mean_flipper_length = mean(flipper_length_mm, na.rm=TRUE))
-```
+Adding `na.rm=TRUE` to the `mean` function will fix this.
 
 Another way that missing values can turn up is where they are **implicitly** missing. e.g. in the `roll` data, there are no `NA` entries at all, however there is missing data. e.g. if we tried to find the average number of each gender across schools, we might try[^grouping]:
 
 ```{r}
-roll %>% group_by(Gender, School) %>%
-  summarise(Students = sum(Students)) %>%
-  group_by(Gender) %>%
+roll |> group_by(Gender, School) |>
+  summarise(Students = sum(Students)) |>
+  group_by(Gender) |>
   summarise(MeanStudents = mean(Students))
 ```
 
 However, this will be wrong, as there are no entries where the number of students in a category is 0, yet we know ofcourse that some schools will have no students of a particular ethnicity, gender and level combination. e.g. single gender schools.
 
 ```{r}
-roll %>% filter(Students == 0)
+roll |> filter(Students == 0)
 ```
 
 We can see this by totalling up students by school and gender, and then taking a look at some schools:
 
 ```{r}
-roll %>% group_by(Gender, School) %>%
-  summarise(Students = sum(Students)) %>%
-  filter(str_detect(School, "Grammar")) %>%
+roll |> group_by(Gender, School) |>
+  summarise(Students = sum(Students)) |>
+  filter(str_detect(School, "Grammar")) |>
   arrange(School)
 ```
 
 One fix for this is using the `complete()` function from `tidyr`. This adds additional combinations to the data, though note that we will need to `ungroup()` things first, so that it can operate across both genders simultaneously[^ungroup]:
 
 ```{r}
-roll %>% group_by(Gender, School) %>%
-  summarise(Students = sum(Students)) %>%
-  ungroup() %>%
-  complete(Gender, School) %>%
-  filter(str_detect(School, "Grammar")) %>%
+roll |> group_by(Gender, School) |>
+  summarise(Students = sum(Students)) |>
+  ungroup() |>
+  complete(Gender, School) |>
+  filter(str_detect(School, "Grammar")) |>
   arrange(School)
 ```
 
@@ -585,35 +620,41 @@ We can also fill in these missing values, because we know they should be 0.
 1. Add the necessary code above to fill in the `NA` values to be `0`. You can do this using the `fill` parameter of `complete`, or alternatively the `replace_na()` function.
 
 ```{r}
-roll %>% group_by(Gender, School) %>%
-  summarise(Students = sum(Students)) %>%
-  ungroup() %>%
-  complete(Gender, School, fill = list(Students = 0))
+roll |> group_by(Gender, School) |>
+  summarise(Students = sum(Students)) |>
+  ungroup() |>
+  complete(Gender, School, fill=list(Students=0)) |>
+  filter(str_detect(School, "Grammar")) |>
+  arrange(School)
 
-roll %>% group_by(Gender, School) %>%
-  summarise(Students = sum(Students)) %>%
-  ungroup() %>%
-  complete(Gender, School) %>%
-  replace_na(replace = list(Students = 0))
+# use replace_na() instead:
+roll |> group_by(Gender, School) |>
+  summarise(Students = sum(Students)) |>
+  ungroup() |>
+  complete(Gender, School) |>
+  filter(str_detect(School, "Grammar")) |>
+  replace_na(replace = list(Students = 0)) |>
+  arrange(School)
 ```
 
 2. With the `NA` values replaced, recompute the mean number of male and female students across all schools.
 
 ```{r}
-roll %>% group_by(Gender, School) %>%
-  summarise(Students = sum(Students)) %>%
-  ungroup() %>%
-  complete(Gender, School, fill = list(Students = 0)) %>%
-  group_by(Gender) %>%
+roll |> group_by(Gender, School) |>
+  summarise(Students = sum(Students)) |>
+  ungroup() |>
+  complete(Gender, School, fill=list(Students=0)) |>
+  arrange(School) |>
+  group_by(Gender) |>
   summarise(Mean = mean(Students))
 ```
-
+Not too far wrong really, but still we were overestimating the number of students when we didn't realise that we had implicit missingness.
 
 [^MASS]: A common issue is loading `MASS` after `dplyr` - the `MASS::select()` function then overrides `dplyr::select()` which results in very opaque error messages when you try and `select()` columns from a `data.frame`.
 
 [^adjust]: This is an example of the *bias-variance trade-off*. By smoothing more we will reduce the variance of the estimate (as we're estimating the density at each location by using more of the data) but will increase bias (as the estimate depends on points far away from the location). Conversely, by smoothing less we decrease bias (the estimate depends only on points nearby) but increase variance (we're using fewer points to estimate at each location). At some point we have a sweet spot! We'll see this same principle over and over in this course.
 
-[^basepipe]: The pipe `%>%` is from the package `magrittr`. This was introduced quite a long time ago, so lots of code you see will use this, and we'll use it as well. There is also a pipe operator in base R, introduced in R v4.1.0, which uses the character combination `|>`. You can use whichever you prefer, and can configure RStudio accordingly so that Ctrl-Shift-M inserts your preferred pipe.
+[^magrittr]: An alternate pipe `%>%` is from the package `magrittr`. This was introduced quite a long time ago, so lots of code you see will use this. We'll instead use the pipe operator in base R, introduced in R v4.1.0, which uses the character combination `|>`. You can use whichever you prefer, and can configure RStudio accordingly so that Ctrl-Shift-M inserts your preferred pipe.
 
 [^ungroup]: You can also ungroup by adding the `group="drop"` to the `summarise()` command.
 

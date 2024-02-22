@@ -43,38 +43,45 @@ We have used `set.seed` here as the weights in the neural network are assigned r
 1. Get predictions from `model1.nn` for `comp_test` into a data frame and use this to compute the MSE (or RMSE - your choice). *NOTE: The `predict.nnet()` function returns a matrix of predictions (with just one column) so you'll have to convert it to numeric before binding columns.*
 
 ```{r}
-comp1_pred <- comp_test %>%
-  bind_cols(pred = predict(model1.nn, newdata=comp_test) %>% as.numeric())
-comp1_pred %>%
-  summarise(MSE = mean((usr - pred)^2))
-comp1_pred %>%
-  metrics(truth=usr, estimate=pred)
+comp_test |>
+  bind_cols(.pred = predict(model1.nn, newdata=comp_test) |> as.numeric()) |>
+  select(usr, .pred, everything()) |>
+  summarise(MSE = mean((usr - .pred)^2))
 ```
 
 2. Try adding `decay=0.01` to the `nnet` function to get a new model `model2.nn`. This tunes the decay rate of weights during the back-propogation algorithm. Check how well this does. Remember to use the same `set.seed` to ensure the weights are initialised the same way.
 
 ```{r}
 set.seed(1945)
-model2.nn <- nnet(usr ~ ., data = comp_train, linout=TRUE, size=11, decay=0.01, maxit=1000)
-```
+model2.nn <- nnet(usr ~ ., data = comp_train, linout=TRUE, size=11, decay=0.01, maxit = 1000)
 
-```{r}
-comp2_pred <- comp_test %>%
-  bind_cols(pred = predict(model2.nn, newdata=comp_test) %>% as.numeric())
-comp2_pred %>%
-  metrics(truth=usr, estimate=pred)
+comp_test |>
+  bind_cols(.pred = predict(model2.nn, newdata=comp_test) |> as.numeric()) |>
+  select(usr, .pred, everything()) |>
+  summarise(MSE = mean((usr - .pred)^2))
 ```
 
 3. Try fitting the above models instead using `parsnip`. The model specification should be `mlp(mode="regression", engine="nnet", hidden_units=11, penalty=0.01)`. Here, `mlp` is short for "multilayer perceptron". Note that you don't need the `linout` parameter - this is automatically set based on the `mode`.
 
 ```{r}
-#set.seed(1945)
-spec2 <- mlp(mode="regression", engine="nnet", hidden_units=11, penalty=0.01,
-             epochs = 1000)
-fit2 <- spec2 %>% fit(usr ~ ., data=comp_train)
-fit2 %>% extract_fit_engine() %>% pluck("convergence")
-pred2 <- fit2 %>% augment(new_data=comp_test)
-pred2 %>% metrics(truth=usr, estimate=.pred)
+set.seed(1945)
+spec_nn <- mlp(mode = "regression", engine = "nnet", hidden_units=11, penalty=0.01, epochs=1000)
+
+model3.nn <- spec_nn |>
+  fit(usr ~ ., data=comp_train)
+
+model3.nn |>
+  extract_fit_engine() |>
+  pluck("convergence")
+
+# Base R ways of getting this stuff...
+nnet_object <- model3.nn |> extract_fit_engine()
+nnet_object$convergence
+nnet_object[["convergence"]]
+
+model3.nn |>
+  augment(new_data = comp_test) |>
+  metrics(truth = usr, estimate=.pred)
 ```
 
 ## The need for scaling
@@ -82,7 +89,7 @@ pred2 %>% metrics(truth=usr, estimate=.pred)
 You should find that you get very poor predictions compared to linear models, trees or forests. This is because the neural network is exponentiating the linear combination of predictors in order to decide whether the hidden nodes should be activated or not. But, our predictors are on very different scales and some of them are very large:
 
 ```{r}
-comp %>% summarise(across(everything(), max))
+comp |> summarise(across(everything(), max))
 ```
 
 If we exponentiate 2.4 million, we get (essentially) infinity. Thus, hidden nodes are turned on or off directly based on the initial random weights, and there is no way to change them as any change in the weights will still give something like infinity (or minus infinity).
@@ -92,12 +99,13 @@ To deal with this we need to scale the data down to something small. A typical w
 One way to do this is to compute the necessary scaling factors (mean and sd) on the training data, and then applying those via the `scale` function to both training and test data. Using base R this would be:
 
 ```{r}
-comp_train_mean <- comp_train %>% select(-usr) %>% apply(2, mean)
-comp_train_sd   <- comp_train %>% select(-usr) %>% apply(2, sd)
-comp_train_scale <- bind_cols(comp_train %>% select(usr),
-                              comp_train %>% select(-usr) %>%
-                                scale(center=comp_train_mean, scale=comp_train_sd) %>%
+comp_train_mean <- comp_train |> select(-usr) |> apply(2, mean)
+comp_train_sd   <- comp_train |> select(-usr) |> apply(2, sd)
+comp_train_scale <- bind_cols(comp_train |> select(usr),
+                              comp_train |> select(-usr) |>
+                                scale(center=comp_train_mean, scale=comp_train_sd) |>
                                 as.data.frame())
+comp_train_scale
 ```
 
 This is a little messy, but it works. We're using the `apply` function to compute column mean and sd and then using the `scale` function to do the scaling, but this returns a matrix, not a data.frame, so we have to transfer back again then bind the columns back together.
@@ -105,10 +113,11 @@ This is a little messy, but it works. We're using the `apply` function to comput
 We could do this by staying within the tidyverse with dplyr - using the usual trick of pivoting longer first. We start by computing the scaling information:
 
 ```{r}
-comp_train_scaling <- comp_train %>%
-  pivot_longer(-usr, names_to='name', values_to='value') %>%
-  group_by(name) %>%
+comp_train_scaling <- comp_train |>
+  pivot_longer(-usr, names_to='name', values_to='value') |>
+  group_by(name) |>
   summarise(mean = mean(value), sd=sd(value))
+comp_train_scaling
 ```
 
 Then we apply to the training data by adding a rowid (so we can pivot back wide again), 
@@ -116,13 +125,25 @@ joining to our scaling information, mutating to get the new value and then pivot
 removing the unused mean and sd columns. The same code can then be applied to `comp_test`
 
 ```{r}
-comp_train_scale <- comp_train %>% rowid_to_column() %>%
-  pivot_longer(-c(usr, rowid), names_to='name', values_to='value') %>%
-  left_join(comp_train_scaling) %>%
-  group_by(name) %>%
-  mutate(value = (value - mean)/sd, .keep='unused') %>%
-  pivot_wider(names_from=name, values_from=value) %>%
+comp_train_scale <-
+  comp_train |> rowid_to_column() |>
+  pivot_longer(-c(usr, rowid), names_to='name', values_to='value') |>
+  left_join(comp_train_scaling) |>
+  group_by(name) |>
+  mutate(value = (value - mean)/sd, .keep = 'unused') |>
+  pivot_wider(names_from=name, values_from=value) |>
   select(-rowid)
+  
+
+# Alternate: Use mutate rather than summarise/left_join is a bit tidier again!
+# NOTE: This is much nicer for the training data, but we don't get the values we
+# need to scale the test data!! So don't do this...
+#comp_train |> rowid_to_column() |>
+#  pivot_longer(-c(usr, rowid), names_to='name', values_to='value') |>
+#  group_by(name) |>
+#  mutate(value = (value - mean(value))/sd(value)) |>
+#  pivot_wider(names_from=name, values_from=value) |>
+#  select(-rowid)
 ```
 
 ### Try yourself
@@ -130,27 +151,46 @@ comp_train_scale <- comp_train %>% rowid_to_column() %>%
 1. Use the above code to scale the `comp_test` data as well into `comp_test_scale`.
 
 ```{r}
-comp_test_scale <- comp_test %>% rowid_to_column() %>%
-  pivot_longer(-c(usr, rowid), names_to='name', values_to='value') %>%
-  left_join(comp_train_scaling) %>%
-  group_by(name) %>%
-  mutate(value = (value - mean)/sd, .keep='unused') %>%
-  pivot_wider(names_from=name, values_from=value) %>%
+comp_test_scale <- comp_test |> rowid_to_column() |>
+  pivot_longer(-c(usr, rowid), names_to='name', values_to='value') |>
+  left_join(comp_train_scaling) |>
+  group_by(name) |>
+  mutate(value = (value - mean)/sd, .keep = 'unused') |>
+  pivot_wider(names_from=name, values_from=value) |>
   select(-rowid)
-comp_test_scale
 ```
 
 2. Fit another neural net this time using the scaled data. It should perform rather better than the unscaled ones.
 
 ```{r}
 set.seed(1945)
-spec2 <- mlp(mode="regression", engine="nnet", hidden_units=11, penalty=0.01,
-             epochs = 5000)
-fit3 <- spec2 %>% fit(usr ~ ., data=comp_train_scale)
-fit3 %>% extract_fit_engine() %>% pluck("convergence")
-pred3 <- fit3 %>% augment(new_data=comp_test_scale)
-pred3 %>% metrics(truth=usr, estimate=.pred)
+#set.seed(1946)
+spec_nn2 <- mlp(mode = "regression", engine = "nnet", hidden_units=11, epochs=5000)
+
+model4.nn <- spec_nn2 |>
+  fit(usr ~ ., data=comp_train_scale)
+
+model4.nn |>
+  extract_fit_engine() |>
+  pluck("convergence")
+
+model4.nn |>
+  augment(new_data = comp_test_scale) |>
+  metrics(truth = usr, estimate=.pred)
+
+# Wait, this is rubbish!!!
+model4.nn |>
+  augment(new_data = comp_test_scale) |>
+  ggplot() +
+  geom_point(mapping=aes(x=usr, y=.pred)) +
+  geom_abline(slope=1)
+
+# Have we overfit to the training data?? YES!
+model4.nn |>
+  augment(new_data = comp_train_scale) |>
+  metrics(truth = usr, estimate=.pred)
 ```
+
 
 ## Tidying up the process of processing
 
@@ -161,11 +201,12 @@ Ofcourse, there's a package for that! We can utilise the `recipe` package within
 To perform scaling we have a simple recipe:
 
 ```{r}
-comp_rec <- recipe(usr ~ ., data=comp_train) %>%
+comp_rec <- recipe(usr ~ ., data=comp_train) |>
   step_normalize(all_numeric_predictors())
 
 comp_rec
 ```
+
 We give the recipe the formula and data (so it knows the outcome variable and other potential predictors) and then add the `step_normalize` function to normalise all numeric predictors.
 
 The recipe just describes what we want to do: It doesn't actually do it! To perform the operation there are two more steps needed: We first must `prep`, which will estimate the parameters for scaling:
@@ -178,14 +219,17 @@ trained_rec
 Finally we need to `bake` our recipe using both our training and testing data. This will perform the needed transformations and return our datasets to us:
 
 ```{r}
-comp_train_baked <- trained_rec %>% bake(comp_train)
-comp_test_baked  <- trained_rec %>% bake(comp_test)
+comp_train_baked <- trained_rec |> bake(comp_train)
+comp_test_baked  <- trained_rec |> bake(comp_test)
+
+# take a look at comp_train_baked:
+comp_train_baked |> skimr::skim()
 ```
 
 We can check these are the same as we got before with our manual setup by using `anti_join` - we should get no rows if they are the same:
 
 ```{r}
-comp_train_baked %>% anti_join(comp_train_scale)
+comp_train_baked |> anti_join(comp_train_scale)
 ```
 
 So steps to fit our model would be:
@@ -200,28 +244,33 @@ In one code block this is:
 
 ```{r}
 # Create our recipe:
-comp_rec <-  recipe(usr ~ ., data = comp_train) %>%
-  step_normalize(all_numeric_predictors()) %>%
+comp_rec <-  recipe(usr ~ ., data = comp_train) |>
+  step_normalize(all_numeric_predictors()) |>
   prep(training = comp_train)
 
 # Create the model
-nn_spec <- mlp(mode = "regression", hidden_units = 5, penalty = 0.01,
-               epochs = 5000)
+nn_spec <- mlp(mode = "regression", hidden_units = 11, penalty = 0.01, epochs=10000)
 
 # Train the model
-nn_fit <- nn_spec %>%
+nn_fit <- nn_spec |>
   fit(usr ~ ., data = bake(comp_rec, comp_train))
 
-# Check convergence
-nn_fit %>% extract_fit_engine() %>% pluck("convergence")
-
-nn_fit %>% extract_fit_engine()
+# Check we're reaching convergence:
+nn_fit |>
+  extract_fit_engine() |>
+  pluck("convergence")
 
 # Apply to test set and evaluate
-nn_pred <- nn_fit %>% augment(new_data = bake(comp_rec, comp_test))
+nn_pred <- comp_test |>
+  bind_cols(
+    nn_fit |> predict(new_data = bake(comp_rec, comp_test))
+  )
+
+# Alternatively with augment:
+nn_pred <- nn_fit |> augment(new_data = bake(comp_rec, comp_test))
 
 # Evaluate the model
-nn_pred %>% metrics(usr, .pred)
+nn_pred |> metrics(usr, .pred)
 ```
 
 ### Try yourself
@@ -232,8 +281,7 @@ nn_pred %>% metrics(usr, .pred)
 
 3. Why are you still getting different metrics from the neural network from run to run?
 
-We're getting different metrics from run to run as the initial random seed differs. Initially the weights (of which there are a large number!) are set to random values between -0.5 and 0.5,
-and we then optimise the weights from there via back propagation. As there are a large number of weights, there's usually a large number of combinations of those weights that lead to locally optimal (i.e. if you change the weights a little you get a poorer fit) model fits. Essentially we're in very high dimensional space, and there is too much freedom to move about, and lots of potential optimal values for the weights. Finding the 'globally' best set of weights is very hard!
+We're still getting different metrics as the initial weights are random, and the model fit is so flexible that we're still not reaching the same 'optimal' set of weights that minimise the residual sum of squares on the training data. We have 254 parameters to fiddle with and only 600 rows, so there's a LOT of flexibility!
 
 ## Prediction competition: Bank data
 

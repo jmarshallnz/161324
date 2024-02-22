@@ -9,10 +9,10 @@ Today we'll use a new dataset for schools alongside the school roll data, and so
 library(tidyverse)
 library(readxl)
 
-roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/roll_nomacrons.csv")
-schools <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools.csv")
+roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools/roll_nomacrons.csv")
+schools <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools/schools.csv")
 
-clean <- roll %>% mutate(Level = as.numeric(substring(Level, 6)))
+clean <- roll |> mutate(Level = as.numeric(substring(Level, 6)))
 clean
 ```
 
@@ -31,8 +31,8 @@ This makes it easy to do data manipulation, and also makes it easy to plot stuff
 But, sometimes we want things in other forms. The following example tables up the total number of students by gender and ethnicity:
 
 ```{r}
-ethnicity_by_gender <- clean %>%
-  group_by(EthnicGroup, Gender) %>%
+ethnicity_by_gender <- clean |>
+  group_by(EthnicGroup, Gender) |>
   summarise(Students = sum(Students))
 ethnicity_by_gender
 ```
@@ -40,7 +40,7 @@ ethnicity_by_gender
 It would be nicer if we could make this into a table so that we had one row for each ethnic group, and separate columns for the gender totals. We can do this using `pivot_wider`. The key arguments are `names_from` which is the column that provides the new column names, and `values_from` which is the column that provides the values that should go in the new columns.
 
 ```{r}
-ethnicity_by_gender %>%
+ethnicity_by_gender |>
   pivot_wider(names_from = Gender, values_from = Students)
 ```
 
@@ -51,49 +51,48 @@ Notice we have the exact same information, it's just in a more human-readable fo
 1. Create a table with total number of male and female students in each year level. (Hint: `group_by` sex and year level then `summarise`. Once done, `pivot_wider` to a table).
 
 ```{r}
-clean %>%
-  group_by(Level, Gender) %>%
-  summarise(Students = sum(Students)) %>%
+clean |>
+  group_by(Gender, Level) |>
+  summarise(Students = sum(Students)) |>
   pivot_wider(names_from = Gender, values_from = Students)
 ```
 
 2. Create a table with the number of each ethnic group in each year level.
 
 ```{r}
-clean %>%
-  group_by(Level, EthnicGroup) %>%
-  summarise(Students = sum(Students)) %>%
+clean |>
+  group_by(EthnicGroup, Level) |>
+  summarise(Students = sum(Students)) |>
   pivot_wider(names_from = EthnicGroup, values_from = Students)
 ```
 
 3. Try adding a "Total" column to the ethnic group by gender table. You could do this before the `pivot_wider` by using a `mutate` with `sum(Students)`.
 
 ```{r}
-# We could do the Total after pivoting. This is OK in this case, but if we had lots of columns to
-# add together would be tedious (and error prone - we might miss one by mistake!)
-clean %>%
-  group_by(EthnicGroup, Gender) %>%
-  summarise(Students = sum(Students)) %>%
-  pivot_wider(names_from=Gender, values_from=Students) %>%
+# Method 1: Operate on the table
+clean |>
+  group_by(EthnicGroup, Gender) |>
+  summarise(Students = sum(Students)) |>
+  pivot_wider(names_from=Gender, values_from=Students) |>
   mutate(Total = Female + Male)
-# Alternatively, compute the total beforehand while the data are tidy
-clean %>%
-  group_by(EthnicGroup, Gender) %>%
-  summarise(Students = sum(Students)) %>%
-  mutate(Total = sum(Students)) %>%
-  pivot_wider(names_from=Gender, values_from=Students) %>%
-  relocate(Total, .after = last_col())
+
+# Method 2: Operate on the tidy set then pivot wider
+clean |>
+  group_by(EthnicGroup, Gender) |>
+  summarise(Students = sum(Students)) |>
+  mutate(Total = sum(Students)) |>
+  pivot_wider(names_from=Gender, values_from=Students) |>
+  relocate(Total, .after=last_col())
 ```
 
 4. Try creating a table with the percentage of female and male students within each ethnic group. You can add a new column with `mutate()` and get the percentage by using `Students/sum(Students)` within each ethnic group.
 
 ```{r}
-clean %>%
-  group_by(EthnicGroup, Gender) %>%
-  summarise(Students = sum(Students)) %>%
-  mutate(Total = sum(Students)) %>%
-  mutate(Percentage = round(Students / Total * 100, 1)) %>%
-  select(-Students, -Total) %>%
+clean |>
+  group_by(EthnicGroup, Gender) |>
+  summarise(Students = sum(Students)) |>
+  mutate(Percentage = round(Students/sum(Students)*100, 1)) |>
+  select(-Students) |>
   pivot_wider(names_from=Gender, values_from=Percentage)
 ```
 
@@ -102,7 +101,7 @@ clean %>%
 In workshop 1 you produced a graph of the total number of students by year level and gender. You should have got something like this:
 
 ```{r}
-year_by_gender <- clean %>% group_by(Level, Gender) %>% summarise(Total = sum(Students))
+year_by_gender <- clean |> group_by(Level, Gender) |> summarise(Total = sum(Students))
 ggplot(year_by_gender) +
   geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
 ```
@@ -112,10 +111,10 @@ This is an interesting graph as it shows that males tend to leave school earlier
 To do this, we want to produce the same plot for each ethnicity. Now, we could just go ahead and create separate plots by using `filter`
 
 ```{r}
-eu_year_by_gender <- clean %>% filter(EthnicGroup == "European") %>% group_by(Level, Gender) %>% summarise(Total = sum(Students))
+eu_year_by_gender <- clean |> filter(EthnicGroup == "European") |> group_by(Level, Gender) |> summarise(Total = sum(Students))
 ggplot(eu_year_by_gender) +
   geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
-as_year_by_gender <- clean %>% filter(EthnicGroup == "Asian") %>% group_by(Level, Gender) %>% summarise(Total = sum(Students))
+as_year_by_gender <- clean |> filter(EthnicGroup == "Asian") |> group_by(Level, Gender) |> summarise(Total = sum(Students))
 ggplot(as_year_by_gender) +
   geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
 ```
@@ -125,10 +124,7 @@ But that gets quite awkward! Fortunately, `ggplot` can do grouping for us via th
 To do this, we'll need to group by EthnicGroup as well as Level and Gender, and then use `facet_wrap`:
 
 ```{r}
-ethnicity_by_year_by_gender <- clean %>%
-  group_by(EthnicGroup, Level, Gender) %>%
-  summarise(Total = sum(Students))
-ethnicity_by_year_by_gender
+ethnicity_by_year_by_gender <- clean |> group_by(EthnicGroup, Level, Gender) |> summarise(Total = sum(Students))
 ggplot(ethnicity_by_year_by_gender) +
   geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge') +
   facet_wrap(vars(EthnicGroup))
@@ -143,15 +139,15 @@ The `vars` helper function here is there so that `facet_wrap` knows to look for 
 ```{r}
 ggplot(ethnicity_by_year_by_gender) +
   geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge') +
-  facet_wrap(vars(EthnicGroup), scales="free_y")
+  facet_wrap(vars(EthnicGroup), scales='free_y')
 ```
 
 2. Instead of colouring by gender, produce separate plots by both `Gender` and `Ethnicity` by supplying both to `facet_wrap`.
 
-```{r}
+```{r, fig.width=7, fig.height=10}
 ggplot(ethnicity_by_year_by_gender) +
   geom_col(mapping=aes(x=Level, y=Total), position='dodge') +
-  facet_wrap(vars(Gender, EthnicGroup), scales="free_y", ncol=6)
+  facet_wrap(vars(EthnicGroup, Gender), scales='free_y', ncol=2)
 ```
 
 3. Try out `facet_grid` instead for the second one.
@@ -159,7 +155,17 @@ ggplot(ethnicity_by_year_by_gender) +
 ```{r}
 ggplot(ethnicity_by_year_by_gender) +
   geom_col(mapping=aes(x=Level, y=Total), position='dodge') +
-  facet_grid(rows = vars(Gender), cols = vars(EthnicGroup), scales="free_y")
+  facet_grid(rows=vars(Gender), cols=vars(EthnicGroup))
+
+# Alternatively do it by proportion
+ethnicity_by_year_by_gender |>
+  group_by(EthnicGroup, Gender) |>
+  mutate(Proportion = Total/sum(Total)) |>
+  filter(EthnicGroup != "International fee paying") |>
+  ggplot() +
+  geom_col(mapping=aes(x=Level, y=Proportion, fill=Gender), position='dodge') +
+  facet_grid(rows=vars(Gender), cols=vars(EthnicGroup)) +
+  guides(fill='none')
 ```
 
 ## Looking at the `schools` data
@@ -175,24 +181,27 @@ schools
 1. How many schools are there in the Palmerston North Territorial Authority?
 
 ```{r}
-schools %>% filter(TerritorialAuthority == "Palmerston North") %>%
-  nrow()
+schools |> filter(TerritorialAuthority == "Palmerston North")
+# there are 44 schools in Palmerston North
 ```
 
 2. Of the schools in Palmerston North, how many are co-ed, single-sex girls or single-sex boys? *You can use `count(SchoolGender)` for this.*
 
 ```{r}
-schools %>% filter(TerritorialAuthority == "Palmerston North") %>%
+schools |>
+  filter(TerritorialAuthority == "Palmerston North") |>
   count(SchoolGender)
 ```
 
 3. Produce a chart of the decile distribution of schools in Palmerston North in the Primary sector.
 
 ```{r}
-schools %>% filter(TerritorialAuthority == "Palmerston North",
-                   Sector == "Primary") %>%
+schools |>
+  filter(TerritorialAuthority == "Palmerston North") |>
+  filter(Sector == "Primary") |>
   ggplot() +
-  geom_bar(mapping = aes(x=Decile))
+  geom_bar(aes(x=Decile)) +
+  scale_x_continuous(breaks=1:10)
 ```
 
 ## Joining datasets with `left_join`
@@ -202,7 +211,7 @@ If we want to summarise the student information across schools, we'll need to jo
 The following will do this:
 
 ```{r}
-all_data <- clean %>% left_join(schools, by="School")
+all_data <- clean |> left_join(schools)
 all_data
 ```
 
@@ -215,28 +224,33 @@ We can now use the `all_data` dataset to answer questions using the variables fr
 1. How many students are there in each Regional Council?
 
 ```{r}
-all_data %>% group_by(RegionalCouncil) %>%
-  summarise(Total = sum(Students))
+all_data |> group_by(RegionalCouncil) |>
+  summarise(Students = sum(Students))
 ```
 
 2. How many girls and boys are in schools with a religious affiliation?
 
 ```{r}
-all_data %>% filter(AffiliationType == "Religious Affiliation") %>%
-  group_by(Gender) %>%
-  summarise(Total = sum(Students))
+# Find the right variable and condition:
+all_data |> count(AffiliationType)
+# Filter
+all_data |>
+  filter(AffiliationType == "Religious Affiliation") |>
+  group_by(Gender) |>
+  summarise(Students = sum(Students))
 ```
 
 3. Produce a chart to compare the ethnic makeup of secondary schools in Decile 10 versus those in Decile 1, excluding international fee paying students.
 
 ```{r}
-all_data %>% filter(EthnicGroup != "International fee paying",
-                    Sector == "Secondary",
-                    Decile %in% c(1, 10)) %>%
-  group_by(Decile, EthnicGroup) %>%
-  summarise(Total = sum(Students)) %>%
+all_data |>
+  filter(EthnicGroup != "International fee paying",
+         Sector == "Secondary",
+         Decile %in% c(1, 10)) |>
+  group_by(Decile, EthnicGroup) |>
+  summarise(Students = sum(Students)) |>
   ggplot() +
-  geom_col(mapping = aes(x = EthnicGroup, y=Total)) +
+  geom_col(aes(x = EthnicGroup, y=Students)) +
   facet_wrap(vars(Decile))
 ```
 
@@ -277,36 +291,36 @@ glimpse(imm)
 Notice that this is basically junk. All the column types are character, and are unnamed except for the first, which is named after the notice at the top. We can skip some fo the junk using the `skip` parameter. We're going to skip 3 rows to try and get something useful in the first row of data:
 
 ```{r}
-imm <- read_excel("immunisation.xlsx", sheet="Ethnicity", skip=3)
+imm <- read_excel("immunisation.xlsx", skip=3)
 imm
 ```
 Ok, this is getting somewhere. We have generally got the data we want there, but notice the names aren't that useful, and we have all the ethnicity information which would be useful to have, but we're going to keep things simple and just keep the first 5 columns. We can ofcourse do that with select. In this case, the names to use aren't all that useful, so we might instead use numbers:
 
 ```{r}
-imm_cleanish <- imm %>% select(Milestone = 1, DHB = 2, Eligible = 3, Immunised = 4, Proportion = 5)
+imm_cleanish <- imm |> select(Milestone = 1, DHB = 2, Eligible = 3, Immunised = 4, Proportion = 5)
 imm_cleanish
-imm_cleanish %>% count(DHB)
 ```
 
 This isn't too bad! Our next step will be to filter some things out. e.g. we don't want the "All milstone Coverage"[^typo] row, and we don't want the "National Total" rows, so let's filter those out. To see how we did, we'll use `count`:
 
 ```{r}
-imm_cleaner <- imm_cleanish %>% filter(!is.na(DHB), DHB != "National Total")
-imm_cleaner %>% count(DHB)
-imm_cleaner %>% count(Milestone)
+imm_cleaner <- imm_cleanish |> filter(Milestone != "All Milstone Coverage",
+                               DHB != "National Total")
+imm_cleaner |> count(DHB)
+imm_cleaner |> count(Milestone)
 imm_cleaner
 ```
 
 Yay! This is looking really nice now - we have 20 DHBs, each with 7 rows, and 7 milestones each with 20 DHBs. Looks great! One thing we note though is the 'Eligible' column is of type `chr` (short for character) instead of numbers. Let's fix that:
 
 ```{r}
-imm_clean <- imm_cleaner %>% mutate(Eligible = as.numeric(Eligible))
+imm_clean <- imm_cleaner |> mutate(Eligible = as.numeric(Eligible))
 imm_clean
 ```
 Nice. As a final check, let's see if the Proportion column is correct, by computing it ourselves:
 
 ```{r}
-imm_clean %>% mutate(PropCheck = Immunised/Eligible) %>%
+imm_clean |> mutate(PropCheck = Immunised/Eligible) |>
   filter(abs(PropCheck - Proportion) > 1e-6)
 ```
 
@@ -331,24 +345,23 @@ Some hints:
  - The chart uses `theme_minimal`.
  - Don't worry about font size as this is display-specific.
 
-```{r}
-imm_clean %>%
-  filter(Milestone != "5 years") %>%
+```{r, fig.width=7, fig.height=5}
+imm_clean |>
+  filter(Milestone != "5 years") |>
   mutate(Milestone = fct_relevel(Milestone, "6 months", "8 months"),
          DHB = fct_rev(DHB),
-         GoalReached = Proportion >= 0.90) %>%
+         GoalReached = Proportion >= 0.90) |>
   ggplot() +
-  geom_col(mapping = aes(y = DHB, x = Proportion, fill=GoalReached), alpha=0.9) +
+  geom_vline(xintercept=0.9, linewidth = 0.1) +
+  geom_col(aes(x=Proportion, y=DHB, fill=GoalReached), alpha=0.9) +
   facet_wrap(vars(Milestone)) +
   labs(y = NULL,
-       x = "Percent Immunised") +
-  scale_x_continuous(labels = scales::label_percent()) +
-  scale_fill_manual(values = c("#C582B2", "#B7B7B2")) +
+       x = "Percent immunised") +
+  scale_x_continuous(labels = scales::label_percent(), limits=c(0,1)) +
   guides(fill = 'none') +
+  scale_fill_manual(values = c('#C582B2', '#B7B7B2')) +
   theme_minimal()
 ```
-
-
 
 [^allthetime]: Almost all the time.
 [^typo]: Real data has typos All. The. Time.

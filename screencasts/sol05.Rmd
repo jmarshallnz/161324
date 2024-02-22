@@ -40,7 +40,7 @@ The above tree is fit with the default value of the complexity parameter `cp`. W
 
 ```{r}
 model2.rp <- rpart(usr ~ ., data=comp_train, cp=0.001)
-model2.rp
+#summary(model2.rp)
 ```
 
 ### Try yourself
@@ -49,9 +49,8 @@ Plot and label this second tree. You should see you get a much more complex tree
 
 ```{r}
 plot(model2.rp, margin=0.1)
-text(model2.rp, cex=0.4)
+text(model2.rp)
 ```
-
 
 We can get a handle on an appropriate level for `cp` by utilising the built-in cross validation that is performed by `rpart` via the `printcp` function:
 
@@ -62,8 +61,8 @@ cp_table <- printcp(model2.rp)
 What we want to do is pick the largest value of `cp` (to give the smallest tree) such that the error in the tree is about the same as the 'optimal' tree. We typically choose the value of `cp` so that it's within one standard error from the minimum value:
 
 ```{r}
-cp_table %>% as_tibble() %>%
-  mutate(limit = min(xerror + xstd)) %>%
+cp_table |> as_tibble() |>
+  mutate(limit = min(xerror + xstd)) |>
   filter(xerror <= limit)
 ```
 
@@ -98,16 +97,17 @@ predict(model1.rp, newdata=comp_test)
 This returns a vector. We can add it to the original data via `bind_cols`, but this is a little fragile, as we're assuming that `predict` will return a row for everything we provide, and this may not be the case (e.g. if the test set had missing values perhaps).
 
 ```{r}
-comp_pred1 <- comp_test %>%
-  bind_cols(.fitted = predict(model1.rp, newdata=comp_test)) %>%
+comp_pred1 <- comp_test |>
+  bind_cols(.fitted = predict(model1.rp, newdata=comp_test)) |>
   select(usr, .fitted, everything())
 comp_pred1
+#comp_pred1 |> summarise(n_distinct(.fitted))
 ```
 
 Now we can compute MSE in the same way we did in workshop 4:
 
 ```{r}
-comp_pred1 %>% summarise(MSE = mean((.fitted - usr)^2))
+comp_pred1 |> summarise(MSE = mean((.fitted - usr)^2))
 ```
 
 ### Try yourself
@@ -115,48 +115,36 @@ comp_pred1 %>% summarise(MSE = mean((.fitted - usr)^2))
 1. Compute the MSE for `model2.rp` and `model3.rp` in the same way. Which model performs best?
 
 ```{r}
-comp_pred_rp <- comp_test %>%
-  bind_cols(.fitted1 = predict(model1.rp, newdata=comp_test),
-            .fitted2 = predict(model2.rp, newdata=comp_test),
-            .fitted3 = predict(model3.rp, newdata=comp_test)) %>%
-  select(usr, .fitted1, .fitted2, .fitted3, everything())
-comp_pred_rp
-comp_pred_rp %>%
-  summarise(MSE1 = mean((usr - .fitted1)^2),
-            MSE2 = mean((usr - .fitted2)^2),
-            MSE3 = mean((usr - .fitted3)^2))
+comp_test |>
+  bind_cols(.pred = predict(model2.rp, newdata=comp_test)) |>
+  summarise(mse = mean((.pred - usr)^2))
+
+comp_test |>
+  bind_cols(.pred = predict(model3.rp, newdata=comp_test)) |>
+  summarise(mse = mean((.pred - usr)^2))
 ```
 
-Alternate to computing the MSE's one by one:
-
-```{r}
-comp_pred_rp %>%
-  summarise(
-    across(
-      starts_with(".fitted"), ~ mean((usr - .x)^2)
-      )
-    )
-```
+model2.rp seems to be doing best here.
 
 2. Try using `yardstick` to compute the `rmse` and `mae` for these models.
 
 ```{r}
-comp_pred_rp %>%
-  rmse(truth=usr, estimate=.fitted1)
-comp_pred_rp %>%
-  rmse(truth=usr, estimate=.fitted2)
-comp_pred_rp %>%
-  rmse(truth=usr, estimate=.fitted3)
-comp_pred_rp %>%
-  mae(truth=usr, estimate=.fitted1)
-comp_pred_rp %>%
-  mae(truth=usr, estimate=.fitted2)
-comp_pred_rp %>%
-  mae(truth=usr, estimate=.fitted3)
-comp_pred_rp %>%
-  metrics(truth=usr, estimate=.fitted1)
-comp_pred_rp %>%
-  metrics(truth=usr, estimate=.fitted2)
+comp_test |>
+  bind_cols(.pred = predict(model2.rp, newdata=comp_test)) |>
+  rmse(truth=usr, estimate=.pred)
+
+comp_test |>
+  bind_cols(.pred = predict(model3.rp, newdata=comp_test)) |>
+  rmse(truth=usr, estimate=.pred)
+
+# To do two at once, the trick is to make sure you have a single column of 'truth'
+# and a single column for prediction. This can be done with pivoting longer.
+comp_test |>
+  bind_cols(.pred2 = predict(model2.rp, newdata=comp_test),
+            .pred3 = predict(model3.rp, newdata=comp_test)) |>
+  pivot_longer(starts_with(".pred"), names_to="model", values_to="prediction") |>
+  group_by(model) |>
+  mae(truth=usr, estimate=prediction)
 ```
 
 ## Dealing with missingness
@@ -166,9 +154,9 @@ One thing that regression trees are particularly useful for are where we have so
 Let's take our training set and change it so we have some missing data in `vflt` (recall this was the variable used in the first split) [^na_real].
 
 ```{r}
-comp_train.miss <- comp_train %>%
+comp_train.miss <- comp_train |>
   mutate(vflt = if_else(row_number() <= 5, NA_real_, vflt))
-comp_train.miss %>% select(vflt, everything())
+comp_train.miss |> select(vflt, everything())
 ```
 
 ### Try yourself
@@ -176,23 +164,23 @@ comp_train.miss %>% select(vflt, everything())
 1. Fit a regression tree to the `comp_train.miss` data using `cp=0.003` as above.
 
 ```{r}
-model4.rp <- rpart(usr ~ ., data=comp_train.miss, cp=0.003)
+model_missing <- rpart(usr ~ ., data=comp_train.miss, cp=0.003)
 ```
 
 2. Plot the tree. You should find that `vflt` is still the first split.
 
 ```{r}
-plot(model4.rp, margin=0.1)
-text(model4.rp)
+plot(model_missing, margin=0.1)
+text(model_missing)
 ```
 
 3. Take a look at the output for `summary()` on this tree. You should see it is using a *surrogate split*. Which variable is being used for the split if `vflt` is missing?
 
 ```{r}
-summary(model4.rp)
+summary(model_missing)
 ```
 
-If `vflt` is missing, then a surrogate split using `pflt` is used: if `pflt < 92.2` then we go the same way as we would have with `vflt`.
+If we don't have `vflt` (like our first 5 rows) we'll use `pflt` as the splitting variable. This allows those first 5 observations to still make their way through the tree and contribute to our model fit.
 
 ## Moving from trees to forests
 
@@ -215,30 +203,26 @@ As expected, the `vflt` and `pflt` variables are most important.
 1. The `predict()` function works in the same way as it does for `rpart`. Produce predictions from the random forest model.
 
 ```{r}
-comp_pred_rf <- comp_test %>%
-  bind_cols(.fitted = predict(model.rf, comp_test)) %>%
-  select(usr, .fitted, everything())
-comp_pred_rf
+comp_test |>
+  bind_cols(.pred = predict(model.rf, newdata=comp_test))
 ```
 
 
 2. Compute MSE for the random forest model compare with the decision trees?
 
 ```{r}
-comp_pred_rf %>%
-  summarise(MSE = mean((usr - .fitted)^2))
+comp_test |>
+  bind_cols(.pred = predict(model.rf, newdata=comp_test)) |>
+  summarise(MSE = mean((usr - .pred)^2))
 ```
 
 3. There are two parameters that might affect how well the forest fits: `mtry` which is the number of predictors to use for building each tree (by default it is set to number of predictors divided by 3) and `nodesize` which defines the minimum size of terminal nodes, which defaults to 5. Try changing each of these and seeing how they change model performance.
 
 ```{r}
-set.seed(12950)
-model2.rf <- randomForest(usr ~ ., data=comp_train, mtry=4, nodesize=1)
-comp_pred_rf2 <- comp_test %>%
-  bind_cols(.fitted = predict(model2.rf, comp_test)) %>%
-  select(usr, .fitted, everything())
-comp_pred_rf2 %>%
-  summarise(MSE = mean((usr - .fitted)^2))
+model.rf2 <- randomForest(usr ~ ., data=comp_train, mtry=4, nodesize = 2)
+comp_test |>
+  bind_cols(.pred = predict(model.rf2, newdata=comp_test)) |>
+  summarise(MSE = mean((.pred - usr)^2))
 ```
 
 ## Making things a bit tidier with parsnip
@@ -251,14 +235,14 @@ The `tidymodels` framework is a way to address this for `rpart`, `randomForest` 
 tree_spec <- decision_tree(mode = "regression",
                             cost_complexity = 0.01)
 
-tree_fit <- tree_spec %>%
+tree_fit <- tree_spec |>
   fit(usr ~ ., data = comp_train)
 
-tree_pred <- comp_test %>%
-  bind_cols(predict(tree_fit, new_data = comp_test)) %>%
+tree_pred <- comp_test |>
+  bind_cols(predict(tree_fit, new_data = comp_test)) |>
   select(usr, .pred, everything())
 
-tree_pred %>% metrics(usr, .pred)
+tree_pred |> metrics(usr, .pred)
 ```
 
 Note the process here:
@@ -273,25 +257,27 @@ Note the process here:
 1. Modify the above to provide fits with different cost complexity (`cp`).
 
 ```{r}
-tree_spec2 <- decision_tree(mode = "regression",
-                            cost_complexity = 0.003)
+tree_spec <- decision_tree(mode = "regression",
+                            cost_complexity = 0.001) #< changed to see what happens
 
-tree_fit2 <- tree_spec2 %>%
+tree_fit <- tree_spec |>
   fit(usr ~ ., data = comp_train)
 
-tree_pred2 <- comp_test %>%
-  bind_cols(predict(tree_fit2, new_data = comp_test)) %>%
+tree_pred <- comp_test |>
+  bind_cols(predict(tree_fit, new_data = comp_test)) |>
   select(usr, .pred, everything())
 
-tree_pred2 %>% metrics(usr, .pred)
+tree_pred |> metrics(usr, .pred)
 ```
 
 2. If you want to get the actual `rpart` model object out of the `tree_fit` object you can use `extract_fit_engine(tree_fit)`. Try this to do the `plotcp` plot.
 
 ```{r}
-tree_fit2 %>%
-  extract_fit_engine() %>%
-  plotcp()
+tree_rpart <- tree_fit |>
+  extract_fit_engine()
+
+plot(tree_rpart, margin=0.1)
+text(tree_rpart)
 ```
 
 3. Change the above so it uses a linear regression model instead: You need only change the `decision_tree` command to `linear_reg`.
@@ -299,35 +285,29 @@ tree_fit2 %>%
 ```{r}
 lm_spec <- linear_reg(mode = "regression")
 
-lm_fit <- lm_spec %>%
+lm_fit <- lm_spec |>
   fit(usr ~ ., data = comp_train)
 
-lm_pred <- comp_test %>%
-  bind_cols(predict(lm_fit, new_data = comp_test)) %>%
+lm_pred <- comp_test |>
+  bind_cols(predict(lm_fit, new_data = comp_test)) |>
   select(usr, .pred, everything())
 
-lm_pred %>% metrics(usr, .pred)
+lm_pred |> metrics(usr, .pred)
 ```
-
 
 4. Change the above so it uses a random forest instead by using `rand_forest(mode = "regression", engine = "randomForest")`. The `engine` argument is because the default engine is `ranger`. You can use that if you like too! You might want to try exploring the `mtry` and `min_n` arguments.
 
 ```{r}
-rf_spec <- rand_forest(mode = "regression", engine="randomForest", mtry=3, min_n=2)
-rf_spec %>% translate()
+rf_spec <- rand_forest(mode = "regression", engine="randomForest", 
+                       mtry = 10, min_n = 1)
 
-rf_fit <- rf_spec %>%
+rf_fit <- rf_spec |>
   fit(usr ~ ., data = comp_train)
 
-rf_fit %>% extract_fit_engine() %>% varImpPlot()
-
-rf_pred <- comp_test %>% 
-  bind_cols(predict(rf_fit, new_data = comp_test)) %>%
-  select(usr, .pred, everything())
-
-rf_pred %>% metrics(usr, .pred)
+comp_test |>
+  bind_cols(predict(rf_fit, new_data = comp_test)) |>
+  metrics(usr, .pred)
 ```
-
 
 [^na_real]: Note the use of `NA_real_` here. This is because the `if_else` function (from `dplyr`) is opinionated! It hates it when you provide two different types of variable to the true or false parameters. The default `NA` is of type logical, so we'd be mixing a logical type and a numeric type if we tried using that. Alternatively, you could use `ifelse()` which doesn't have such strong opinions!
 
