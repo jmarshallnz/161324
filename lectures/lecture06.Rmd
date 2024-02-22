@@ -862,6 +862,7 @@ fit.lm |>
 ```
 
 ```{r, echo=FALSE}
+library(broom)
 lm.tidy <- fit.lm |> glance()
 ```
 
