@@ -672,6 +672,16 @@ class: middle, inverse
 
 ---
 
+## Recall: Kernel density estimates
+
+Drop a blob of jelly (**kernel**) where each data value is. Where values are close (**higher density**) the jelly overlaps and builds up. The bandwidth $h$ defines the amount of smoothing.
+
+<div class='center-fig'>
+  <img src="graphics/density_building.gif" />
+</div>
+
+---
+
 .left-code[
 ## Kernel Density Estimates for Donuts
 
