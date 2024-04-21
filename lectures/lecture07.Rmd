@@ -14,8 +14,7 @@ output:
       ratio: "16:9"
       slideNumberFormat: |
         <div class="progress-bar-container">
-          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
-          </div>
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);" />
         </div>
 editor_options:
   chunk_output_type: console
@@ -182,7 +181,7 @@ bugs |> knitr::kable()
 
 ## Bayes' Theorem: An Aside
 
-- Bayes' theorem attribute to Rev. Thomas Bayes (1701--1761).
+- Bayes' theorem attribute to Rev. Thomas Bayes (1701--1761).
 
 - The theorem is incredibly important to modern statistics.
  
@@ -246,7 +245,7 @@ $$\begin{aligned} P(\mbox{Frongle} | \mbox{Green, 2 stripe}) &= \frac{\pi_2 f_2(
 -   If some mistakes are more important than others, may choose to
     minimize weighted misclassification rate.
 
-    -   E.g. false negatives more important than false positives in
+    -   E.g. false negatives more important than false positives in
         medical diagnoses.
 
 ---
@@ -431,7 +430,7 @@ $$\begin{aligned}f_1(x_0) > f_2(x_0) &\Leftrightarrow& \frac{1}{\sqrt{2 \pi} s} 
 -   In other words, assign test case to class 1 if and only if $x_0$ is
     closer to $\bar x_1$ than $\bar x_2$.
 
-    -   I.e. if $x_0 < (\bar x_1 + \bar x_2)/2$.
+    -   I.e. if $x_0 < (\bar x_1 + \bar x_2)/2$.
 
 -   This is very natural!
 
