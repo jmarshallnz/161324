@@ -12,8 +12,7 @@ output:
       ratio: "16:9"
       slideNumberFormat: |
         <div class="progress-bar-container">
-          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
-          </div>
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);" />
         </div>
 editor_options:
   chunk_output_type: console
@@ -404,7 +403,7 @@ hrc |> filter(Value > 100000)
 
 ## Filtering rows
  
-What if we wanted really low counts before 2010?
+What if we wanted really low counts before the end of 2010?
 
 ```{r}
 hrc |> filter(Value < 100, Date <= '2010-12-31')
