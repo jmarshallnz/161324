@@ -28,6 +28,7 @@ knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comme
 theme_set(theme_minimal())
 
 swiss.train <- read_csv("../data/swiss-train.csv")
+xaringanExtra:::use_freezeframe()
 ```
 
 ## Classification Methods
@@ -185,7 +186,9 @@ bugs |> knitr::kable()
 
 - The theorem is incredibly important to modern statistics.
  
-- It permits the reversal of conditional probability statements.
+- It permits the reversal of conditional probability statements:
+
+$$\begin{align}P(A | B) &= \frac{P(A \cap B)}{P(B)}\\&=\frac{P(B \cap A)}{P(B)}\\&=\frac{P(B | A)P(A)}{P(B)}\end{align}$$
 
 - It is the foundation stone of **Bayesian statistics**.
 ]
@@ -433,6 +436,32 @@ $$\begin{aligned}f_1(x_0) > f_2(x_0) &\Leftrightarrow& \frac{1}{\sqrt{2 \pi} s} 
     -   I.e. if $x_0 < (\bar x_1 + \bar x_2)/2$.
 
 -   This is very natural!
+
+---
+
+## 'Very natural'
+
+If we plot $f_1$ and $f_2$ we can see why it works out:
+
+```{r, echo=FALSE, fig.dim=c(7.5,3)}
+ggplot(data = data.frame(x=c(-3,5)), aes(x)) +
+  stat_function(fun = dnorm, n=101, args = list(mean = 0, sd = 1), col='steelblue') +
+  stat_function(fun = dnorm, n=101, args = list(mean = 2, sd = 1), col='darkred') +
+  scale_x_continuous(breaks = c(0, 2), labels = c(expression(mu[1]), expression(mu[2]))) +
+  geom_vline(xintercept=1, linetype = 'dotted')+
+  theme_minimal() +
+  labs(x=NULL, y=NULL) +
+  theme(axis.text.y = element_blank())
+```
+
+---
+
+## Classifying a Test Case
+
+-   Assign test case to class 1 if and only if $x_0$ is
+    closer to $\bar x_1$ than $\bar x_2$.
+
+    -   I.e. if $x_0 < (\bar x_1 + \bar x_2)/2$.
 
 -   The idea extends naturally to situations with $C \ge 3$ classes, and
     with $p \ge 2$ feature variables.
@@ -931,7 +960,8 @@ library(patchwork)
 x1_dens <- map_dfr(donut.nB$fit$tables$x1, broom::tidy, .id='Class')
 x2_dens <- map_dfr(donut.nB$fit$tables$x2, broom::tidy, .id='Class')
 all <- full_join(x1_dens |> rename(x1=x, y1=y),
-                 x2_dens |> rename(x2=x, y2=y), multiple='all') |>
+                 x2_dens |> rename(x2=x, y2=y), multiple='all',
+                 relationship='many-to-many') |>
   mutate(z = y1*y2)
 g1 <- ggplot(donut.train, mapping=aes(x=x1, y=x2, col=Class)) +
   geom_point(alpha=.02) +
@@ -994,7 +1024,8 @@ dens_x2 <- tibble(x2 = seq(min(donut.train$x2),
   cross_join(mu_sd |> filter(variable == "x2")) |>
   mutate(y = dnorm(x2, mean=mean, sd=sd)) |> select(x2, Class, y)
 
-dens_all <- dens_x1 |> full_join(dens_x2, by="Class", multiple='all') |> mutate(z = y.x*y.y, .keep='unused')
+dens_all <- dens_x1 |> full_join(dens_x2, by="Class", multiple='all',
+                 relationship='many-to-many') |> mutate(z = y.x*y.y, .keep='unused')
 
 g1 <- ggplot(donut.train, mapping=aes(x=x1, y=x2, col=Class)) +
   geom_point(alpha=.02) +
