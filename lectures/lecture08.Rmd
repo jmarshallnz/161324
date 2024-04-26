@@ -14,8 +14,7 @@ output:
       ratio: "16:9"
       slideNumberFormat: |
         <div class="progress-bar-container">
-          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
-          </div>
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);" />
         </div>
 editor_options:
   chunk_output_type: console
@@ -64,7 +63,7 @@ swiss.test <- read_csv("../data/swiss-test.csv") |>
 -   A critical difference is that the response (target) variable $y$
     need not be distributed according to a normal distribution.
 
--   Logistic regression models a **binary** response variable (i.e. two
+-   Logistic regression models a **binary** response variable (i.e. two
     classes), values written as 0 and 1.
 
     -   These can code for classes 1 and 2 respectively in two class
@@ -93,7 +92,7 @@ swiss.test <- read_csv("../data/swiss-test.csv") |>
 -   Problem: linear regression does not respect $[0,1]$ range for
     probability.
 
--   E.g. suppose we have single predictor variable, and fitted model is
+-   E.g. suppose we have single predictor variable, and fitted model is
     $\hat p(x) = 0.3 + 0.1 x$.
 
     -   We run into trouble if $x < -3$ or $x > 7$.
@@ -201,7 +200,7 @@ where
 
         glm(formula, family, data)
 
--   Here `formula` is the model formula, e.g. `y ~ x1 + x2`.
+-   Here `formula` is the model formula, e.g. `y ~ x1 + x2`.
 
     -   Make sure `y` is binary 1/0 variable or two-level factor.
 
@@ -483,14 +482,14 @@ swiss.glm.2 |> broom::augment() |>
 
     -   Predictions on **response scale** are estimated probabilities.
 
-    -   Predictions on scale of linear predictor -- i.e. logit.
+    -   Predictions on scale of linear predictor -- i.e. logit.
 
 -   Default in R is prediction on logit scale.
 
 -   Can specify predictions on response scale through `type` argument to
     `predict()`, or `type.predict` to `augment()`:
 
--   E.g. `augment(my.glm, newdata=test.data, type.predict="response")`.
+-   E.g. `augment(my.glm, newdata=test.data, type.predict="response")`.
 
 ---
 
@@ -915,7 +914,7 @@ sigmoid transformation on the output.
 
 -   As we use `nnet()` under the hood, we need to beware of numerical problems.
 
-    -   Best to scale predidctors that are large in magnitude.
+    -   Best to scale predictors that are large in magnitude.
 
 ---
 
