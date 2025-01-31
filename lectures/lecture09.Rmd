@@ -14,8 +14,7 @@ output:
       ratio: "16:9"
       slideNumberFormat: |
         <div class="progress-bar-container">
-          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);">
-          </div>
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);" />
         </div>
 editor_options:
   chunk_output_type: console
@@ -436,21 +435,6 @@ nnet_plot()
 
 -   The $\alpha$ and $\beta$ terms (the *weights*) are then estimated from
     training data.
-
----
-
-## Neural networks for classification
-
-The actual network used for
-classification and the method of fitting the weights $\alpha$ and
-$\beta$ terms differs based on the number of classes.
-
--   With 2 classes, a single output node $\hat{p}$ is used, and the
-    cross entropy information criterion is minimised
-    $$I_E = \hat{p} \log(\hat{p}).$$
-
--   With 3 or more classes, an output node per class is used, and
-    maximum likelihood is used to estimate the weights.
 
 ---
 
