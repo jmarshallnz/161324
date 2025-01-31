@@ -23,7 +23,7 @@ options(pillar.sigfig = 5)
 
 # Preface {-}
 
-This is the study guide for 161.324 Data Mining at Massey University.
+This is the study guide for 161.324 Data Mining and 161.777 Practical Data Mining at Massey University.
 
 It is put together based on existing notes from previous courses, updated in 2022 to utilise
 the tidyverse suite of packages.
