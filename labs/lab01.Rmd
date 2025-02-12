@@ -15,7 +15,7 @@ For others, this may be new - you may be familiar with R and RStudio (and even R
 
 We start by loading in the `tidyverse` and `palmerpenguins` packages (for data).
 
-```{r setup, message=FALSE}
+```{r setup}
 library(tidyverse)
 library(palmerpenguins)
 
@@ -45,6 +45,7 @@ ggplot(data = penguins) +
 ```
 
 Recall that the recipe for a `ggplot` chart is:
+
 1. Use `ggplot` to create an empty chart.
 2. Assign some data to it via the `data` argument to `ggplot`. We've used the `penguins` data.
 3. Choose a geometry layer, in this case `geom_point` for points.
@@ -130,39 +131,49 @@ Recall that `dplyr` is the main package in the `tidyverse` for manipulating data
  - `summarise`: reduce a bunch of rows down to a single summary row.
  - `group_by`: group the data so that the above operations apply per group.
 
-We start by reading in some data on the number of school students in New Zealand broken down by school, gender, ethnicity and level. The data comes from 
+We start by reading in some data on the number of school students in New Zealand broken down by school, ethnicity and level. The data comes from 
 
 https://www.educationcounts.govt.nz/statistics/school-rolls
 
 and is read in using:
 
 ```{r}
-roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools/roll_nomacrons.csv")
+roll <- read_csv("http://www.massey.ac.nz/~jcmarsha/data/schools/roll.csv")
 roll
 ```
 
-You should see there are 103,666 rows for 5 different variables (`School`, `Gender`, `EthnicGroup`, `Level`, `Students`)
+You should see there are 66,261 rows for 4 different variables (`School`, `EthnicGroup`, `Level`, `Students`)
 
 We'll start by using `filter` to select rows that satisfy one or more conditions. This is useful for quickly obtaining subsets of interest (indeed, the `subset` command from base R works similarly).
 
-This next code block filters all rows where `EthnicGroup` is set to `Maori`. Notice the use of two equals for 'is equal to'
+This next code block filters all rows where `EthnicGroup` is set to `Māori`. Notice the use of two equals for 'is equal to'
 
 ```{r}
-filter(roll, EthnicGroup == "Maori")
+filter(roll, EthnicGroup == "Māori")
 ```
+
+### A note about macrons
+
+The above line of code for filtering our `roll` data by `EthnicGroup` utilises a macron in the word "Māori". On many devices this can be a bit tricky to type in! In most systems (Mac, Windows, Linux) you can do this by installing the Māori keyboard setup. Another way is to use copy and paste. e.g. if we do something like:
+
+```{r}
+count(roll, EthnicGroup)
+```
+
+this shows us how many rows there are of each entry in `EthnicGroup`. We can then copy and paste "Māori" entry into our code. As macrons are super important in te reo and many other languages, we will try and use them wherever we can.
 
 More than one row may be selected by separating different conditions with commas (for AND) or the vertical pipe symbol (for OR). e.g. compare the following:
 
 ```{r}
-filter(roll, EthnicGroup == "Maori", Gender == "Female")
-filter(roll, EthnicGroup == "Maori" | Gender == "Female")
+filter(roll, EthnicGroup == "Māori", Level == "Year 1")
+filter(roll, EthnicGroup == "Māori" | Level == "Year 1")
 ```
 
 A helper function for 'one of these options' is `%in%`. e.g. these two are equivalent:
 
 ```{r}
-filter(roll, Level == "Year 1" | Level == "Year 2")
-filter(roll, Level %in% c("Year 1", "Year 2"))
+filter(roll, Level == "Year 1" | Level == "Year 2" | Level == "Year 3" | Level == "Year 4")
+filter(roll, Level %in% c("Year 1", "Year 2", "Year 3", "Year 4"))
 ```
 
 ### Try yourself:
@@ -176,7 +187,7 @@ You can `arrange` (sort) row output based on the values in each column, and can 
 You can use `desc()` to sort in descending order.
 
 ```{r}
-arrange(roll, Gender, EthnicGroup, Level)
+arrange(roll, EthnicGroup, Level)
 arrange(roll, desc(Students))
 ```
 
@@ -206,7 +217,11 @@ The data frames `internationals` and `y13internationals` here are really only te
 arrange(filter(filter(roll, EthnicGroup == "International fee paying"), Level == "Year 13"), desc(Students))
 ```
 
-But this is hard to read! Instead, we could use the pipe operator, `|>` (insertable via `Ctrl`-`Shift`-`M`)[^magrittr]. What this does is takes what you provide on the left hand side and "pipes" it as the first argument into the function you provide on the right hand side. Any other arguments to the function then just get placed in the function as usual. So the above could be written:
+But this is hard to read! Instead, we could use the pipe operator, `|>` (insertable via `Ctrl`-`Shift`-`M`, or `Cmd`-`Shift`-`M` on a Mac).
+
+*NOTE: If you press that key combination and instead get `%>%`, then go to Tools->Global Options->Code and select "use native pipe operator, |>".*
+
+What this does is takes what you provide on the left hand side and "pipes" it as the first argument into the function you provide on the right hand side. Any other arguments to the function then just get placed in the function as usual. So the above could be written:
 
 ```{r}
 roll |>
@@ -251,7 +266,7 @@ clean = roll |> mutate(Level = as.numeric(substring(Level, 6)))
 
 ### Try yourself
 
-1. Using the `clean` dataset, create a new column combining ethnicgroup and gender with `paste`.
+1. Using the `clean` dataset, create a new column combining ethnicgroup and level with `paste`.
 2. Redo part 1, so that the original two columns are removed.
 3. Create a new variable "Age" with the typical age of students in each year level (Year 1 students are typically 5 years old).
 4. Investigate using the `unite` function from `tidyr` to do what you did in part 1 and 2.
@@ -268,7 +283,7 @@ clean |> summarise(Total = sum(Students), Average = Total/n())
 1. Find the largest (maximum) number of students in any row.
 2. Find the median number of students in a row.
 3. What is the lowest and highest year levels in the data?
-4. Find the number of Maori students in year 9 (hint: `filter` then `summarise`)
+4. Find the number of Māori students in year 9 (hint: `filter` then `summarise`)
 
 The true power of `dplyr` comes with the `group_by()` operation, which allows all of the rest of the operations we've learned about (plus more!) to be performed simultaneously on subgroups of the data.
 
@@ -281,10 +296,8 @@ clean |> group_by(School) |> summarise(Total = sum(Students))
 ### Try yourself
 
 1. How many students of each ethnicity are there?
-2. How many students are there of each gender?
-3. Which school has the most female students in year 13?
-4. Produce a graph of the total number of students by year level. Hint: First get the data frame you want, and then use `ggplot` with `geom_col`.
-5. Alter your graph from 4 so as to include gender.  Hint: You'll need to group by two variables for this.
+2. Which school has the most students in year 13?
+3. Produce a graph of the total number of students by year level. Hint: First get the data frame you want, and then use `ggplot` with `geom_col`.
 
 ## Missing values
 
@@ -295,37 +308,37 @@ penguins |> summarise(mean_flipper_length = mean(flipper_length_mm))
 ```
 Adding `na.rm=TRUE` to the `mean` function will fix this.
 
-Another way that missing values can turn up is where they are **implicitly** missing. e.g. in the `roll` data, there are no `NA` entries at all, however there is missing data. e.g. if we tried to find the average number of each gender across schools, we might try[^grouping]:
+Another way that missing values can turn up is where they are **implicitly** missing. e.g. in the `clean` roll data, there are no `NA` entries at all, however there is missing data. e.g. if we tried to find the average number students of each level across schools, we might try[^grouping]:
 
 ```{r}
-roll |> group_by(Gender, School) |>
+clean |> group_by(Level, School) |>
   summarise(Students = sum(Students)) |>
-  group_by(Gender) |>
+  group_by(Level) |>
   summarise(MeanStudents = mean(Students))
 ```
 
-However, this will be wrong, as there are no entries where the number of students in a category is 0, yet we know ofcourse that some schools will have no students of a particular ethnicity, gender and level combination. e.g. single gender schools.
+However, this will be wrong, as there are no entries where the number of students in a category is 0, yet we know ofcourse that some schools will have no students of a particular level, such as primary schools who are unlikely to have year 13 students!
 
 ```{r}
-roll |> filter(Students == 0)
+clean |> filter(Students == 0)
 ```
 
-We can see this by totalling up students by school and gender, and then taking a look at some schools:
+We can see this by totalling up students by school and level, and then taking a look at some schools:
 
 ```{r}
-roll |> group_by(Gender, School) |>
+clean |> group_by(Level, School) |>
   summarise(Students = sum(Students)) |>
   filter(str_detect(School, "Grammar")) |>
   arrange(School)
 ```
 
-One fix for this is using the `complete()` function from `tidyr`. This adds additional combinations to the data, though note that we will need to `ungroup()` things first, so that it can operate across both genders simultaneously[^ungroup]:
+One fix for this is using the `complete()` function from `tidyr`. This adds additional combinations to the data, though note that we will need to `ungroup()` things first, so that it can operate across the levels simultaneously[^ungroup]:
 
 ```{r}
-roll |> group_by(Gender, School) |>
+clean |> group_by(Level, School) |>
   summarise(Students = sum(Students)) |>
   ungroup() |>
-  complete(Gender, School) |>
+  complete(Level, School) |>
   filter(str_detect(School, "Grammar")) |>
   arrange(School)
 ```
@@ -335,7 +348,7 @@ We can also fill in these missing values, because we know they should be 0.
 ### Try yourself
 
 1. Add the necessary code above to fill in the `NA` values to be `0`. You can do this using the `fill` parameter of `complete`, or alternatively the `replace_na()` function.
-2. With the `NA` values replaced, recompute the mean number of male and female students across all schools.
+2. With the `NA` values replaced, recompute the mean number of students by level across all schools.
 
 [^MASS]: A common issue is loading `MASS` after `dplyr` - the `MASS::select()` function then overrides `dplyr::select()` which results in very opaque error messages when you try and `select()` columns from a `data.frame`.
 
@@ -345,4 +358,4 @@ We can also fill in these missing values, because we know they should be 0.
 
 [^ungroup]: You can also ungroup by adding the `group="drop"` to the `summarise()` command.
 
-[^grouping]: Note that the second `group_by(Gender)` here is not required: After we `summarise()`, the second group (`School`) is automatically stripped, as we only have one row for that (as we've summarised across the different schools now). So the grouping will have already dropped down to `Gender`. Note that `summarise()` will tell you this.
+[^grouping]: Note that the second `group_by(Level)` here is not required: After we `summarise()`, the second group (`School`) is automatically stripped, as we only have one row for that (as we've summarised across the different schools now). So the grouping will have already dropped down to `Level`. Note that `summarise()` will tell you this.

@@ -45,6 +45,7 @@ ggplot(data = penguins) +
 ```
 
 Recall that the recipe for a `ggplot` chart is:
+
 1. Use `ggplot` to create an empty chart.
 2. Assign some data to it via the `data` argument to `ggplot`. We've used the `penguins` data.
 3. Choose a geometry layer, in this case `geom_point` for points.
