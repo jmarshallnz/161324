@@ -20,70 +20,46 @@ We'll be looking at how to summarise by more than one group, and how to turn tha
 
 **Make sure you can Knit this document successfully before you make changes.**
 
-## Using `pivot_wider` to turn tidy data into wide data
-
-Up to now, all the data we've been playing with has been **tidy**: each row consists of a single observation and each column is a separate variable.
-
-e.g. for this data we have a column for gender and another column for number of students: we don't have separate columns counting males and females - the counts are all in one column, and which groups that count applies to are denoted in the other columns.
-
-This makes it easy to do data manipulation, and also makes it easy to plot stuff, as `ggplot2` and `dplyr` (indeed, the whole `tidyverse` suite of packages) works best if the data are tidy.
-
-But, sometimes we want things in other forms. The following example tables up the total number of students by gender and ethnicity:
-
-```{r}
-ethnicity_by_gender <- clean |>
-  group_by(EthnicGroup, Gender) |>
-  summarise(Students = sum(Students))
-ethnicity_by_gender
-```
-
-It would be nicer if we could make this into a table so that we had one row for each ethnic group, and separate columns for the gender totals. We can do this using `pivot_wider`. The key arguments are `names_from` which is the column that provides the new column names, and `values_from` which is the column that provides the values that should go in the new columns.
-
-```{r}
-ethnicity_by_gender |>
-  pivot_wider(names_from = Gender, values_from = Students)
-```
-
-Notice we have the exact same information, it's just in a more human-readable form. It's not in a form that's easier to plot though! `ggplot` would struggle with these data, as we don't have a single "Count" column for the y-axis to use.
-
-### Try yourself
-
-1. Create a table with total number of male and female students in each year level. (Hint: `group_by` sex and year level then `summarise`. Once done, `pivot_wider` to a table).
-2. Create a table with the number of each ethnic group in each year level.
-3. Try adding a "Total" column to the ethnic group by gender table. You could do this before the `pivot_wider` by using a `mutate` with `sum(Students)`.
-4. Try creating a table with the percentage of female and male students within each ethnic group. You can add a new column with `mutate()` and get the percentage by using `Students/sum(Students)` within each ethnic group.
-
 ## Small multiple plots
 
-In workshop 1 you produced a graph of the total number of students by year level and gender. You should have got something like this:
+In workshop 1 you produced a graph of the total number of students by year level. You should have got something like this:
 
 ```{r}
-year_by_gender <- clean |> group_by(Level, Gender) |> summarise(Total = sum(Students))
-ggplot(year_by_gender) +
-  geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
+year_totals <- clean |> group_by(Level) |> summarise(Total = sum(Students))
+ggplot(year_totals) +
+  geom_col(mapping=aes(x=Level, y=Total))
 ```
 
-This is an interesting graph as it shows that males tend to leave school earlier than females. We might be interested to see if there are any patterns in other variables, such as in ethnicity (or perhaps by region - we'll see how to get that information later).
+This is an interesting graph as there is an unexpected peak at level 7 (caused by a reclassification of students at year 7/8) and it is also interesting to see the decrease as students leave school early. We might be interested to see if there are any patterns in other variables, such as in ethnicity (or perhaps by region - we'll see how to get that information later).
 
 To do this, we want to produce the same plot for each ethnicity. Now, we could just go ahead and create separate plots by using `filter`
 
+## Try yourself
+
+1. Alter the chart above so as to include ethnic group on the chart. Hint: You'll need to group by two variables for this, and utilise another aesthetic such as `fill`.
+
+In the last exercise you produced a graph of the total number of students by year level and EthnicGroup. The problem with this chart is that even if you play with the `position` argument of `geom_col()` it is hard to see if the patterns in total number of students by year level are similar or different across different ethnicities.
+
+An alternate is to produce a plot for each ethnicity. We could just go ahead and create separate plots by using `filter`
+
 ```{r}
-eu_year_by_gender <- clean |> filter(EthnicGroup == "European") |> group_by(Level, Gender) |> summarise(Total = sum(Students))
-ggplot(eu_year_by_gender) +
-  geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
-as_year_by_gender <- clean |> filter(EthnicGroup == "Asian") |> group_by(Level, Gender) |> summarise(Total = sum(Students))
-ggplot(as_year_by_gender) +
-  geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge')
+eu_year_by_level <- clean |> filter(EthnicGroup == "European") |> group_by(Level) |> summarise(Total = sum(Students))
+ggplot(eu_year_by_level) +
+  geom_col(mapping=aes(x=Level, y=Total))
+
+as_year_by_level <- clean |> filter(EthnicGroup == "Asian") |> group_by(Level) |> summarise(Total = sum(Students))
+ggplot(as_year_by_level) +
+  geom_col(mapping=aes(x=Level, y=Total))
 ```
 
 But that gets quite awkward! Fortunately, `ggplot` can do grouping for us via the `facet_wrap` or `facet_grid` commands. These produce what is known as 'small multiple' plots - basically divide the plot up into subplots, and in each subplot we show a different group with consistent style/axes etc. 
 
-To do this, we'll need to group by EthnicGroup as well as Level and Gender, and then use `facet_wrap`:
+To do this, we'll need to group by EthnicGroup as well as Level, and then use `facet_wrap`: as well as Level and Gender, and then use `facet_wrap`:
 
 ```{r}
-ethnicity_by_year_by_gender <- clean |> group_by(EthnicGroup, Level, Gender) |> summarise(Total = sum(Students))
-ggplot(ethnicity_by_year_by_gender) +
-  geom_col(mapping=aes(x=Level, y=Total, fill=Gender), position='dodge') +
+ethnicity_by_year <- clean |> group_by(EthnicGroup, Level) |> summarise(Total = sum(Students))
+ggplot(ethnicity_by_year) +
+  geom_col(mapping=aes(x=Level, y=Total)) +
   facet_wrap(vars(EthnicGroup))
 ```
 
@@ -92,8 +68,7 @@ The `vars` helper function here is there so that `facet_wrap` knows to look for 
 ### Try yourself
 
 1. Try altering the above plot so that it uses a different y-axis for each plot. This can be useful when there's differing numbers of students in each group. Hint: see the help for `facet_wrap`.
-2. Instead of colouring by gender, produce separate plots by both `Gender` and `Ethnicity` by supplying both to `facet_wrap`.
-3. Try out `facet_grid` instead for the second one.
+2. Redo the plot without the International fee paying students. You might want to see how you can set the number of rows and columns as well.
 
 ## Looking at the `schools` data
 
@@ -107,7 +82,7 @@ schools
 
 1. How many schools are there in the Palmerston North Territorial Authority?
 2. Of the schools in Palmerston North, how many are co-ed, single-sex girls or single-sex boys? *You can use `count(SchoolGender)` for this.*
-3. Produce a chart of the decile distribution of schools in Palmerston North in the Primary sector.
+3. Produce a chart that shows the breakdown in secondary schools by school gender (co-ed, single-sex girls, single-sex boys) for each of the three Takiwa (education regions). You may wish to remove the two schools that have senior co-ed and junior boys only.
 
 ## Joining datasets with `left_join`
 
@@ -127,8 +102,63 @@ We can now use the `all_data` dataset to answer questions using the variables fr
 ### Try yourself
 
 1. How many students are there in each Regional Council?
-2. How many girls and boys are in schools with a religious affiliation?
-3. Produce a chart to compare the ethnic makeup of secondary schools in Decile 10 versus those in Decile 1, excluding international fee paying students.
+2. How many students of each ethnicity are there in each Takiwa?
+3. How many students are in schools with a religious affiliation?
+4. Produce a chart showing the total number of students of each year level within each Takiwa by using `facet_wrap()` to produce side by side plots by Takiwa.
+
+## Facetting with two variables
+
+We can facet with more than one variable. e.g. we could alter the level by Takiwa plot to include ethnic group as follows:
+
+```{r}
+all_data |>
+  filter(EthnicGroup != "International fee paying") |>
+  group_by(Takiwa, EthnicGroup, Level) |>
+  summarise(Total = sum(Students)) |>
+  ggplot() +
+  geom_col(mapping=aes(x=Level, y=Total)) +
+  facet_wrap(vars(Takiwa, EthnicGroup), ncol=6)
+```
+
+While this works, we end up with a lot of space used for all the headings. An alternate is to use `facet_grid()` which uses one variable for rows and another for columns.
+
+### Try yourself
+
+1. Alter the above chart to show how the number of students in each year level differs by ethnicity in each Takiwa using `facet_grid()`.
+2. Play around with which variable is in rows and which is in columns and the `scales` parameter to `facet_grid()` to produce something that shows all subgroups reasonably well.
+
+## Using `pivot_wider` to turn tidy data into wide data
+
+Up to now, all the data we've been playing with has been **tidy**: each row consists of a single observation and each column is a separate variable.
+
+e.g. for this data we have a column for ethnic group and another column for number of students: we don't have separate columns counting each ethnic group - the counts are all in one column, and which groups that count applies to are denoted in the other columns.
+
+This makes it easy to do data manipulation, and also makes it easy to plot stuff, as `ggplot2` and `dplyr` (indeed, the whole `tidyverse` suite of packages) works best if the data are tidy.
+
+But, sometimes we want things in other forms. The following example tables up the total number of students by ethnicity for each takiwa:
+
+```{r}
+ethnicity_by_takiwa <- all_data |>
+  group_by(Takiwa, EthnicGroup) |>
+  summarise(Students = sum(Students))
+ethnicity_by_takiwa
+```
+
+It would be nicer if we could make this into a table so that we had one row for each ethnic group, and separate columns for the takiwa totals. We can do this using `pivot_wider`. The key arguments are `names_from` which is the column that provides the new column names, and `values_from` which is the column that provides the values that should go in the new columns.
+
+```{r}
+ethnicity_by_takiwa |>
+  pivot_wider(names_from = Takiwa, values_from = Students)
+```
+
+Notice we have the exact same information, it's just in a more human-readable form. It's not in a form that's easier to plot though! `ggplot` would struggle with these data, as we don't have a single "Count" column for the y-axis to use.
+
+### Try yourself
+
+1. Create a table with total number of students in each year level in each Takiwa (Hint: `group_by` Takiwa and year level then `summarise`. Once done, `pivot_wider` to a table).
+2. Create a table with the number of each ethnic group in each year level.
+3. Try adding a "Total" column to the ethnic group by takiwa table. You could do this before the `pivot_wider` by using a `mutate` with `sum(Students)`.
+4. Try creating a table with the percentage of students of each ethnic group within each Takiwa. You can add a new column with `mutate()` and get the percentage by using `Students/sum(Students)` within each takiwa.
 
 ## Tidying data
 
