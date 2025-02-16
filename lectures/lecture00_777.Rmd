@@ -1,0 +1,152 @@
+---
+title: 'Lecture 1'
+subtitle: 'Data Mining'
+output:
+  xaringan::moon_reader:
+    css: [default, default-fonts, "custom.css"]
+    mathjax: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"
+    nature:
+      highlightStyle: tomorrow
+      highlightLines: true
+      countIncrementalSlides: false
+      ratio: "16:9"
+      slideNumberFormat: |
+        <div class="progress-bar-container">
+          <div class="progress-bar" style="width: calc(%current% / %total% * 100%);" />
+        </div>
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(fig.dim=c(4.8, 4.5), fig.retina=2, out.width="100%", comment="#>")
+theme_set(theme_minimal())
+```
+
+class: middle, inverse
+
+## Welcome to 161.777 Practical Data Mining
+
+---
+
+## Teaching team
+
+In order of appearance:
+
+Jonathan Marshall         |  Nick Knowlton            |  Barry McDonald 
+--------------------------|---------------------------|--------------------------
+j.c.marshall@massey.ac.nz |  n.knowlton@massey.ac.nz  | b.mcdonald@massey.ac.nz
+Manawatu ScB3.17          |  Albany                   | Albany
+
+---
+
+## Topics
+
+- Data wrangling and visualisation
+
+- Missingness
+
+- Prediction
+
+- Classification
+
+- Clustering
+
+- Market basket analysis
+
+---
+
+## Assessment
+
+- Readiness quiz. No credit, repeat as many times as you like.
+
+- Assignment: 20%
+
+- Two online open book tests: 20% each
+
+- Project: 40%
+
+---
+
+## Expecations for AI or other assistance
+
+- For tests: Only utilise external information for preparation. **Not during the tests**.
+
+- For assignments: You may utilise external sources for preparation, but your final work must be
+entirely your own (i.e. anything obtained from elsewhere must be rewritten to make it your own).
+
+- **You must submit work that is your own**, with anything from other sources synthesized and re-written in
+your own 'voice' or your own 'code'.
+
+- **You must also document any external sources that you have used.** There is a place (and credit available) for this on each assignment.
+
+- Ensure you answer any questions **in context**. No credit will be given for 'correct' answers that lack
+context.
+
+---
+
+## Using external help (AI, search, other humans) effectively
+
+Most assignment work, and some test questions involve writing code. We suggest the following approach:
+
+ - **Think carefully about what the question is asking**. Rewriting the question in your own words might help.
+
+ - **Don't eat the dragon in one bite**. Break down the question into the small steps you need to do to solve it, writing them down in your own words.
+
+ - **Translate a few of those steps to pseudo-code**, or directly to code if you're comfortable doing so. Check each step gives you what you expect. The workshops will be useful for finding similar examples or ideas.
+
+ - **If you're unsure about the question or a step, ask a human!** The teaching team or your fellow students know the context so can give better advice than tell-us-the-next-word answer bots.
+
+ - **Combine your steps gradually**, checking along the way, to answer the question.
+
+ - **Ensure you document what assistance you have had** (human, web sources, or tell-us-the-next-word answer bots) along the way.
+
+---
+
+## Software
+
+We use R via RStudio. https://www.r-project.org
+
+R was developed in Auckland, by [Ross Ihaka](https://en.wikipedia.org/wiki/Ross_Ihaka) and [Robert Gentleman](https://en.wikipedia.org/wiki/Robert_Gentleman_(statistician%29), but now there are a cast of thousands.
+
+It is programming language that is built with statistical analyses in mind.
+
+You will **learn to write code** to clean and visualise data, and build models for prediction.
+
+We interact with R via the RStudio front-end: https://rstudio.com
+
+Both are free, and you should install them on your computer.
+
+---
+
+## The tidyverse
+
+In general we'll be using the tidyverse series of packages where we can.
+
+- `readr` and `readxl` for loading data.
+
+- `dplyr` and `tidyr` for data manipulation.
+
+- `ggplot2` and `patchwork` for data visualisation. 
+
+- `broom` and `tidymodels` for training of models and prediction.
+
+The tidyverse website is a useful resource: https://tidyverse.org
+
+---
+
+## Getting help
+
+- Use the stream forums to ask for help.
+
+- Use the [Discord channel](https://discord.gg/Mzk7fUk) to ask for help.
+
+- We encourage you to help your classmates on stream (or in workshops) as well.
+
+- Try and help us (and your classmates) help you: e.g. if you have an R issue, copy your code and the error so we can spot the problem.
+
+- Google is super useful! Include "R" or "RStudio" or maybe the name of the package "ggplot" or "dplyr" in your query. Add `&udm=14` to your search URL to get rid of the AI stuff.
+
+- Check the date of the google responses: older results might well be out of date.
