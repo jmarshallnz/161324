@@ -164,9 +164,10 @@ A few of these look decidely non-normal! We could also assess the balance in the
 
 ```{r}
 glass.test |> count(Type)
+glass.train |> count(Type)
 ```
 
-We see it is dominated by building windows, so one could make a pretty accurate classifier just by saying "every bit of glass is a building window"! This would have a training accuracy of 116/160=72.5%, so is a useful baseline.
+We see it is dominated by building windows, so one could make a pretty accurate classifier just by saying "every bit of glass is a building window"! This would have a training accuracy of 104/160=65%, so is a useful baseline.
 
 ### Try yourself
 
