@@ -101,18 +101,18 @@ roll |> filter(Students == 0)
 ```
 
 However, we know there are schools where there will be no students for a particular
-combination of `Gender`, `EthnicGroup` and `Level`.
+combination of `EthnicGroup` and `Level`.
 
 ---
 
 ## Implicit missing values
 
-As an example, consider `Freyberg Community School` year 5 students:
+As an example, consider `West End School` year 1 and 2 students:
 
 ```{r}
-freyberg_year5 <- roll |> filter(School == "Freyberg Community School",
-                                 Level == "Year 5")
-freyberg_year5
+westend <- roll |> filter(School == "West End School (P North)",
+                                         Level %in% c("Year 1", "Year 2"))
+westend
 ```
 
 ---
@@ -122,7 +122,7 @@ freyberg_year5
 The `complete` function is useful for adding rows for the missing combinations of variables:
 
 ```{r}
-freyberg_year5 |> complete(School, Level, Gender, EthnicGroup)
+westend |> complete(School, Level, EthnicGroup)
 ```
 
 ---
@@ -132,7 +132,7 @@ freyberg_year5 |> complete(School, Level, Gender, EthnicGroup)
 In this case, we know the `Students` entry should be 0, so we can add that in:
 
 ```{r}
-freyberg_year5 |> complete(School, Level, Gender, EthnicGroup,
+westend |> complete(School, Level, EthnicGroup,
                            fill = list(Students = 0))
 ```
 
