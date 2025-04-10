@@ -31,7 +31,7 @@ for the three data sets. In each case we ask for the `group` variable to be a fa
 **NOTE** The `tidykda` dataset is not on CRAN - you can install it using the `remotes` package by running:
 
 ```
-remotes::install_github("jmarshallnz/tidykda")
+remotes::install_url("https://www.massey.ac.nz/~jcmarsha/161324/tidykda_0.1.0.tar.gz")
 ```
 
 in the console.
